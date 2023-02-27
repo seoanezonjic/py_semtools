@@ -1,0 +1,34 @@
+format-version: 1.2
+data-version: releases/2021-02-01
+subsetdef: chebi_ph7_3 "Rhea list of ChEBI terms representing the major species at pH 7.3."
+subsetdef: gocheck_do_not_annotate "Term not to be used for direct annotation"
+subsetdef: gocheck_do_not_manually_annotate "Term not to be used for direct manual annotation"
+subsetdef: goslim_agr "AGR slim"
+subsetdef: goslim_aspergillus "Aspergillus GO slim"
+subsetdef: goslim_candida "Candida GO slim"
+subsetdef: goslim_chembl "ChEMBL protein targets summary"
+subsetdef: goslim_drosophila "Drosophila GO slim"
+subsetdef: goslim_flybase_ribbon "FlyBase Drosophila GO ribbon slim"
+subsetdef: goslim_generic "Generic GO slim"
+subsetdef: goslim_metagenomics "Metagenomics GO slim"
+subsetdef: goslim_mouse "Mouse GO slim"
+subsetdef: goslim_pir "PIR GO slim"
+subsetdef: goslim_plant "Plant GO slim"
+subsetdef: goslim_pombe "Fission yeast GO slim"
+subsetdef: goslim_synapse "synapse GO slim"
+subsetdef: goslim_yeast "Yeast GO slim"
+synonymtypedef: syngo_official_label "label approved by the SynGO project"
+synonymtypedef: systematic_synonym "Systematic synonym" EXACT
+default-namespace: gene_ontology
+ontology: go
+
+[Term]
+id: GO:0001588
+name: dopamine neurotransmitter receptor activity, coupled via Gs
+namespace: molecular_function
+alt_id: GO:0001589
+alt_id: GO:0001590
+def: "Combining with the neurotransmitter dopamine and activating adenylate cyclase via coupling to Gs to initiate a change in cell activity." [GOC:mah, ISBN:0953351033, IUPHAR_RECEPTOR:2252, IUPHAR_RECEPTOR:2260]
+synonym: "dopamine D1 receptor activity" NARROW [GOC:bf]
+synonym: "dopamine D5 receptor activity" NARROW [GOC:bf]
+is_a: GO:0004952 ! dopamine neurotransmitter receptor activity

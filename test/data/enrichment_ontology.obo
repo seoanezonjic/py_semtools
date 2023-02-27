@@ -1,0 +1,27 @@
+format-version: 1.2
+data-version: test/a/b/c/
+
+[Term]
+id: root
+name: All
+
+[Term]
+id: branchA
+name: Child1
+is_a: root ! root
+
+[Term]
+id: branchAChild1
+name: Child2
+alt_id: branchAChild3
+is_a: branchA ! branchA
+
+[Term]
+id: branchAChild2
+name: Child4
+is_a: branchA ! branchA
+
+[Term]
+id: branchB
+name: Child5
+is_a: root ! root

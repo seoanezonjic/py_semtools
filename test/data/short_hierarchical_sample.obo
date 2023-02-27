@@ -1,0 +1,16 @@
+format-version: 1.2
+data-version: test/a/b/c/
+
+[Term]
+id: root
+name: All
+
+[Term]
+id: Child1
+name: Child1
+is_a: root ! root
+
+[Term]
+id: Child2
+name: Child2
+is_a: root ! root

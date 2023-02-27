@@ -1,0 +1,18 @@
+format-version: 1.2
+data-version: test/a/b/c/
+
+[Term]
+id: A
+name: All
+is_a: C ! C
+
+[Term]
+id: B
+name: B
+is_a: A ! A
+
+[Term]
+id: C
+name: C
+is_a: B ! B
+
