@@ -15,7 +15,7 @@ DATA_TEST_PATH = os.path.join(ROOT_PATH, 'data')
 #########################################################
 # Define TESTS
 #########################################################
-class OBOParserTestCase(unittest.TestCase):
+class TestOBOFunctionalities(unittest.TestCase):
 
 	def setUp(self):
 		# Files
