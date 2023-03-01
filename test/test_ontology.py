@@ -4,9 +4,8 @@
 
 import unittest
 import os
-import json
 import math
-from py_semtools import Ontology
+from py_semtools import Ontology, JsonParser
 
 ROOT_PATH = os.path.dirname(__file__)
 DATA_TEST_PATH = os.path.join(ROOT_PATH, 'data')
@@ -118,26 +117,18 @@ class TestOBOFunctionalities(unittest.TestCase):
 		# Export object to JSON
 		self.hierarchical.write(os.path.join(DATA_TEST_PATH, "testjson.json"))
 		
-        #file: os.path.join(DATA_TEST_PATH, "testjson.json"
-
-        ####ASK PEDRO ABOUT THESE TWO LINES
-		#obo = Ontology()
-        #JsonParser.load(obo, os.path.join(DATA_TEST_PATH, "testjson.json"), build= True)
-		f = open(os.path.join(DATA_TEST_PATH, "testjson.json"))
-		obo = json.load(f)
-		f.close()
+		obo = Ontology()
+        JsonParser.load(obo, os.path.join(DATA_TEST_PATH, "testjson.json"), build= True)
 		self.assertEqual(self.hierarchical, obo)
 		# Remove generated files
 		os.remove(os.path.join(DATA_TEST_PATH, "testjson.json"))
 
 	def test_export_import2(self):
 		self.hierarchical.write(os.path.join(DATA_TEST_PATH, "testjson.json"))
-        ####ASK PEDRO ABOUT THESE TWO LINES
-		#obo = Ontology()
-        #JsonParser.load(obo, os.path.join(DATA_TEST_PATH, "testjson.json"), build= True)
-		f = open(os.path.join(DATA_TEST_PATH, "testjson.json"))
-		obo = json.load(f)
-		f.close()
+        
+		obo = Ontology()
+        JsonParser.load(obo, os.path.join(DATA_TEST_PATH, "testjson.json"), build= True)
+		
 		self.hierarchical.precompute()
 		jsonObo = Ontology(file= os.path.join(DATA_TEST_PATH, "testjson.json"), load_file= True)
 		self.assertEqual(self.hierarchical,jsonObo)
@@ -567,9 +558,9 @@ class TestOBOFunctionalities(unittest.TestCase):
 
 	def test_auxiliar_methods(self):
 		iteration_with_custom_each = []
-        #### TODO: ASK PEDRO ABOUT THE EACH METHOD OF THE HIERARCHICAL CLASS (the att parameter)
-		#self.hierarchical.each(att=true) do |id, tags|
-		#	iteration_with_custom_each << [id, tags]
+        #### TODO: ASK PEDRO ABOUT THE EACH METHOD OF THE HIERARCHICAL CLASS (the att parameter) and how it will be migrated in Python
+		for (iid, tags) in hierarchical:
+			iteration_with_custom_each.append([iid, tags])
 		
 		self.assertEqual([
             ["Parental", {"id": "Parental", "name": "All", "comment": "none"}], 

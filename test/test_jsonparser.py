@@ -7,7 +7,7 @@
 import json
 import unittest
 import os
-from py_semtools import Ontology
+from py_semtools import Ontology, JsonParser
 
 
 ROOT_PATH= os.path.dirname(__file__)
@@ -32,14 +32,9 @@ class TestJSONparser(unittest.TestCase):
 		self.hierarchical.get_IC("Child2")
 		# Export object to JSON
 		self.hierarchical.write(os.path.join(DATA_TEST_PATH, "testjson.json"))
-		#file: os.path.join(DATA_TEST_PATH, "testjson.json"
-		
-        ### ASK PEDRO ABOUT THESE TWO LINES
-		#obo = Ontology.new()
-		#JsonParser.load(obo, os.path.join(DATA_TEST_PATH, "testjson.json"), build: true)        
-		f = open(os.path.join(DATA_TEST_PATH, "testjson.json"))
-		obo = json.load(f)
-		f.close()
+		       
+		obo = Ontology()
+		JsonParser.load(obo, os.path.join(DATA_TEST_PATH, "testjson.json"), build= True)
 		
 		self.assertEqual(self.hierarchical, obo)
 		# Remove generated files
@@ -48,12 +43,8 @@ class TestJSONparser(unittest.TestCase):
 	def test_export_import2(self):
 		self.hierarchical.write(os.path.join(DATA_TEST_PATH, "testjson.json"))
 		
-        ####ASK PEDRO ABOUT THESE TWO LINES
-		#obo = Ontology.new()
-		#JsonParser.load(obo, os.path.join(DATA_TEST_PATH, "testjson.json"), build: true)
-		f = open(os.path.join(DATA_TEST_PATH, "testjson.json"))
-		obo = json.load(f)
-		f.close()
+		obo = Ontology()
+		JsonParser.load(obo, os.path.join(DATA_TEST_PATH, "testjson.json"), build= True)
 
 		self.hierarchical.precompute()
 		jsonObo = Ontology(file= os.path.join(DATA_TEST_PATH, "testjson.json"), load_file= True)
