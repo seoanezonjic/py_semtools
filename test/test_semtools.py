@@ -12,14 +12,14 @@ import unittest
 #########################################################
 
 class SemtoolsTest(unittest.TestCase):
-  def test_that_it_has_a_version_number(self):
+    def test_that_it_has_a_version_number(self):
 
-    self.assertEqual(type(py_semtools.__version__), str)
+        self.assertEqual(type(py_semtools.__version__), str)
 
-    version = py_semtools.__version__
-    version = version.split('.')
-    major, minor, patches = [int(i) for i in version]
-    
-    self.assertEqual(type(major), int)
-    self.assertEqual(type(minor), int)
-    self.assertEqual(type(patches), int)
+        version = py_semtools.__version__
+        version = version.split('.')
+        major, minor, patches = [int(i) for i in version]
+        
+        self.assertEqual(type(major), int)
+        self.assertEqual(type(minor), int)
+        self.assertEqual(type(patches), int)
