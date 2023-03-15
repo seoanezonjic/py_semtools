@@ -28,20 +28,20 @@ class TestOBOFunctionalities(unittest.TestCase):
         self.file_Enr = {"file": os.path.join(DATA_TEST_PATH, "enrichment_ontology.obo"), "name": "enrichment_ontology"}
 
         ## OBO INFO
-        self.load_Header = [
+        self.load_Header = (
             {"file": os.path.join(DATA_TEST_PATH, "only_header_sample.obo"), "name": "only_header_sample"}, 
             {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
-            {"terms": {}, "typedefs": {}, "instances": {}}]
-        self.load_Hierarchical_WithoutIndex = [
+            {"terms": {}, "typedefs": {}, "instances": {}})
+        self.load_Hierarchical_WithoutIndex = (
             {"file": os.path.join(DATA_TEST_PATH, "hierarchical_sample.obo"), "name": "hierarchical_sample"}, 
             {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
             {"terms": {
                 "Parental": {"id": "Parental", "name": "All", "comment": "none"}, 
                 "Child1": {"id": "Child1", "name": "Child1", "is_obsolete": "true", "is_a": ["Parental"], "replaced_by": ["Child2"]}, 
                 "Child2": {"id": "Child2", "name": "Child2", "synonym": ["\"1,6-alpha-mannosyltransferase activity\" EXACT []"], "alt_id": ["Child3", "Child4"], "is_a": ["Parental"]}}, 
-            "typedefs": {}, "instances": {}}]
+            "typedefs": {}, "instances": {}})
         #TODO: Confirm if the ontology below is defined correctly
-        self.load_Hierarchical = [
+        self.load_Hierarchical = (
             {"file": os.path.join(DATA_TEST_PATH, "hierarchical_sample.obo"), "name": "hierarchical_sample"}, 
             {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
             {"terms": {
@@ -50,24 +50,24 @@ class TestOBOFunctionalities(unittest.TestCase):
                 "Child2": {"id": "Child2", "name": "Child2", "synonym": ["\"1,6-alpha-mannosyltransferase activity\" EXACT []"], "alt_id": ["Child3", "Child4"], "is_a": ["Parental"]}, 
                 "Child3": {"id": "Child2", "name": "Child2", "synonym": ["\"1,6-alpha-mannosyltransferase activity\" EXACT []"], "alt_id": ["Child3", "Child4"], "is_a": ["Parental"]}, 
                 "Child4": {"id": "Child2", "name": "Child2", "synonym": ["\"1,6-alpha-mannosyltransferase activity\" EXACT []"], "alt_id": ["Child3", "Child4"], "is_a": ["Parental"]}}, 
-            "typedefs": {}, "instances": {}}]
-        self.load_Circular = [
+            "typedefs": {}, "instances": {}})
+        self.load_Circular = (
             {"file": os.path.join(DATA_TEST_PATH, "circular_sample.obo"), "name": "circular_sample"}, 
             {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
             {"terms": {
                 "A": {"id": "A", "name": "All", "is_a": ["C"]}, 
                 "B": {"id": "B", "name": "B", "is_a": ["A"]}, 
                 "C": {"id": "C", "name": "C", "is_a": ["B"]}}, 
-            "typedefs": {}, "instances": {}}]
-        self.load_Atomic = [
+            "typedefs": {}, "instances": {}})
+        self.load_Atomic = (
             {"file": os.path.join(DATA_TEST_PATH, "sparse_sample.obo"), "name": "sparse_sample"}, 
             {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
             {"terms": {
                 "Parental": {"id": "Parental", "name": "All", "comment": "none"}, 
                 "Child1": {"id": "Child1", "name": "Child1"}, 
                 "Child2": {"id": "Child2", "name": "Child2"}}, 
-            "typedefs": {}, "instances": {}}]
-        self.load_Sparse = [
+            "typedefs": {}, "instances": {}})
+        self.load_Sparse = (
             {"file": os.path.join(DATA_TEST_PATH, "sparse2_sample.obo"), "name": "sparse2_sample"}, 
             {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
             {"terms": {
@@ -75,13 +75,13 @@ class TestOBOFunctionalities(unittest.TestCase):
                 "B": {"id": "B", "name": "B", "is_a": ["A"]}, 
                 "C": {"id": "C", "name": "C", "is_a": ["A"]}, 
                 "D": {"id": "D", "name": "Sparsed"}}, 
-            "typedefs": {}, "instances": {}}]
+            "typedefs": {}, "instances": {}})
 
         # Parentals
-        self.parentals_Hierachical = ["hierarchical", {"Child1": ["Parental"], "Child2": ["Parental"], "Child3": ["Parental"], "Child4": ["Parental"]}]
-        self.parentals_Circular = ["circular", {"A": ["C", "B"], "C": ["B", "A"], "B": ["A", "C"]}]
-        self.parentals_Atomic = ["atomic", {}]
-        self.parentals_Sparse = ["sparse", {"B": ["A"], "C": ["A"]}]
+        self.parentals_Hierachical = ("hierarchical", {"Child1": ["Parental"], "Child2": ["Parental"], "Child3": ["Parental"], "Child4": ["Parental"]})
+        self.parentals_Circular = ("circular", {"A": ["C", "B"], "C": ["B", "A"], "B": ["A", "C"]})
+        self.parentals_Atomic = ("atomic", {})
+        self.parentals_Sparse = ("sparse", {"B": ["A"], "C": ["A"]})
 
         # Aux variables
         self.basic_tags = {"ancestors": ["is_a"], "obsolete": ["is_obsolete"], "alternative": ["alt_id","replaced_by","consider"]}
