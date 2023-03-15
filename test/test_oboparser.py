@@ -31,12 +31,12 @@ class OBOParserTestCase(unittest.TestCase):
         self.file_Enr = {"file": os.path.join(DATA_TEST_PATH, "enrichment_ontology.obo"), "name": "enrichment_ontology"}
         
         ## OBO INFO
-        self.load_Header = [
+        self.load_Header = (
             {"file": os.path.join(DATA_TEST_PATH, "only_header_sample.obo"), "name": "only_header_sample"}, 
             {"format-version":"1.2", "data-version": "test/a/b/c/"}, 
-            {"terms":{}, "typedefs": {}, "instances":{}}]
+            {"terms":{}, "typedefs": {}, "instances":{}})
 
-        self.load_Hierarchical_WithoutIndex = [
+        self.load_Hierarchical_WithoutIndex = (
             {"file": os.path.join(DATA_TEST_PATH, "hierarchical_sample.obo"), "name": "hierarchical_sample"}, 
             {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
             {"terms": {
@@ -45,10 +45,10 @@ class OBOParserTestCase(unittest.TestCase):
                 "Child2": {"id": "Child2", "name": "Child2", "synonym": ["\"1,6-alpha-mannosyltransferase activity\" EXACT []"], "alt_id": ["Child3", "Child4"], "is_a": ["Parental"]}, 
                 "Child5": {"id": "Child5", "name": "Child5", "synonym": ["\"activity related to example\" EXACT []"], "is_obsolete": "true", "is_a": ["Parental"]}
             }, 
-            "typedefs": {}, "instances": {}}]
+            "typedefs": {}, "instances": {}})
 
         #TODO: Confirm if the ontology below is defined correctly
-        self.load_Hierarchical_altid = [
+        self.load_Hierarchical_altid = (
             {"file": os.path.join(DATA_TEST_PATH, "hierarchical_sample.obo"), "name": "hierarchical_sample"}, 
             {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
             {"terms": {
@@ -59,9 +59,9 @@ class OBOParserTestCase(unittest.TestCase):
                 "Child4": {"id": "Child2", "name": "Child2", "synonym": ["\"1,6-alpha-mannosyltransferase activity\" EXACT []"], "alt_id": ["Child3", "Child4"], "is_a": ["Parental"]},
                 "Child5": {"id": "Child5", "name": "Child5", "synonym": ["\"activity related to example\" EXACT []"], "is_obsolete": "true", "is_a": ["Parental"]}
                 }, 
-            "typedefs": {}, "instances": {}}]
+            "typedefs": {}, "instances": {}})
 
-        self.load_Hierarchical = [
+        self.load_Hierarchical = (
             {"file": os.path.join(DATA_TEST_PATH, "hierarchical_sample.obo"), "name": "hierarchical_sample"}, 
             {"format-version": "1.2", "data-version": "test/a/b/c/"},
             {"terms":{
@@ -70,27 +70,27 @@ class OBOParserTestCase(unittest.TestCase):
                 "Child2": {"id": "Child2", "name": "Child2", "synonym": ["\"1,6-alpha-mannosyltransferase activity\" EXACT []"], "alt_id": ["Child3", "Child4"], "is_a": ["Parental"]}, 
                 "Child5": {"id": "Child5", "name": "Child5", "synonym": ["\"activity related to example\" EXACT []"], "is_obsolete": "true", "is_a": ["Parental"]}
             },
-            "typedefs": {}, "instances": {}}]
+            "typedefs": {}, "instances": {}})
 
-        self.load_Circular = [
+        self.load_Circular = (
             {"file": os.path.join(DATA_TEST_PATH, "circular_sample.obo"), "name": "circular_sample"}, 
             {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
             {"terms": {
                 "A": {"id":"A", "name": "All", "is_a": ["C"]}, 
                 "B": {"id":"B", "name": "B", "is_a": ["A"]}, 
                 "C": {"id":"C", "name": "C", "is_a": ["B"]}}, 
-            "typedefs": {}, "instances": {}}]
+            "typedefs": {}, "instances": {}})
 
-        self.load_Atomic = [
+        self.load_Atomic = (
             {"file": os.path.join(DATA_TEST_PATH, "sparse_sample.obo"), "name": "sparse_sample"}, 
             {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
             {"terms": {
                 "Parental": {"id": "Parental", "name": "All", "comment": "none"}, 
                 "Child1": {"id": "Child1", "name": "Child1"}, 
                 "Child2": {"id": "Child2", "name": "Child2"}}, 
-            "typedefs": {}, "instances": {}}]
+            "typedefs": {}, "instances": {}})
 
-        self.load_Sparse = [
+        self.load_Sparse = (
             {"file": os.path.join(DATA_TEST_PATH, "sparse2_sample.obo"), "name": "sparse2_sample"}, 
             {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
             {"terms": {
@@ -98,20 +98,20 @@ class OBOParserTestCase(unittest.TestCase):
                 "B": {"id": "B", "name": "B", "is_a": ["A"]}, 
                 "C": {"id": "C", "name": "C", "is_a": ["A"]}, 
                 "D": {"id": "D", "name": "Sparsed"}}, 
-            "typedefs": {}, "instances": {}}]
+            "typedefs": {}, "instances": {}})
 
         ## OBO INFO2
-        self.load_Hierarchical_WithoutIndex2 = [
+        self.load_Hierarchical_WithoutIndex2 = (
             {"file": os.path.join(DATA_TEST_PATH, "hierarchical_sample.obo"), "name": "hierarchical_sample"}, 
             {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
             {"terms": {
                 "Parental": {"id": "Parental", "name": "All", "comment": "none"}, 
                 "Child1": {"id": "Child1", "name": "Child1", "is_obsolete": "true", "is_a": ["Parental"], "replaced_by": ["Child2"]}, 
                 "Child2": {"id": "Child2", "name": "Child2", "alt_id": ["Child3", "Child4"], "is_a": ["Parental"]}}, 
-            "typedefs": {}, "instances": {}}]
+            "typedefs": {}, "instances": {}})
         
         #TODO: Confirm if the ontology below is defined correctly
-        self.load_Hierarchical2 = [
+        self.load_Hierarchical2 = (
             {"file": os.path.join(DATA_TEST_PATH, "hierarchical_sample.obo"), "name": "hierarchical_sample"}, 
             {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
             {"terms": {
@@ -120,24 +120,24 @@ class OBOParserTestCase(unittest.TestCase):
                 "Child2": {"id": "Child2", "name": "Child2", "alt_id": ["Child3", "Child4"], "is_a": ["Parental"]}, 
                 "Child3": {"id": "Child2", "name": "Child2", "alt_id": ["Child3", "Child4"], "is_a": ["Parental"]}, 
                 "Child4": {"id": "Child2", "name": "Child2", "alt_id": ["Child3", "Child4"], "is_a": ["Parental"]}}, 
-            "typedefs": {}, "instances": {}}]
+            "typedefs": {}, "instances": {}})
             
-        self.load_Circular2 = [
+        self.load_Circular2 = (
             {"file": os.path.join(DATA_TEST_PATH, "circular_sample.obo"), "name": "circular_sample"}, 
             {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
             {"terms": {
                 "A": {"id": "A", "name": "All", "is_a": ["C"]}, 
                 "B": {"id": "B", "name": "B", "is_a": ["A"]}, 
                 "C": {"id": "C", "name": "C", "is_a": ["B"]}}, 
-            "typedefs": {}, "instances": {}}]
+            "typedefs": {}, "instances": {}})
 
         self.hierarchical_terms2 = {"Child2": {"is_a": ["B"]}, "Parental": {"is_a": ["A"]}}
 
         # Parentals
-        self.parentals_Hierachical = ["hierarchical", {"Child1": ["Parental"], "Child2": ["Parental"], "Child3": ["Parental"], "Child4": ["Parental"], "Child5": ["Parental"]}]
-        self.parentals_Circular = ["circular", {"A": ["C", "B"], "C": ["B", "A"], "B": ["A", "C"]}]
-        self.parentals_Atomic = ["atomic", {}]
-        self.parentals_Sparse = ["sparse", {"B": ["A"], "C": ["A"]}]
+        self.parentals_Hierachical = ("hierarchical", {"Child1": ["Parental"], "Child2": ["Parental"], "Child3": ["Parental"], "Child4": ["Parental"], "Child5": ["Parental"]})
+        self.parentals_Circular = ("circular", {"A": ["C", "B"], "C": ["B", "A"], "B": ["A", "C"]})
+        self.parentals_Atomic = ("atomic", {})
+        self.parentals_Sparse = ("sparse", {"B": ["A"], "C": ["A"]})
     
     def test_load_file(self):
         self.assertEqual(self.load_Header, OboParser.load_obo(self.file_Header["file"])) # Only header
@@ -161,13 +161,13 @@ class OBOParserTestCase(unittest.TestCase):
         
     def test_expand2(self):
         # Test regular
-        self.assertEqual(["hierarchical",["Parental"]], OboParser.get_related_ids("Child2", self.load_Hierarchical2[2]["terms"], "is_a"))
+        self.assertEqual(("hierarchical",["Parental"]), OboParser.get_related_ids("Child2", self.load_Hierarchical2[2]["terms"], "is_a"))
         # Test with already expanded info
         aux_expansion = {"Parental": ["A"]}
-        self.assertEqual(["hierarchical",["Parental", "A"]], OboParser.get_related_ids("Child2", self.load_Hierarchical2[2]["terms"], "is_a", aux_expansion))		
+        self.assertEqual(("hierarchical",["Parental", "A"]), OboParser.get_related_ids("Child2", self.load_Hierarchical2[2]["terms"], "is_a", aux_expansion))		
         # Test circular
-        self.assertEqual(["circular",["C","B"]], OboParser.get_related_ids("A", self.load_Circular2[2]["terms"], "is_a"))
-        self.assertEqual(["circular",["B","A"]], OboParser.get_related_ids("C", self.load_Circular2[2]["terms"], "is_a"))
+        self.assertEqual(("circular",["C","B"]), OboParser.get_related_ids("A", self.load_Circular2[2]["terms"], "is_a"))
+        self.assertEqual(("circular",["B","A"]), OboParser.get_related_ids("C", self.load_Circular2[2]["terms"], "is_a"))
         
     def test_load(self):
         _, header, stanzas = OboParser.load_obo(self.file_Hierarchical["file"])

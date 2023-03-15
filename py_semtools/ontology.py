@@ -1,3 +1,3 @@
-class Py_semtools:
+class Ontology:
     def __init__(self):
         self.terms = []
