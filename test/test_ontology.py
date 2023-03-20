@@ -5,7 +5,7 @@
 import unittest
 import os
 import math
-from py_semtools import Ontology, JsonParser
+from py_semtools import Ontology#, JsonParser
 
 ROOT_PATH = os.path.dirname(__file__)
 DATA_TEST_PATH = os.path.join(ROOT_PATH, 'data')
@@ -152,6 +152,7 @@ class TestOBOFunctionalities(unittest.TestCase):
         self.assertEqual(self.hierarchical_freqs_default,self.hierarchical.max_freqs) # Only structural freq
 
     def test_paths_levels(self):
+        self.hierarchical.precompute()
         self.hierarchical.expand_path("Child2")
         default_child2_paths = {"total_paths": 1, "largest_path": 2, "shortest_path": 2, "paths": [["Child2", "Parental"]]}
         self.assertEqual(default_child2_paths, self.hierarchical.term_paths["Child2"])
@@ -179,14 +180,15 @@ class TestOBOFunctionalities(unittest.TestCase):
     # I/O observed term from data
     ####################################
     def test_add_observed_terms(self):
-        self.hierarchical.add_observed_terms(terms= ["Parental"], transform_to_sym= True)
-        self.hierarchical.add_observed_terms(terms= ["Child2","Child2"], transform_to_sym= True)
+        self.hierarchical.precompute()
+        self.hierarchical.add_observed_terms(terms= ["Parental"])
+        self.hierarchical.add_observed_terms(terms= ["Child2","Child2"])
         
         self.assertEqual(self.hierarchical_freqs_updated, self.hierarchical.max_freqs) 
         self.assertEqual({"ancestors": 1.0, "descendants": 0.0, "struct_freq": 1.0, "observed_freq": 2.0},
-           self.hierarchical.meta["Child2"])
+        self.hierarchical.meta["Child2"])
         self.assertEqual({"ancestors": 0.0, "descendants": 1.0, "struct_freq": 2.0, "observed_freq": 3.0},
-            self.hierarchical.meta["Parental"])
+        self.hierarchical.meta["Parental"])
 
 
     # Obtain level and term relations
@@ -225,7 +227,10 @@ class TestOBOFunctionalities(unittest.TestCase):
 
 
     def test_similarities(self):
-        self.hierarchical.add_observed_terms(terms= ["Child2","Child2","Child2","Parental","Parental","Parental","Parental"], transform_to_sym= True)
+        self.hierarchical.precompute()
+        self.enrichment_hierarchical.precompute()
+        self.sparse.precompute()
+        self.hierarchical.add_observed_terms(terms= ["Child2","Child2","Child2","Parental","Parental","Parental","Parental"])
         self.assertEqual(1, self.hierarchical.get_structural_frequency("Child2")) ## Term by term frequencies
         self.assertEqual(3, self.hierarchical.get_observed_frequency("Child2"))
         self.assertEqual(2, self.hierarchical.get_structural_frequency("Parental"))
@@ -260,6 +265,7 @@ class TestOBOFunctionalities(unittest.TestCase):
     ####################################
     
     def test_modifiying_profile_externel(self):
+        self.hierarchical.precompute()
         # Remove by scores
         prof = ["Parental", "Child2"]
         scores = {"Parental": 3, "Child2": 7}
@@ -275,28 +281,31 @@ class TestOBOFunctionalities(unittest.TestCase):
         self.assertEqual(["Parental","Child3"],self.hierarchical.clean_profile_by_score(prof2,scores, byMax= False, remove_without_score= False))
 
         self.assertEqual(["Child2"],self.hierarchical.clean_profile_hard(["Child2", "Parental", "Child5", "Child1"]))
-        self.assertEqual(["branchAChild1", "branchAChild2"],self.enrichment_hierarchical.clean_profile_hard(["root", "branchB", "branchAChild1", "branchAChild2"], options = {"term_filter": "branchA"})) # Testing term_filter option
+        self.assertEqual(["branchAChild1", "branchAChild2"], sorted(self.enrichment_hierarchical.clean_profile_hard(["root", "branchB", "branchAChild1", "branchAChild2"], options = {"term_filter": "branchA"}))) # Testing term_filter option
         
         # Remove parentals and alternatives
-        self.assertEqual([["Child2"], ["Parental"]], self.hierarchical.remove_ancestors_from_profile(["Child2", "Parental"]))
-        self.assertEqual([["Child2", "Parental"], ["Child3"]], self.hierarchical.remove_alternatives_from_profile(["Child2", "Parental", "Child3"]))
+        self.assertEqual((["Child2"], ["Parental"]), self.hierarchical.remove_ancestors_from_profile(["Child2", "Parental"]))
+        self.assertEqual((["Child2", "Parental"], ["Child3"]), self.hierarchical.remove_alternatives_from_profile(["Child2", "Parental", "Child3"]))
 
         # Expand parental 
         ## For one profile
-        self.assertEqual(["branchA", "root", "branchAChild1", "branchB"] , self.enrichment_hierarchical.expand_profile_with_parents(["branchAChild1", "branchB"])) 
+        self.assertEqual(['branchA', 'branchAChild1', 'branchB', 'root'] , sorted(self.enrichment_hierarchical.expand_profile_with_parents(["branchAChild1", "branchB"]))) 
 
     # ID Handlers
     #################################### 
     
     def test_id_handlers_external(self):
-        self.assertEqual([["Parental", "Child2"], ["FakeID"] ], self.hierarchical.check_ids(["Parental", "FakeID", "Child3"])) # Validate ids
-        self.assertEqual([["All", "Child2", "Child5"], [None]], self.enrichment_hierarchical.translate_ids(["root", "branchAChild3", "branchB", "FakeID"]))
-        self.assertEqual([["root", "branchAChild1", "branchB"], ["FakeName"]], self.enrichment_hierarchical.translate_names(["All", "Child2", "Child5","FakeName"]))
+        self.hierarchical.precompute()
+        self.assertEqual((["Parental", "Child2"], ["FakeID"]), self.hierarchical.check_ids(["Parental", "FakeID", "Child3"])) # Validate ids
+        self.enrichment_hierarchical.precompute()
+        self.assertEqual((["All", "Child2", "Child5"], ["FakeID"]), self.enrichment_hierarchical.translate_ids(["root", "branchAChild3", "branchB", "FakeID"]))
+        self.assertEqual((["root", "branchAChild1", "branchB"], ["FakeName"]), self.enrichment_hierarchical.translate_names(["All", "Child2", "Child5","FakeName"]))
 
     # Description of profile's terms
     ####################################
     
     def test_description_profile_terms(self):
+        self.hierarchical.precompute()
         self.assertEqual([[["Parental", "All"], [["Child2", "Child2"]]]], self.hierarchical.get_childs_table(["Parental"])) # Expanded info
         # For a profile
         self.assertEqual([["Child2", 2], ["Child1", None], ["Parental", 1]], self.hierarchical.get_terms_levels(["Child2","Child1","Parental"]))
@@ -305,11 +314,14 @@ class TestOBOFunctionalities(unittest.TestCase):
     ####################################
     
     def test_ic_profile_external(self):
+        self.hierarchical.precompute()
         expected_A_IC_resnik = (-(math.log10(1/2.0))-(math.log10(2/2.0))) / 2.0
         self.assertEqual(expected_A_IC_resnik, self.hierarchical.get_profile_mean_IC(["Child2", "Parental"]))
+        self.enrichment_hierarchical.precompute()
         self.assertEqual(["branchA", -(math.log10(3/5.0))], self.enrichment_hierarchical.get_maxmica_term2profile("branchA",["branchAChild1","branchB"]))
         
     def test_similarities_profile_external(self):
+        self.hierarchical.precompute()
         profA = ["Child2"]
         profB = ["Child2"]
         profC = ["Parental"]
@@ -559,7 +571,7 @@ class TestOBOFunctionalities(unittest.TestCase):
     def test_auxiliar_methods(self):
         iteration_with_custom_each = []
         #### TODO: ASK PEDRO ABOUT THE EACH METHOD OF THE HIERARCHICAL CLASS (the att parameter) and how it will be migrated in Python
-        for (iid, tags) in hierarchical:
+        for (iid, tags) in self.hierarchical.each(att=True):
             iteration_with_custom_each.append([iid, tags])
         
         self.assertEqual([

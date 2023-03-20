@@ -198,5 +198,6 @@ class OBOParserTestCase(unittest.TestCase):
 
     def test_blacklist(self):
         hierarchical_cutted = Ontology(file = self.file_Hierarchical["file"], load_file = True, removable_terms = ["Parental"])
+        hierarchical_cutted.precompute()
         self.assertEqual(0, hierarchical_cutted.meta["Child2"]["ancestors"])
-        self.assertIsNone(hierarchical_cutted.terms["Parental"])
+        self.assertIsNone(hierarchical_cutted.terms.get("Parental"))
