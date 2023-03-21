@@ -1,0 +1,4 @@
+GO	http://purl.obolibrary.org/obo/go/go-basic.obo
+HPO	http://purl.obolibrary.org/obo/hp.obo
+MONDO	http://purl.obolibrary.org/obo/mondo.obo
+EFO	http://www.ebi.ac.uk/efo/efo.obo
