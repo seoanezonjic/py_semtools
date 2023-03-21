@@ -369,12 +369,14 @@ class TestOBOFunctionalities(unittest.TestCase):
     ####################################
     
     def test_modifying_profile_internal(self):
+        self.hierarchical.precompute()
         self.hierarchical.add_profile("A", ["Child2", "Parental"], substitute= False) # Add profiles
         self.hierarchical.add_profile("B", ["Child2", "Parental", "FakeID"], substitute= False)
         self.hierarchical.add_profile("C", ["Child2", "Parental"], substitute= False)
         self.hierarchical.add_profile("D", ["Parental"], substitute= False)
         # Expand parental 
         ## Parental method for self.profiles
+        self.enrichment_hierarchical.precompute()
         self.enrichment_hierarchical.load_profiles({
             "A": ["branchAChild1", "branchB"],
             "B": ["branchAChild2", "branchA", "branchB"],
@@ -382,7 +384,7 @@ class TestOBOFunctionalities(unittest.TestCase):
             "D": ["FakeID"]},
              calc_metadata= False, substitute= False)
         self.enrichment_hierarchical.expand_profiles('parental') # FRED: Maybe we could add "propagate" version but this is checked in test_expand_items
-        self.assertEqual({"A": ["branchA", "root", "branchAChild1", "branchB"], "B": ["branchA", "root", "branchAChild2", "branchB"], "C": ["branchA", "root", "branchAChild2", "branchAChild1"], "D": []}, self.enrichment_hierarchical.profiles)
+        self.assertEqual({"A": ['branchA', 'branchAChild1', 'branchB', 'root'], "B": ['branchA', 'branchAChild2', 'branchB', 'root'], "C": ['branchA', 'branchAChild1', 'branchAChild2', 'root'], "D": []}, self.enrichment_hierarchical.profiles)
         self.enrichment_hierarchical.reset_profiles()
         self.assertEqual({"A": ["Child2"], "B": ["Child2"], "C": ["Child2"], "D": ["Parental"]}, self.hierarchical.clean_profiles())
 
@@ -431,6 +433,7 @@ class TestOBOFunctionalities(unittest.TestCase):
     ####################################
     
     def test_similarities_profile_internal(self):
+        self.hierarchical.precompute()
         self.hierarchical.add_profile("A",["Child2"], substitute= False)
         self.hierarchical.add_profile("D",["Parental","Child2"], substitute= False)
         sim_D_A = (-math.log10(2/2.0) -math.log10(1/2.0)) / 2.0
@@ -439,10 +442,11 @@ class TestOBOFunctionalities(unittest.TestCase):
         self.assertEqual(sim_A_D_bi, self.hierarchical.compare_profiles()["A"]["D"])
         self.assertEqual(-math.log10(2/2.0), self.hierarchical.compare_profiles(external_profiles= {"C": ["Parental"]})["A"]["C"])
         self.hierarchical.add_observed_terms_from_profiles()
-        self.assertEqual([{"Child2": -math.log10(0.5), "Parental": -math.log10(1)}, {"Child2": -math.log10(2/3.0), "Parental": -math.log10(1)}], self.hierarchical.get_observed_ics_by_onto_and_freq())
+        self.assertEqual(({"Child2": -math.log10(0.5), "Parental": -math.log10(1)}, {"Child2": -math.log10(2/3.0), "Parental": -math.log10(1)}), self.hierarchical.get_observed_ics_by_onto_and_freq())
     
 
     def test_ic_profile_internal(self):
+        self.hierarchical.precompute()
         self.hierarchical.add_profile("A", ["Child2", "Parental"], substitute= False) # Add profiles
         self.hierarchical.add_profile("B", ["Child2", "Parental", "FakeID"], substitute= False)
         self.hierarchical.add_profile("C", ["Child2", "Parental"], substitute= False)
@@ -464,13 +468,14 @@ class TestOBOFunctionalities(unittest.TestCase):
                                                  "B": (-math.log10(3/7.0) -math.log10(7/7.0)) / 2.0, 
                                                  "C": (-math.log10(3/7.0) -math.log10(7/7.0)) / 2.0, 
                                                  "D": 0.0 }
-        self.assertEqual([expected_profiles_IC_resnik, expected_profiles_IC_resnik_observed], self.hierarchical.get_profiles_resnik_dual_ICs())
+        self.assertEqual((expected_profiles_IC_resnik, expected_profiles_IC_resnik_observed), self.hierarchical.get_profiles_resnik_dual_ICs())
     
 
     # specifity_index related methods
     ####################################
 
     def test_onto_levels_from_profiles(self):
+        self.hierarchical.precompute()
         self.hierarchical.add_profile("A", ["Child2", "Parental"], substitute= False) # Add profiles
         self.hierarchical.add_profile("B", ["Child2", "Parental", "FakeID"], substitute= False)
         self.hierarchical.add_profile("C", ["Child2", "Parental"], substitute= False)
@@ -502,20 +507,17 @@ class TestOBOFunctionalities(unittest.TestCase):
     ########################################
     
     def test_IO_items(self):
+        self.hierarchical.precompute()
         # Handle items
         items_rel = {"Parental": ['a','b'], "Child3": ['c']}
-        items_rel_sym = {"Parental": ["a", "b"], "Child3": ["c"]}
-        items_rel_concat = {"Parental": ["a","b",'a','b'], "Child3": ["c",'c']}
 
         self.hierarchical.items = {} # reset items from method get_items_from_profiles
         self.hierarchical.load_item_relations_to_terms(items_rel)
         self.assertEqual(items_rel, self.hierarchical.items)
-        self.hierarchical.load_item_relations_to_terms(items_rel_sym)
-        self.assertEqual(items_rel_sym, self.hierarchical.items)
         self.hierarchical.load_item_relations_to_terms(items_rel,False,True)
-        self.assertEqual(items_rel_concat, self.hierarchical.items)
-        self.hierarchical.load_item_relations_to_terms(items_rel_sym,True,True) # here third must no be relevant
-        self.assertEqual(items_rel_sym, self.hierarchical.items)
+        self.assertEqual(items_rel, self.hierarchical.items)
+        self.hierarchical.load_item_relations_to_terms(items_rel,True,True) # here third must no be relevant
+        self.assertEqual(items_rel, self.hierarchical.items)
 
 
     def test_defining_items_from_instance_variable(self):

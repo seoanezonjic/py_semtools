@@ -3,6 +3,7 @@ import os
 import sys
 import copy
 import warnings
+from collections import defaultdict
 
 from py_semtools.parsers.oboparser import OboParser
 
@@ -457,6 +458,65 @@ class Ontology:
         return term in self.obsoletes
 
     #############################################
+    # ITEMS METHODS
+    #############################################
+
+    # I/O Items
+    ####################################
+
+    # Store specific relations hash given into ITEMS structure
+    # ===== Parameters
+    # +relations+:: hash to be stored
+    # +remove_old_relations+:: substitute ITEMS structure instead of merge new relations
+    # +expand+:: if true, already stored keys will be updated with the unique union of both sets
+    def load_item_relations_to_terms(self, relations, remove_old_relations = False, expand = False):
+        if remove_old_relations: self.items = {} 
+        for term, items in relations.items():
+            if not self.term_exist(term):
+                warnings.warn('Some terms specified are not stored into this ontology. These not correct terms will be stored too')
+                break
+        if expand:
+            self.items = self.concatItems(self.items, relations)
+        else:
+            self.items.update(relations)
+
+    # Defining Items from instance variables
+    ########################################
+
+    # Assign a dictionary already calculated as a items set.
+    # ===== Parameters
+    # +dictID+:: dictionary ID to be stored (:byTerm will be used)
+    def set_items_from_dict(self, dictID, remove_old_relations = False):
+        if remove_old_relations: self.items = {} 
+        query = self.dicts[dictID]
+        if query != None:
+            self.items.update(query['byTerm'])
+        else:
+            warnings.warn('Specified ID is not calculated. Dict will not be added as a items set')
+
+    # Get related profiles to a given term
+    # ===== Parameters
+    # +term+:: to be checked
+    # ===== Returns 
+    # profiles which contains given term
+    def get_items_from_term(self, term):
+        return self.items[term]
+
+    # For each term in profiles add the ids in the items term-id dictionary 
+    def get_items_from_profiles(self):
+        for t_id, terms in self.profiles.items(): 
+            for term in terms: self.add2hash(self.items, term, t_id)
+
+    # Defining instance variables from items
+    ########################################
+
+    def get_profiles_from_items(self):
+        new_profiles = {}
+        for term, ids in self.items.items():
+            for pr_id in ids: self.add2hash(new_profiles, pr_id, term)
+        self.profiles = new_profiles        
+
+    #############################################
     # PROFILE EXTERNAL METHODS
     #############################################
 
@@ -759,13 +819,13 @@ class Ontology:
 
     def expand_profiles(self, meth, unwanted_terms = [], calc_metadata = True, ontology = None, minimum_childs = 1, clean_profiles = True):
         if meth == 'parental':
-            for pr_id, terms in self.profiles.items(): self.profiles[pr_id] = self.diff(self.expand_profile_with_parents(terms), unwanted_terms)
+            for pr_id, terms in self.profiles.items(): self.profiles[pr_id] = sorted(self.diff(self.expand_profile_with_parents(terms), unwanted_terms))
             if calc_metadata: self.get_items_from_profiles()
         elif meth == 'propagate':
             self.get_items_from_profiles()
             self.expand_items_to_parentals(ontology = ontology, minimum_childs = minimum_childs, clean_profiles = clean_profiles)
             self.get_profiles_from_items()
-        self.add_observed_terms_from_profiles(reset = true)
+        self.add_observed_terms_from_profiles(reset = True)
 
     # Remove alternatives (if official term is present) and ancestors terms of stored profiles 
     # ===== Parameters
@@ -775,7 +835,7 @@ class Ontology:
     # a hash with cleaned profiles
     def clean_profiles(self, store = False, remove_alternatives = True):
         cleaned_profiles = {}
-        for pr_id, terms in self.profiles:  cleaned_profiles[pr_id] = self.clean_profile(terms, remove_alternatives = remove_alternatives)
+        for pr_id, terms in self.profiles.items():  cleaned_profiles[pr_id] = self.clean_profile(terms, remove_alternatives = remove_alternatives)
         if store: self.profiles = cleaned_profiles 
         return cleaned_profiles
 
@@ -856,6 +916,109 @@ class Ontology:
         if percentile_index < 0: percentile_index = 0  # Special case (caused by literal calc)
         return prof_lengths[percentile_index]
 
+    # IC data
+    ####################################
+
+    # Get frequency terms and information coefficient from profiles #
+
+    # Calculates frequencies of stored profiles terms
+    # ===== Parameters
+    # +ratio+:: if true, frequencies will be returned as ratios between 0 and 1.
+    # +asArray+:: used to transform returned structure format from hash of Term-Frequency to an array of tuples [Term, Frequency]
+    # +translate+:: if true, term IDs will be translated to 
+    # ===== Returns 
+    # stored profiles terms frequencies
+    def get_profiles_terms_frequency(self, ratio = True, asArray = True, translate = True):
+        freqs = defaultdict(lambda: 0)
+        for t_id, terms in self.profiles.items(): 
+            for term in terms: freqs[term] += 1 
+
+        if translate:
+            translated_freqs = {}
+            for term, freq in freqs.items():
+                tr = self.translate_id(term)
+                if tr != None: translated_freqs[tr] = freq
+            freqs = translated_freqs
+
+        if ratio:
+            n_profiles = len(self.profiles)
+            for term, freq in freqs.items(): freqs[term] = freq / n_profiles
+
+        if asArray:
+            freqs = [ [k, v] for k,v in freqs.items() ]
+            freqs.sort(key = lambda f: f[1], reverse=True)
+
+        return freqs
+
+    # Calculates resnik ontology, and resnik observed mean ICs for all profiles stored
+    # ===== Returns 
+    # two hashes with Profiles and IC calculated for resnik and observed resnik respectively
+    def get_profiles_resnik_dual_ICs(self, struct = 'resnik', observ = 'resnik_observed'): # Maybe change name during migration to get_profiles_dual_ICs
+        struct_ics = {}
+        observ_ics = {}
+        for t_id, terms in self.profiles.items():
+            struct_ics[t_id] = self.get_profile_mean_IC(terms, ic_type = struct)
+            observ_ics[t_id] = self.get_profile_mean_IC(terms, ic_type = observ)
+        return struct_ics, observ_ics
+
+
+    # Calculates and return resnik ICs (by ontology and observed frequency) for observed terms
+    # ===== Returns 
+    # two hashes with resnik and resnik_observed ICs for observed terms
+    def get_observed_ics_by_onto_and_freq(self): 
+        ic_ont = {}
+        resnik_observed = {}
+        observed_terms = set([ t_id for terms in self.profiles.values() for t_id in terms ])
+        for term in observed_terms:
+            ic_ont[term] = self.get_IC(term)
+            resnik_observed[term] = self.get_IC(term, ic_type = 'resnik_observed')
+        return ic_ont, resnik_observed
+
+    # Profiles vs Profiles #
+
+    def get_pair_index(self, profiles_A, profiles_B):
+        pair_index = {}
+        for curr_id, profile_A in  profiles_A.items():
+            for pr_id, profile_B in profiles_B.items():
+                for term_A in profile_A:
+                    for term_B in profile_B:
+                        term_A, term_B = sorted([term_A, term_B])
+                        self.add2nestHash(pair_index, term_A, term_B, True)
+        return pair_index
+
+    def get_mica_index_from_profiles(self, pair_index, sim_type = 'resnik', ic_type = 'resnik', lca_index = True):
+        for tA, tB_data in pair_index.items():
+            for tB in  tB_data.keys():
+                value = self.get_similarity(tA, tB, sim_type = sim_type, ic_type = ic_type, lca_index = lca_index)
+                if value == None: value = True  # We use true to save that the operation was made but there is not mica value
+                self.add2nestHash(self.mica_index, tA, tB, value)
+                self.add2nestHash(self.mica_index, tB, tA, value)
+
+    # Compare internal stored profiles against another set of profiles. If an external set is not provided, internal profiles will be compared with itself 
+    # ===== Parameters
+    # +external_profiles+:: set of external profiles. If nil, internal profiles will be compared with itself
+    # +sim_type+:: similitude method to be used. Default: resnik
+    # +ic_type+:: ic type to be used. Default: resnik
+    # +bidirectional+:: calculate bidirectional similitude. Default: false
+    # ===== Return
+    # Similitudes calculated
+    def compare_profiles(self, external_profiles = None, sim_type = 'resnik', ic_type = 'resnik', bidirectional = True):
+        profiles_similarity = {} #calculate similarity between patients profile
+        if external_profiles == None:
+            comp_profiles = self.profiles
+            main_profiles = comp_profiles
+        else:
+            comp_profiles = external_profiles
+            main_profiles = self.profiles
+        # Compare
+        pair_index = self.get_pair_index(main_profiles, comp_profiles)
+        self.mica_index = {}
+        self.get_mica_index_from_profiles(pair_index, sim_type = sim_type, ic_type = ic_type, lca_index= False)
+        for curr_id, current_profile in main_profiles.items():
+            for t_id, profile in comp_profiles.items():
+                value = self.compare(current_profile, profile, sim_type = sim_type, ic_type = ic_type, bidirectional = bidirectional, store_mica = True)
+                self.add2nestHash(profiles_similarity, curr_id, t_id, value)
+        return profiles_similarity
 
     ########################################
     ## GENERAL ONTOLOGY METHODS
@@ -881,11 +1044,49 @@ class Ontology:
         else:
             query.append(val)
 
+    def add2nestHash(self, h, key1, key2, val):
+        query1 = h.get(key1)
+        if query1 == None:
+            h[key1] = {key2 : val} 
+        else:
+            query1[key2] = val
+
     def intersection(self, arr1, arr2):
-         return [item for item in arr1 if item in arr1 and item in arr2] 
+         return [item for item in arr1 if item in arr2] 
 
     def union(self, arr1, arr2):
-        return arr1 + [item for item in arr2 if item in arr2 and item not in arr1]
+        return arr1 + [item for item in arr2 if item not in arr1]
 
     def diff(self, arr1, arr2):
-        return [item for item in arr1 if item in arr1 and item not in arr2]
+        return [item for item in arr1 if item not in arr2]
+
+    def concatItems(self, itemA, itemB): # NEED TEST, CHECK WITH PSZ THIS METHOD
+        # A is Array :: RETURN ARRAY
+            # A_array : B_array
+            # A_array : B_hash => NOT ALLOWED
+            # A_array : B_single => NOT ALLOWED
+        # A is Hash :: RETURN HASH
+            # A_hash : B_array => NOT ALLOWED
+            # A_hash : B_hash
+            # A_hash : B_single => NOT ALLOWED
+        # A is single element => RETURN ARRAY
+            # A_single : B_array
+            # A_single : B_hash => NOT ALLOWED
+            # A_single : B_single
+        concatenated = None
+        if type(itemA) is list and type(itemB) is list:
+            concatenated = self.union(itemA, itemB)
+        elif type(itemA) is dict and type(itemB) is dict:
+            itemB_concatenated = {}
+            for k, newV in itemB.items():
+                oldV = itemA.get(k)
+                if oldV == None:
+                    itemB_concatenated[k] = newV
+                else:
+                    itemB_concatenated[k] = self.concatItems(oldV, newV)
+            concatenated = itemA | itemB_concatenated
+        elif type(itemB) is list:
+            concatenated = self.union([itemA] + itemB)
+        elif type(itemB) is not dict:
+            concatenated = list(set([itemA, itemB]))
+        return concatenated
