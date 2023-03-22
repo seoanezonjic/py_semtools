@@ -10,8 +10,6 @@ EXTERNAL_DATA=os.path.join(ROOT_PATH, '..', 'external_data')
 sys.path.insert(0, os.path.join(ROOT_PATH, '..'))
 from semtools import Ontology
 
-require 'down'
-
 ######################################################################################
 ## METHODS
 ######################################################################################
@@ -27,75 +25,58 @@ def format_tabular_data(data, separator, id_col, terms_col):
 def store_profiles(file, ontology):
   for t_id, terms in file: ontology.add_profile(t_id, terms)
 
-def load_value(hash_to_load, key, value, unique = true)
-   	query = hash_to_load[key]
-    if query.nil?
-       value = [value] if value.class != Array
+def load_value(hash_to_load, key, value, unique = True):
+   	query = hash_to_load.get(key)
+    if query == None:
+       if type(value) not is list: value = [value]
        hash_to_load[key] = value
-    else
-        if value.class == Array
-            query.concat(value)
-        else
-            query << value
-        end
-        query.uniq! unless unique == nil
-    end
-end
+    else:
+        if type(value) is list:
+            query.extend(value)
+        else:
+            query.append(value)
+        if unique: 
+          uniq_query = list(set(query))
+          query.clear()
+          query.extend(uniq_query)
 
-def translate(ontology, type, options, profiles = nil)
+def translate(ontology, mode, options, profiles = None):
   not_translated = {}
-  if type == 'names'
-    ontology.profiles.each do |id, terms|
+  if mode == 'names':
+    for pr_id, terms in ontology.profiles.items()
       translation, untranslated = ontology.translate_ids(terms)
-      ontology.profiles[id] = translation  
-      not_translated[id] = untranslated unless untranslated.empty?
-    end  
-  elsif type == 'codes'
-    profiles.each do |id,terms|
+      ontology.profiles[pr_id] = translation  
+      if len(untranslated) > 0: not_translated[pr_id] = untranslated
+  elif mode == 'codes':
+    for pr_id, terms in profiles.items():
       translation, untranslated = ontology.translate_names(terms)
-      profiles[id] = translation
-      profiles[id] = profiles[id].join("#{options[:separator]}") 
-      not_translated[id] = untranslated unless untranslated.empty?
-    end    
-  end
-  if !not_translated.empty?
-    File.open(options[:untranslated_path], 'w') do |file|
-      not_translated.each do |id, terms|
-          file.puts([id, terms.join(";")].join("\t"))
-      end
-    end
-  end    
-end  
+      profiles[pr_id] = options['separator'].join(translation)
+      if len(untranslated) > 0: not_translated[pr_id] = untranslated
+  if len(not_translated) > 0:
+    with open(options['untranslated_path'], 'w') as file:
+      for pr_id, terms in not_translated.items():
+          file.write("\t".join([pr_id, ";".join(terms)]) + "\n")
 
-def clean_profile(profile, ontology, options)
-	cleaned_profile = ontology.clean_profile_hard(profile)	
-	unless options[:term_filter].nil?
-		cleaned_profile.select! {|term| ontology.get_ancestors(term).include?(options[:term_filter])}
-	end	
+def clean_profile(profile, ontology, options):
+	cleaned_profile = ontology.clean_profile_hard(profile, options)	
 	return cleaned_profile
-end
 
-def clean_profiles(profiles, ontology, options)
+def clean_profiles(profiles, ontology, options):
 	removed_profiles = []
-	profiles.each do |id, terms|
+	for pr_id, terms in profiles.items():
 		cleaned_profile = clean_profile(terms, ontology, options)
-		profiles[id] = cleaned_profile
-		removed_profiles << id if cleaned_profile.empty?
-	end
-	removed_profiles.each{|rp| profiles.delete(rp)}
+    if len(cleaned_profile) == 0:
+  		removed_profiles.append(pr_id)
+    else:
+  		profiles[pr_id] = cleaned_profile
+	for rp in removed_profiles: profiles.pop(rp)
 	return removed_profiles
-end
 
-def write_similarity_profile_list(output, onto_obj, similarity_type, refs)
-  profiles_similarity = onto_obj.compare_profiles(sim_type: similarity_type, external_profiles: refs)
-  File.open(output, 'w') do |f|
-    profiles_similarity.each do |pairsA, pairsB_and_values|
-      pairsB_and_values.each do |pairsB, values|
-        f.puts "#{pairsA}\t#{pairsB}\t#{values}"
-      end
-    end
-  end
-end
+def write_similarity_profile_list(output, onto_obj, similarity_type, refs):
+  profiles_similarity = onto_obj.compare_profiles(sim_type = similarity_type, external_profiles = refs)
+  with open(output, 'w') as f:
+    for profA, profB_and_sim in profiles_similarity.items():
+      for profB, sim in profB_and_sim.items(): f.write f"{profA}\t#{profB}\t#{sim}\n"
 
 def download(source, key, output):
   source_list = dict(load_tabular_file(source))
@@ -125,93 +106,70 @@ def get_ontology_file(path, source):
       raise Exception("Input ontology file not exists")
   return path
 
-def get_stats(stats)
+def get_stats(stats):
   report_stats = []
-  report_stats << ['Elements', stats[:count]]
-  report_stats << ['Elements Non Zero', stats[:countNonZero]]
-  report_stats << ['Non Zero Density', stats[:countNonZero].fdiv(stats[:count])]
-  report_stats << ['Max', stats[:max]]
-  report_stats << ['Min', stats[:min]]
-  report_stats << ['Average', stats[:average]]
-  report_stats << ['Variance', stats[:variance]]
-  report_stats << ['Standard Deviation', stats[:standardDeviation]]
-  report_stats << ['Q1', stats[:q1]]
-  report_stats << ['Median', stats[:median]]
-  report_stats << ['Q3', stats[:q3]]
+  report_stats.append(['Elements', stats['count']])
+  report_stats.append(['Elements Non Zero', stats['countNonZero']])
+  report_stats.append(['Non Zero Density', stats['countNonZero'] / stats['count']])
+  report_stats.append(['Max', stats['max']])
+  report_stats.append(['Min', stats['min']])
+  report_stats.append(['Average', stats['average']])
+  report_stats.append(['Variance', stats['variance']])
+  report_stats.append(['Standard Deviation', stats['standardDeviation']])
+  report_stats.append(['Q1', stats['q1']])
+  report_stats.append(['Median', stats['median']])
+  report_stats.append(['Q3', stats['q3']])
   return report_stats
-end
 
-def sort_terms_by_levels(terms, modifiers, ontology, all_childs)
+def sort_terms_by_levels(terms, modifiers, ontology, all_childs):
   term_levels = ontology.get_terms_levels(all_childs)
-  if modifiers.include?('a')
-    term_levels.sort!{|t1,t2| t2[1] <=> t1[1]}
-  else
-    term_levels.sort!{|t1,t2| t1[1] <=> t2[1]}
-  end
-  all_childs = term_levels.map{|t| t.first}
+  if 'a' in modifiers:
+    term_levels.sort(reverse=True)
+  else:
+    term_levels.sort()
+  all_childs = [ t[0] for t in term_levels: ]
   return all_childs, term_levels
-end
 
-  def get_childs(ontology, terms, modifiers)
-    #modifiers
-    # - a: get ancestors instead of decendants
-    # - r: get parent-child relations instead of list descendants/ancestors
-    # - hN: when list of relations, it is limited to N hops from given term
-    # - n: give terms names instead of term codes
+def get_childs(ontology, terms, modifiers):
+  #modifiers
+  # - a: get ancestors instead of decendants
+  # - r: get parent-child relations instead of list descendants/ancestors
+  # - hN: when list of relations, it is limited to N hops from given term
+  # - n: give terms names instead of term codes
+  all_childs = []
+  for term in terms:
+    childs = ontology.get_ancestors(term) if 'a' in modifiers else ontology.get_descendants(term) 
+    all_childs = list(set(all_childs) | set(childs))
+  if 'r' in modifiers:
+    relations = []
+    all_childs = list(set(all_childs) | set(terms)) # Add parents that generated child list
+    target_hops = None
+    if r"h([0-9]+)" =~ modifiers
+      target_hops = $1.to_i + 1 # take into account refernce term (parent/child) addition
+      all_childs, term_levels = sort_terms_by_levels(terms, modifiers, ontology, all_childs)
+
+    current_level = None
+    hops = 0
+    for i, term in enumerate(all_childs):
+      if target_hops != None:
+        level = term_levels[i][1]
+        if level != current_level:
+          current_level = level
+          hops +=1
+          if hops == target_hops + 1: break  # +1 take into account that we have detected a level change and we saved the last one entirely
+      
+      descendants = ontology.get_direct_ancentors(term) if modifiers.include?('a') else ontology.get_direct_descendants(term)
+      if descendants != None:
+        for desc in descendants:
+          relations.append([desc, term]) if 'a' in modifiers else relations.append([term, desc])
     all_childs = []
-    terms.each do |term|
-      if modifiers.include?('a') 
-        childs = ontology.get_ancestors(term)
-      else
-        childs = ontology.get_descendants(term)
-      end
-      all_childs = all_childs | childs
-    end
-    if modifiers.include?('r')
-      relations = []
-      all_childs = all_childs | terms # Add parents that generated child list
-      target_hops = nil
-      if /h([0-9]+)/ =~ modifiers
-        target_hops = $1.to_i + 1 # take into account refernce term (parent/child) addition
-        all_childs, term_levels = sort_terms_by_levels(terms, modifiers, ontology, all_childs)
-      end
-
-      current_level = nil
-      hops = 0
-      all_childs.each_with_index do |term, i|
-        if !target_hops.nil?
-          level = term_levels[i][1]
-          if level != current_level
-            current_level = level
-            hops +=1
-            break if hops == target_hops + 1 # +1 take into account that we have detected a level change and we saved the last one entirely
-          end
-        end
-        if modifiers.include?('a')
-          descendants = ontology.get_direct_ancentors(term)
-        else
-          descendants = ontology.get_direct_descendants(term)
-        end
-        if !descendants.nil?
-          descendants.each do |desc|
-            if modifiers.include?('a')
-              relations << [desc, term]
-            else
-              relations << [term, desc]
-            end
-          end
-        end
-      end
-      all_childs = []
-      relations.each do |rel| 
-        rel, _ = ontology.translate_ids(rel) if modifiers.include?('n')
-        all_childs << rel
-      end
-    else
-      all_childs.map!{|c| ontology.translate_id(c)} if modifiers.include?('n') 
-    end
-    return all_childs
-  end
+    for rel in relations: 
+      if modifiers.include?('n'): rel, _ = ontology.translate_ids(rel) 
+      all_childs.append(rel)
+  elif 'n' in modifiers:
+    all_childs = [ ontology.translate_id(c) for c in all_childs ]  
+  return all_childs
+end
 
 
 
@@ -316,117 +274,77 @@ if options.get('list_translate') != None
 
 if options.get('translate') == 'codes'
   profiles = {}
-  data.each do |id, terms|
-    load_value(profiles, id, terms)
-    profiles[id] = terms.split(options[:separator])
-  end
+  for info in data:
+    pr_id, terms = info
+    load_value(profiles, pr_id, terms)
+    profiles[pr_id] = terms.split(options['separator'])
   translate(ontology, 'codes', options, profiles)
   store_profiles(profiles, ontology)
-end
    
-if options[:clean_profiles]
+if options.get('clean_profiles'):
 	removed_profiles = clean_profiles(ontology.profiles, ontology, options)	
-	if !removed_profiles.nil? && !removed_profiles.empty?
-      File.open(options[:removed_path], 'w') do |f|
-          removed_profiles.each do |profile|
-              f.puts profile
-          end
-      end
-	end
-end
+	if removed_profiles != None and len(removed_profiles) > 0:
+    with open(options['removed_path'], 'w') as f:
+      for profile in removed_profiles: f.write(profile + "\n")
 
-if !options[:expand_profiles].nil?
-  ontology.expand_profiles(options[:expand_profiles], unwanted_terms: options[:unwanted_terms])
-end 
+if options.get('expand_profiles') != None:
+  ontology.expand_profiles(options['expand_profiles'], unwanted_terms = options['unwanted_terms'])
 
-if !options[:similarity].nil?
-  refs = nil
-  if !options[:reference_profiles].nil?
-    refs = load_tabular_file(options[:reference_profiles])
-    format_tabular_data(refs, options[:separator], 0, 1)
-    refs = refs.to_h
-    refs = clean_profiles(ontology.profiles, ontology, options) if options[:clean_profiles]
-    abort('Reference profiles are empty after cleaning ') if refs.nil? || refs.empty?
-  end
-  write_similarity_profile_list(options[:output_file], ontology, options[:similarity], refs)
-end 
+if options.get('similarity') != None:
+  refs = None
+  if options,get('reference_profiles') != None:
+    refs = load_tabular_file(options['reference_profiles'])
+    format_tabular_data(refs, options['separator'], 0, 1)
+    refs = dict(refs)
+    if options['clean_profiles']: refs = clean_profiles(ontology.profiles, ontology, options) 
+    if refs == None or len(refs) == 0?: raise Exception('Reference profiles are empty after cleaning ')
+  write_similarity_profile_list(options['output_file'], ontology, options['similarity'], refs)
 
 
-if options[:IC] == 'prof'
-  ontology.add_observed_terms_from_profiles
-  by_ontology, by_freq = ontology.get_profiles_resnik_dual_ICs
-  ic_file = File.basename(options[:input_file], ".*")+'_IC_onto_freq'
-  File.open(ic_file , 'w') do |file|
-    ontology.profiles.keys.each do |id|
-        file.puts([id, by_ontology[id], by_freq[id]].join("\t"))
-    end       
-  end
-elsif options[:IC] == 'ont'
-  File.open('ont_IC' , 'w') do |file|
-    ontology.each do |term|
-        file.puts "#{term}\t#{ontology.get_IC(term)}"
-    end       
-  end
-end    
+if options.get('ic') == 'prof':
+  ontology.add_observed_terms_from_profiles()
+  by_ontology, by_freq = ontology.get_profiles_resnik_dual_ICs()
+  ic_file = os.path.splittext(os.path.basename(options['input_file']))[0]+'_IC_onto_freq'
+  with open(ic_file , 'w') as file:
+    for pr_id in ontology.profiles.keys():
+    file.write("\t".join([pr_id, by_ontology[pr_id], by_freq[pr_id]] + "\n")
+elif options.get('ic') == 'ont':
+  with open('ont_IC' , 'w') as file:
+    for term in ontology.each():
+        file.write f"{term}\t{ontology.get_IC(term)}\n"
 
-if options[:translate] == 'names'
-  translate(ontology, 'names', options)  
-end
+if options.get('translate') == 'names': translate(ontology, 'names', options)  
 
-if !options[:childs].first.empty?
-  terms, modifiers = options[:childs]
+if len(options['childs'][0]) > 0:
+  terms, modifiers = options['childs']
   all_childs = get_childs(ontology, terms, modifiers)
-  all_childs.each do |ac|
-    if modifiers.include?('r')
-      puts ac.join("\t")
-    else
-      puts ac
-    end
-  end
-end
+  for ac in all_childs:
+    if 'r' in modifiers:
+      print("\t".join(ac) + "\n")
+    else:
+      puts(ac + "\n")
 
-if !options[:output_file].nil? && options[:similarity].nil?
-  File.open(options[:output_file], 'w') do |file|
-    ontology.profiles.each do |id, terms|
-      file.puts([id, terms.join("|")].join("\t"))
-    end
-  end         
-end
+if options.get('output_file') != None and options,get('similarity') == None
+  with open(options['output_file'], 'w') as file:
+    for pr_id, terms in ontology.profiles.items(): file.write("\t".join([pr_id, "|".join(terms)]) + "\n")
 
-if options[:statistics]
-  get_stats(ontology.profile_stats).each do |stat|
-    puts stat.join("\t")
-  end
-end
+if options.get('statistics'): 
+  for stat in get_stats(ontology.profile_stats): print("\t".join(stat))
 
-if options[:list_term_attributes]
-  term_attributes = ontology.list_term_attributes
-  term_attributes.each do |t_attr|
-    t_attr[0] = t_attr[0].to_s
-    puts t_attr.join("\t")
-  end
-end
+if options.get('list_term_attributes')
+  for t_attr in ontology.list_term_attributes(): print("\t".join(t_attr))
 
-if !options[:keyword].nil?
+if options.get(keyword) != None
   xref_translated = []
-  dict = ontology.dicts[:tag][options[:xref_sense]]
-  data.each do |id, prof|
+  dictio = ontology.dicts['tag'][options['xref_sense']]
+  for info in data:
+    pr_id, prof = info
     xrefs = []
-    prof.each do |t|
-	if options[:xref_sense] == :byValue
-	      query = dict[t.to_s]
-	else
-	      query = dict[t]
-	end
-      xrefs.concat(query) if !query.nil?
-    end
-    xref_translated << [id, xrefs] if !xrefs.empty?
-  end
-  File.open(options[:output_file], 'w') do |f|
-    xref_translated.each do |id, prof|
-      prof.each do |t|
-        f.puts [id, t].join("\t")
-      end
-    end
-  end
-end
+    for t in prof:
+    	query = dictio.get(t)
+      if query != None: xrefs.extend(query) 
+    if len(xrefs) > 0: xref_translated.append([pr_id, xrefs]) 
+  with open(options['output_file'], 'w') as f:
+    for pr_id, prof in xref_translated:
+      for t in prof:
+        f.write("\t".join([pr_id, t]) + "\n")
