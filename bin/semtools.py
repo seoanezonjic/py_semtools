@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.join(ROOT_PATH, '..'))
 import py_semtools # For external_data
 from py_semtools import Ontology
 
-EXTERNAL_DATA=os.path.join(os.path.dirname(py_semtools.__file__), '..', 'external_data')
+EXTERNAL_DATA=os.path.join(os.path.dirname(py_semtools.__file__), 'external_data')
 ######################################################################################
 ## METHODS
 ######################################################################################
@@ -90,9 +90,13 @@ def download(source, key, output):
       output_path = output
     else:
       file_name = key + '.obo'
-      if os.access(os.path.join(external_data, 'ontologies.txt'), os.W_OK) == 0:
+      try:
+        with open(os.path.join(external_data, file_name), 'w') as file:
+          file.write('')
+          file.close()
         output_path = os.path.join(external_data, file_name)
-      else:
+      except IOError as error: 
+        print('B')
         output_path = file_name
     if url != None:
       r = requests.get(url, allow_redirects=True)
