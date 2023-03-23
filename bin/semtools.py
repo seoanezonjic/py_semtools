@@ -6,10 +6,11 @@ import glob
 import requests
 
 ROOT_PATH=os.path.dirname(__file__)
-EXTERNAL_DATA=os.path.join(ROOT_PATH, '..', 'external_data')
 sys.path.insert(0, os.path.join(ROOT_PATH, '..'))
+import py_semtools # For external_data
 from py_semtools import Ontology
 
+EXTERNAL_DATA=os.path.join(os.path.dirname(py_semtools.__file__), '..', 'external_data')
 ######################################################################################
 ## METHODS
 ######################################################################################
