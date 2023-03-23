@@ -8,7 +8,7 @@ import requests
 ROOT_PATH=os.path.dirname(__file__)
 EXTERNAL_DATA=os.path.join(ROOT_PATH, '..', 'external_data')
 sys.path.insert(0, os.path.join(ROOT_PATH, '..'))
-from semtools import Ontology
+from py_semtools import Ontology
 
 ######################################################################################
 ## METHODS
@@ -26,9 +26,9 @@ def store_profiles(file, ontology):
   for t_id, terms in file: ontology.add_profile(t_id, terms)
 
 def load_value(hash_to_load, key, value, unique = True):
-   	query = hash_to_load.get(key)
+    query = hash_to_load.get(key)
     if query == None:
-       if type(value) not is list: value = [value]
+       if type(value)  is not list: value = [value]
        hash_to_load[key] = value
     else:
         if type(value) is list:
@@ -43,7 +43,7 @@ def load_value(hash_to_load, key, value, unique = True):
 def translate(ontology, mode, options, profiles = None):
   not_translated = {}
   if mode == 'names':
-    for pr_id, terms in ontology.profiles.items()
+    for pr_id, terms in ontology.profiles.items():
       translation, untranslated = ontology.translate_ids(terms)
       ontology.profiles[pr_id] = translation  
       if len(untranslated) > 0: not_translated[pr_id] = untranslated
@@ -58,25 +58,25 @@ def translate(ontology, mode, options, profiles = None):
           file.write("\t".join([pr_id, ";".join(terms)]) + "\n")
 
 def clean_profile(profile, ontology, options):
-	cleaned_profile = ontology.clean_profile_hard(profile, options)	
-	return cleaned_profile
+  cleaned_profile = ontology.clean_profile_hard(profile, options)	
+  return cleaned_profile
 
 def clean_profiles(profiles, ontology, options):
-	removed_profiles = []
-	for pr_id, terms in profiles.items():
-		cleaned_profile = clean_profile(terms, ontology, options)
+  removed_profiles = []
+  for pr_id, terms in profiles.items():
+    cleaned_profile = clean_profile(terms, ontology, options)
     if len(cleaned_profile) == 0:
-  		removed_profiles.append(pr_id)
+      removed_profiles.append(pr_id)
     else:
-  		profiles[pr_id] = cleaned_profile
-	for rp in removed_profiles: profiles.pop(rp)
-	return removed_profiles
+      profiles[pr_id] = cleaned_profile
+  for rp in removed_profiles: profiles.pop(rp)
+  return removed_profiles
 
 def write_similarity_profile_list(output, onto_obj, similarity_type, refs):
   profiles_similarity = onto_obj.compare_profiles(sim_type = similarity_type, external_profiles = refs)
   with open(output, 'w') as f:
     for profA, profB_and_sim in profiles_similarity.items():
-      for profB, sim in profB_and_sim.items(): f.write f"{profA}\t#{profB}\t#{sim}\n"
+      for profB, sim in profB_and_sim.items(): f.write(f"{profA}\t{profB}\t{sim}\n")
 
 def download(source, key, output):
   source_list = dict(load_tabular_file(source))
@@ -89,7 +89,7 @@ def download(source, key, output):
       output_path = output
     else:
       file_name = key + '.obo'
-      if os.access(external_data, os.W_OK) == 0:
+      if os.access(os.path.join(external_data, 'ontologies.txt'), os.W_OK) == 0:
         output_path = os.path.join(external_data, file_name)
       else:
         output_path = file_name
@@ -100,9 +100,9 @@ def download(source, key, output):
 def get_ontology_file(path, source):
   if not os.path.exists(path):
     ont_index = dict(load_tabular_file(source))
-    if ont_index.get(path) != None
+    if ont_index.get(path) != None:
       path = os.path.join(os.path.dirname(source), path + '.obo')
-    else
+    else:
       raise Exception("Input ontology file not exists")
   return path
 
@@ -127,7 +127,7 @@ def sort_terms_by_levels(terms, modifiers, ontology, all_childs):
     term_levels.sort(reverse=True)
   else:
     term_levels.sort()
-  all_childs = [ t[0] for t in term_levels: ]
+  all_childs = [ t[0] for t in term_levels ]
   return all_childs, term_levels
 
 def get_childs(ontology, terms, modifiers):
@@ -144,8 +144,9 @@ def get_childs(ontology, terms, modifiers):
     relations = []
     all_childs = list(set(all_childs) | set(terms)) # Add parents that generated child list
     target_hops = None
-    if r"h([0-9]+)" =~ modifiers
-      target_hops = $1.to_i + 1 # take into account refernce term (parent/child) addition
+    matches = re.search(r"h([0-9]+)", modifiers) 
+    if matches:
+      target_hops = int(matches.group(1)) + 1 # take into account refernce term (parent/child) addition
       all_childs, term_levels = sort_terms_by_levels(terms, modifiers, ontology, all_childs)
 
     current_level = None
@@ -158,18 +159,17 @@ def get_childs(ontology, terms, modifiers):
           hops +=1
           if hops == target_hops + 1: break  # +1 take into account that we have detected a level change and we saved the last one entirely
       
-      descendants = ontology.get_direct_ancentors(term) if modifiers.include?('a') else ontology.get_direct_descendants(term)
+      descendants = ontology.get_direct_ancentors(term) if 'a' in modifiers else ontology.get_direct_descendants(term)
       if descendants != None:
         for desc in descendants:
           relations.append([desc, term]) if 'a' in modifiers else relations.append([term, desc])
     all_childs = []
     for rel in relations: 
-      if modifiers.include?('n'): rel, _ = ontology.translate_ids(rel) 
+      if 'n' in modifiers: rel, _ = ontology.translate_ids(rel) 
       all_childs.append(rel)
   elif 'n' in modifiers:
     all_childs = [ ontology.translate_id(c) for c in all_childs ]  
   return all_childs
-end
 
 
 
@@ -254,6 +254,7 @@ if options.get('ontology_file') != None:
 extra_dicts = []
 if options.get('keyword') != None: extra_dicts.append(['xref', {'select_regex': f"({options['keyword']})", 'store_tag': 'tag', 'multiterm': True}]) 
 ontology = Ontology(file = options['ontology_file'], load_file = True, extra_dicts = extra_dicts)
+ontology.precompute()
 
 if options['root'] != None: Ontology.mutate(options['root'], ontology, clone = False)  # TODO fix method and convert in class method
 
@@ -263,16 +264,16 @@ if options['input_file'] != None:
     format_tabular_data(data, options.get('separator'), options.get('subject_column'), options.get('annotations_column'))
     if options.get('translate') != 'codes' and options.get('keyword') == None: store_profiles(data, ontology) 
 
-if options.get('list_translate') != None
+if options.get('list_translate') != None:
   for term in data:
     if options['list_translate'] == 'names':
       translation, untranslated = ontology.translate_ids(term)
     elif options['list_translate'] == 'codes':
       translation, untranslated = ontology.translate_names(term)
-    print f"{term[0]}\t{ '-' if len(translation) == 0 else translation[0]}"
+    print(f"{term[0]}\t{ '-' if len(translation) == 0 else translation[0]}")
   exit()
 
-if options.get('translate') == 'codes'
+if options.get('translate') == 'codes':
   profiles = {}
   for info in data:
     pr_id, terms = info
@@ -282,8 +283,8 @@ if options.get('translate') == 'codes'
   store_profiles(profiles, ontology)
    
 if options.get('clean_profiles'):
-	removed_profiles = clean_profiles(ontology.profiles, ontology, options)	
-	if removed_profiles != None and len(removed_profiles) > 0:
+  removed_profiles = clean_profiles(ontology.profiles, ontology, options)	
+  if removed_profiles != None and len(removed_profiles) > 0:
     with open(options['removed_path'], 'w') as f:
       for profile in removed_profiles: f.write(profile + "\n")
 
@@ -292,12 +293,12 @@ if options.get('expand_profiles') != None:
 
 if options.get('similarity') != None:
   refs = None
-  if options,get('reference_profiles') != None:
+  if options.get('reference_profiles') != None:
     refs = load_tabular_file(options['reference_profiles'])
     format_tabular_data(refs, options['separator'], 0, 1)
     refs = dict(refs)
     if options['clean_profiles']: refs = clean_profiles(ontology.profiles, ontology, options) 
-    if refs == None or len(refs) == 0?: raise Exception('Reference profiles are empty after cleaning ')
+    if refs == None or len(refs) == 0: raise Exception('Reference profiles are empty after cleaning ')
   write_similarity_profile_list(options['output_file'], ontology, options['similarity'], refs)
 
 
@@ -307,11 +308,11 @@ if options.get('ic') == 'prof':
   ic_file = os.path.splittext(os.path.basename(options['input_file']))[0]+'_IC_onto_freq'
   with open(ic_file , 'w') as file:
     for pr_id in ontology.profiles.keys():
-    file.write("\t".join([pr_id, by_ontology[pr_id], by_freq[pr_id]] + "\n")
+      file.write("\t".join([pr_id, by_ontology[pr_id], by_freq[pr_id]]) + "\n")
 elif options.get('ic') == 'ont':
   with open('ont_IC' , 'w') as file:
     for term in ontology.each():
-        file.write f"{term}\t{ontology.get_IC(term)}\n"
+        file.write(f"{term}\t{ontology.get_IC(term)}\n")
 
 if options.get('translate') == 'names': translate(ontology, 'names', options)  
 
@@ -324,24 +325,24 @@ if len(options['childs'][0]) > 0:
     else:
       puts(ac + "\n")
 
-if options.get('output_file') != None and options,get('similarity') == None
+if options.get('output_file') != None and options.get('similarity') == None:
   with open(options['output_file'], 'w') as file:
     for pr_id, terms in ontology.profiles.items(): file.write("\t".join([pr_id, "|".join(terms)]) + "\n")
 
 if options.get('statistics'): 
   for stat in get_stats(ontology.profile_stats): print("\t".join(stat))
 
-if options.get('list_term_attributes')
+if options.get('list_term_attributes'):
   for t_attr in ontology.list_term_attributes(): print("\t".join(t_attr))
 
-if options.get(keyword) != None
+if options.get('keyword') != None:
   xref_translated = []
   dictio = ontology.dicts['tag'][options['xref_sense']]
   for info in data:
     pr_id, prof = info
     xrefs = []
     for t in prof:
-    	query = dictio.get(t)
+      query = dictio.get(t)
       if query != None: xrefs.extend(query) 
     if len(xrefs) > 0: xref_translated.append([pr_id, xrefs]) 
   with open(options['output_file'], 'w') as f:

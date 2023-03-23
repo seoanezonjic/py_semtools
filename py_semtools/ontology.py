@@ -981,18 +981,20 @@ class Ontology:
         for curr_id, profile_A in  profiles_A.items():
             for pr_id, profile_B in profiles_B.items():
                 for term_A in profile_A:
-                    for term_B in profile_B:
-                        term_A, term_B = sorted([term_A, term_B])
-                        self.add2nestHash(pair_index, term_A, term_B, True)
+                    for term_B in profile_B:                        
+                        t_A, t_B = sorted([term_A, term_B])
+                        self.add2nestHash(pair_index, t_A, t_B, True)
         return pair_index
 
     def get_mica_index_from_profiles(self, pair_index, sim_type = 'resnik', ic_type = 'resnik', lca_index = True):
+        count = 0
         for tA, tB_data in pair_index.items():
             for tB in  tB_data.keys():
                 value = self.get_similarity(tA, tB, sim_type = sim_type, ic_type = ic_type, lca_index = lca_index)
                 if value == None: value = True  # We use true to save that the operation was made but there is not mica value
                 self.add2nestHash(self.mica_index, tA, tB, value)
                 self.add2nestHash(self.mica_index, tB, tA, value)
+                count += 1
 
     # Compare internal stored profiles against another set of profiles. If an external set is not provided, internal profiles will be compared with itself 
     # ===== Parameters

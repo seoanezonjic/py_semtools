@@ -39,6 +39,6 @@ setup(
     packages=["py_semtools"],
     include_package_data=True,
     scripts=['bin/semtools.py'],
-    install_requires=[]
+    install_requires=['requests']
 
 )
