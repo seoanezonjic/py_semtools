@@ -5,7 +5,7 @@ import copy
 import warnings
 from collections import defaultdict
 
-from py_semtools.parsers.oboparser import OboParser
+from py_semtools import OboParser
 
 class Ontology:
     allowed_calcs = {'ics': ['resnik', 'resnik_observed', 'seco', 'zhou', 'sanchez'], 'sims': ['resnik', 'lin', 'jiang_conrath']}

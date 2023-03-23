@@ -2,7 +2,7 @@ import sys
 import os
 import re
 import warnings
-from py_semtools.parsers.file_parser import FileParser
+from py_semtools import FileParser
 class OboParser(FileParser):
 
     #############################################
