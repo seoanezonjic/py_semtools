@@ -248,6 +248,13 @@ class TestOBOFunctionalities(unittest.TestCase):
         self.assertEqual(0.0, self.hierarchical.get_similarity("Parental", "Parental")) # SIM
         self.assertEqual(0.0, self.hierarchical.get_similarity("Parental", "Child2"))
         self.assertEqual(-(math.log10(1/2.0)), self.hierarchical.get_similarity("Child2", "Child2"))
+        self.assertEqual(0.0, self.hierarchical.get_similarity("Parental", "Child2",sim_type="lin"))
+        self.assertEqual(1, self.hierarchical.get_similarity("Parental", "Parental",sim_type="lin"))
+        self.assertEqual(1, self.hierarchical.get_similarity("Child2", "Child2",sim_type="lin"))
+        self.assertEqual((-math.log10(1/2.0) + 0) - (2.0 * 0), self.hierarchical.get_similarity("Parental", "Child2",sim_type="jiang_conrath"))
+        self.assertEqual((0+0) - (2.0 * 0), self.hierarchical.get_similarity("Parental", "Parental",sim_type="jiang_conrath"))
+        self.assertEqual( (-math.log10(1/2.0) + -math.log10(1/2.0)) - (2.0 * -(math.log10(1/2.0))), 
+                            self.hierarchical.get_similarity("Child2", "Child2",sim_type="jiang_conrath"))
 
 
     # Checking valid terms
@@ -421,10 +428,10 @@ class TestOBOFunctionalities(unittest.TestCase):
         self.assertEqual([2, 2, 2, 1], self.hierarchical.get_profiles_sizes()) # Check metadata
         self.assertEqual(round(7 /4.0, 4), self.hierarchical.get_profiles_mean_size())
         self.assertEqual({"average": 1.75, 
-                      "variance": 3.25,
-                      "standardDeviation": math.sqrt(3.25), 
+                      "variance": 0.1875,
+                      "standardDeviation": math.sqrt(0.1875), 
                       "max": 2, "min": 1, "count": 4, "countNonZero": 4, 
-                      "q1": 1.5, "median": 2.0, "q3": 2.0}, self.hierarchical.profile_stats)
+                      "q1": 1.75, "median": 2.0, "q3": 2.0}, self.hierarchical.profile_stats())
         self.assertEqual(1, self.hierarchical.get_profile_length_at_percentile(0, increasing_sort= True))
         self.assertEqual(2, self.hierarchical.get_profile_length_at_percentile(2.0 / (4 - 1) * 100, increasing_sort= True))
         self.assertEqual(2, self.hierarchical.get_profile_length_at_percentile(3.0 / (4 - 1) * 100, increasing_sort= True))

@@ -4,6 +4,7 @@ import sys
 import copy
 import warnings
 import json
+import numpy as np
 from collections import defaultdict
 
 from py_semtools import OboParser
@@ -444,9 +445,12 @@ class Ontology:
                 case 'resnik':
                     sim = sim_res
                 case 'lin':
-                    sim = (2.0 * sim_res) / (self.get_IC(termA, sim_type=ic_type) + self.get_IC(termB, sim_type=ic_type))
+                    if termA == termB:
+                        sim = 1
+                    else:
+                        sim = (2.0 * sim_res) / (self.get_IC(termA, ic_type=ic_type) + self.get_IC(termB, ic_type=ic_type))
                 case 'jiang_conrath': # This is not a similarity, this is a disimilarity (distance)
-                    sim = (self.get_IC(termA, sim_type=ic_type) + self.get_IC(termB, sim_type=ic_type)) - (2.0 * sim_res)
+                    sim = (self.get_IC(termA, ic_type=ic_type) + self.get_IC(termB, ic_type=ic_type)) - (2.0 * sim_res)
         return sim
 
     # Checking valid terms
@@ -927,27 +931,20 @@ class Ontology:
     # Description of profile size
     ####################################
 
-    # def profile_stats # FRED to migrate
-    #   stats = Hash.new(0)
-    #   data = get_profiles_sizes
-    #   stats[:average] = data.sum().fdiv(data.size)
-    #   sum_devs = data.sum{|element| (element - stats[:avg]) ** 2}
-    #   stats[:variance] = sum_devs.fdiv(data.size)
-    #   stats[:standardDeviation] = stats[:variance] ** 0.5
-    #   stats[:max] = data.max
-    #   stats[:min] = data.min
-
-    #   stats[:count] = data.size
-    #   data.each do |value|
-    #     stats[:countNonZero] += 1 if value != 0
-    #   end
-
-    #   stats[:q1] = data.get_quantiles(0.25)
-    #   stats[:median] = data.get_quantiles(0.5)
-    #   stats[:q3] = data.get_quantiles(0.75)
-    #   return stats
-
-    # end
+    def profile_stats(self):
+        stats = {}
+        data = np.array(self.get_profiles_sizes())
+        stats["average"] = np.mean(data)
+        stats["variance"] = np.var(data)
+        stats["standardDeviation"] = np.std(data)
+        stats["max"] = data.max()
+        stats["min"] = data.min()
+        stats["count"] = len(data)
+        stats["countNonZero"] = len([non_zero_element for non_zero_element in data if non_zero_element != 0])
+        stats["q1"] = np.quantile(data, 0.25)
+        stats["median"] = np.quantile(data, 0.5)
+        stats["q3"] = np.quantile(data, 0.75)
+        return stats
 
     # ===== Returns 
     # mean size of stored profiles
@@ -956,8 +953,8 @@ class Ontology:
     # ===== Returns 
     # mean size of stored profiles
     def get_profiles_mean_size(self, round_digits = 4):
-        sizes = self.get_profiles_sizes()
-        return round(sum(sizes) / len(self.profiles), round_digits)
+        sizes = np.array(self.get_profiles_sizes())
+        return round(np.mean(sizes),round_digits)
 
     # ===== Returns 
     # an array of sizes for all stored profiles
@@ -972,13 +969,10 @@ class Ontology:
     # +increasing_sort+:: flag to indicate if sizes order must be increasing. Default: false
     # ===== Returns 
     # values assigned to percentile asked
-    def get_profile_length_at_percentile(self, perc=50, increasing_sort = False): # FRED: wrapper (analizando posible discordancia) Ojear el cohort
-        prof_lengths = sorted(self.get_profiles_sizes)
-        if not increasing_sort: prof_lengths.reverse()
-        n_profiles = len(prof_lengths) 
-        percentile_index = round((perc * (n_profiles - 1)) / 100 - 0.5) # Take length which not overpass percentile selected
-        if percentile_index < 0: percentile_index = 0  # Special case (caused by literal calc)
-        return prof_lengths[percentile_index]
+    def get_profile_length_at_percentile(self, perc=50, increasing_sort = False): # TODO: Ojear el cohort
+        sizes = np.array(self.get_profiles_sizes())    
+        if not increasing_sort: perc = 100 - perc    
+        return np.quantile(sizes,perc/100)
 
     # IC data
     ####################################
