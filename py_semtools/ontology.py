@@ -3,6 +3,7 @@ import os
 import sys
 import copy
 import warnings
+import json
 from collections import defaultdict
 
 from py_semtools import OboParser
@@ -26,6 +27,7 @@ class Ontology:
         self.items = {}
         self.term_paths = {}
         self.reroot = False
+        if file != None: load_file = True
         if load_file:
             fformat = file_format
             if fformat == None and file != None: fformat = os.path.splitext(file)[1]
@@ -35,7 +37,7 @@ class Ontology:
                 JsonParser.load(self, file, build = build)
             elif fformat != None:
                 warnings.warn('Format not allowed. Loading process will not be performed')
-            if build: self.precompute 
+            if build: self.precompute()
 
     #############################################
     # GENERATE METADATA FOR ALL TERMS
@@ -516,7 +518,69 @@ class Ontology:
             for pr_id in ids: self.add2hash(new_profiles, pr_id, term)
         self.profiles = new_profiles        
 
-    #############################################
+ # Expanding items
+    ####################################
+
+    # This method computes childs similarity and impute items to it parentals. To do that Item keys must be this ontology allowed terms.
+    # Similarity will be calculated by text extact similarity unless an ontology object will be provided. In this case, MICAs will be used
+    # ===== Parameters
+    # +ontology+:: (Optional) ontology object which items given belongs
+    # +minimum_childs+:: minimum of childs needed to infer relations to parental. Default: 2
+    # +clean_profiles+:: if true, clena_profiles ontology method will be used over inferred profiles. Only if an ontology object is provided
+    # ===== Returns
+    # void and update items object
+    def expand_items_to_parentals(self, ontology = None, minimum_childs = 2, clean_profiles = True):
+        targetKeys = self.expand_profile_with_parents(list(self.items.keys()))
+        terms_per_level = self.list_terms_per_level(targetKeys)        
+        terms_per_level =  sorted(list(map(list, terms_per_level.items())), key= lambda e: e[0]) # Obtain sorted levels 
+        terms_per_level.pop() # Leaves are not expandable # FRED: Thats comment could be not true
+
+        for level_terms in reversed(terms_per_level): # Expand from leaves to roots
+            lvl, terms = level_terms
+            for term in terms:
+                childs = [ t for t in self.get_descendants(term) if t in self.items ] # Get child with items
+                if len(childs) < minimum_childs: continue
+                propagated_item_count = defaultdict(lambda: 0)                
+                if ontology == None: # Count how many times is presented an item in childs
+                    for child in childs: 
+                        for i in self.items[child]: propagated_item_count[i] += 1
+                else: # Count take into account similarity between terms in other ontology. Not pretty clear the full logic
+                    while len(childs) > 1: 
+                        curr_term = childs.pop(0)
+                        for child in childs:
+                            maxmica_counts = defaultdict(lambda: 0)
+                            curr_items = self.items[curr_term]
+                            child_items = self.items[child]
+                            for item in curr_items:
+                                maxmica = ontology.get_maxmica_term2profile(item, child_items)
+                                maxmica_counts[maxmica[0]] += 1
+                            for item in child_items:
+                                maxmica = ontology.get_maxmica_term2profile(item, curr_items)
+                                maxmica_counts[maxmica[0]] += 1
+                            for t, freq in maxmica_counts.items(): #TODO: Maybe need Division by 2 due to the calculation of mica two times  but test fails.
+                                if freq >= 2: propagated_item_count[t] += freq
+                            # FRED: Maybe for the childs.shift there is uniqueness
+
+                propagated_items = [ k for k,v in propagated_item_count.items() if v >= minimum_childs ]
+                if len(propagated_items) > 0:
+                    query = self.items.get(term)
+                    if query == None:
+                        self.items[term] = propagated_items
+                    else:
+                        terms = self.union(self.items[term], propagated_items)
+                        if clean_profiles and ontology != None: terms = ontology.clean_profile(terms)
+                        self.items[term] = terms
+    
+    def list_terms_per_level_from_items(self):
+        return self.list_terms_per_level(list(self.items.keys()))
+ 
+    def list_terms_per_level(self, terms):
+        terms_levels = {}
+        for term in terms: 
+          level = self.get_term_level(term)
+          self.add2hash(terms_levels, level, term)
+        return terms_levels
+
     # PROFILE EXTERNAL METHODS
     #############################################
 
@@ -1022,9 +1086,151 @@ class Ontology:
                 self.add2nestHash(profiles_similarity, curr_id, t_id, value)
         return profiles_similarity
 
+    # specifity_index related methods
+    ####################################
+
+    # Return ontology levels from profile terms
+    # ===== Returns 
+    # hash of term levels (Key: level; Value: array of term IDs)
+    def get_ontology_levels_from_profiles(self, uniq = True):
+        profiles_terms = [ v for vals in self.profiles.values() for v in vals ]
+        if uniq: profiles_terms = set(profiles_terms) 
+        term_freqs_byProfile = defaultdict( lambda: 0)
+        for term in profiles_terms: term_freqs_byProfile[term] += 1 
+        levels_filtered = {}
+        terms_levels = self.dicts['level']['byValue']
+        for term, count in term_freqs_byProfile.items():
+            level = terms_levels[term]
+            term_repeat = [term] * count
+            query = levels_filtered.get(level)
+            if query == None:
+                levels_filtered[level] = term_repeat
+            else:
+                query.extend(term_repeat)
+        return levels_filtered
+
+    def get_profile_ontology_distribution_tables(self):
+      cohort_ontology_levels = self.get_ontology_levels_from_profiles(uniq=False)
+      uniq_cohort_ontology_levels = self.get_ontology_levels_from_profiles()
+      ontology_levels = self.get_ontology_levels()
+      total_ontology_terms = len([ v for vals in ontology_levels.values() for v in vals ])
+      total_cohort_terms = len([ v for vals in cohort_ontology_levels.values() for v in vals ])
+      total_uniq_cohort_terms =len([ v for vals in uniq_cohort_ontology_levels.values() for v in vals ])
+
+      distribution_ontology_levels = []
+      distribution_percentage = []
+      for level, terms in ontology_levels.items():
+        cohort_terms = cohort_ontology_levels.get(level)
+        uniq_cohort_terms = uniq_cohort_ontology_levels.get(level)
+        if cohort_terms == None or uniq_cohort_terms == None:
+          num = 0
+          u_num = 0
+        else:
+          num = len(cohort_terms)
+          u_num = len(uniq_cohort_terms)
+        distribution_ontology_levels.append([level, len(terms), num])
+        distribution_percentage.append([
+          level,
+          round(len(terms) / total_ontology_terms*100, 3),
+          round(num / total_cohort_terms*100, 3),
+          round(u_num / total_uniq_cohort_terms*100, 3)
+        ])
+      distribution_ontology_levels.sort(key = lambda l: l[0])
+      distribution_percentage.sort(key = lambda x: x[0])
+      return distribution_ontology_levels, distribution_percentage
+
+    def get_weigthed_level_contribution(self, section, maxL, nLevels):
+        accumulated_weigthed_diffL = 0
+        for s in section:
+            level, diff = s
+            weightL = maxL - level 
+            if weightL >= 0:
+                weightL += 1
+            else:
+                weightL = abs(weightL)
+            accumulated_weigthed_diffL += diff * weightL
+        weigthed_contribution = accumulated_weigthed_diffL / nLevels
+        return weigthed_contribution
+
+    def get_dataset_specifity_index(self, mode):
+        ontology_levels, distribution_percentage = self.get_profile_ontology_distribution_tables()
+        if mode == 'uniq':
+            observed_distribution = 3
+        elif mode == 'weigthed':
+            observed_distribution = 2
+        max_terms = max([ row[1] for row in distribution_percentage ])
+        maxL = None
+        diffL = []
+        for level_info in distribution_percentage:
+            if level_info[1] == max_terms: maxL = level_info[0]
+            diffL.append([level_info[0], level_info[observed_distribution] - level_info[1]]) 
+        diffL = [ dL for dL in diffL if dL[-1] > 0 ]
+        highSection = [ dL for dL in diffL if dL[0] > maxL ]
+        lowSection = [ dL for dL in diffL if dL[0] <= maxL ]
+        dsi = None
+        if len(highSection) == 0:
+            dsi = 0
+        else:
+            hss = self.get_weigthed_level_contribution(highSection, maxL, len(ontology_levels) - maxL)
+            lss = self.get_weigthed_level_contribution(lowSection, maxL, maxL)
+            dsi = hss / lss
+        return dsi
+ 
     ########################################
     ## GENERAL ONTOLOGY METHODS
     ########################################
+    def __eq__(self, other):
+        if isinstance(other, Ontology):
+            res = self.terms == other.terms and \
+                self.ancestors_index == other.ancestors_index and \
+                self.alternatives_index == other.alternatives_index and \
+                self.structureType == other.structureType and \
+                self.ics == other.ics and \
+                self.meta == other.meta and \
+                self.dicts == other.dicts and \
+                self.profiles == other.profiles and \
+                len(set(self.items.keys()) - set(other.items.keys())) == 0 and \
+                self.items == other.items and \
+                self.term_paths == other.term_paths and \
+                self.max_freqs == other.max_freqs
+        else:
+            res = False
+        return res
+
+    def clone(self):
+        copy = Ontology()
+        copy.terms = copy.copy(self.terms)
+        copy.ancestors_index = copy.copy(self.ancestors_index)
+        copy.descendants_index = copy.copy(self.descendants_index)
+        copy.alternatives_index = copy.copy(self.alternatives_index)
+        copy.structureType = copy.copy(self.structureType)
+        copy.ics = copy.copy(self.ics)
+        copy.meta = copy.copy(self.meta)
+        copy.dicts = copy.copy(self.dicts)
+        copy.profiles = copy.copy(self.profiles)
+        copy.items = copy.copy(self.items)
+        copy.term_paths = copy.copy(self.term_paths)
+        copy.max_freqs = copy.copy(self.max_freqs)
+        return copy
+
+    # Exports an OBO_Handler object in json format
+    # ===== Parameters
+    # +file+:: where info will be stored
+    def write(self, file):
+        # Take object stored info
+        obj_info = {'terms': self.terms,
+                    'ancestors_index': self.ancestors_index,
+                    'descendants_index': self.descendants_index,
+                    'alternatives_index': self.alternatives_index,
+                    'structureType': self.structureType,
+                    'ics': self.ics,
+                    'meta': self.meta,
+                    'max_freqs': self.max_freqs,
+                    'dicts': self.dicts,
+                    'profiles': self.profiles,
+                    'items': self.items,
+                    'term_paths': self.term_paths}
+        with open(file, "w") as f: f.write(json.dumps(obj_info))
 
     def each(self, att = False):
         if len(self.terms) == 0: warnings.warn('terms empty')
@@ -1034,6 +1240,19 @@ class Ontology:
             else:
                 yield(t_id)    
 
+    def get_root(self): 
+        roots = [ term for term in self.each() if self.ancestors_index.get(term) == None]
+        return roots
+
+    def list_term_attributes(self):
+        terms = [ [term, self.translate_id(term), self.get_term_level(term)] for term in self.each()]
+        return terms
+
+    # Gets ontology levels calculated
+    # ===== Returns 
+    # ontology levels calculated
+    def get_ontology_levels(self):
+        return copy.copy(self.dicts['level']['byTerm']) # By term, in this case, is Key::Level, Value::Terms
 
     ########################################
     ## SUPPORT METHODS

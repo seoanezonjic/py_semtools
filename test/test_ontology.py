@@ -4,6 +4,7 @@
 
 import unittest
 import os
+import sys
 import math
 from py_semtools import Ontology#, JsonParser
 
@@ -106,6 +107,7 @@ class TestOBOFunctionalities(unittest.TestCase):
     #################################
 
     def test_export_import(self):
+        self.hierarchical.precompute()
         # Export/import
         self.hierarchical.write(os.path.join(DATA_TEST_PATH, "testjson.json"))
         obo = Ontology(file= os.path.join(DATA_TEST_PATH, "testjson.json"), build= False)
@@ -488,8 +490,8 @@ class TestOBOFunctionalities(unittest.TestCase):
     
     def test_specificity_index(self):
         self.hierarchical.load_profiles({"A": ["Child2"], "B": ["Parental"],"C": ["Child2", "Parental"]}, calc_metadata= False, substitute= False)
-        self.assertEqual([[[1, 1, 2], [2, 1, 2]], [[1, 50.0, 50.0, 50.0], [2, 50.0, 50.0, 50.0]]], self.hierarchical.get_profile_ontology_distribution_tables())
-        self.assertEqual(0.967, self.hierarchical.get_weigthed_level_contribution([[1,0.5],[2,0.7]],3,3).round(3))
+        self.assertEqual(([[1, 1, 2], [2, 1, 2]], [[1, 50.0, 50.0, 50.0], [2, 50.0, 50.0, 50.0]]), self.hierarchical.get_profile_ontology_distribution_tables())
+        self.assertEqual(0.967, round(self.hierarchical.get_weigthed_level_contribution([[1,0.5],[2,0.7]],3,3), 3))
         
         enrichment_hierarchical2 = Ontology(file= os.path.join(DATA_TEST_PATH, "enrichment_ontology2.obo"), load_file= True)
         enrichment_hierarchical2.load_profiles({
@@ -571,6 +573,7 @@ class TestOBOFunctionalities(unittest.TestCase):
     #################################
 
     def test_auxiliar_methods(self):
+        self.hierarchical.precompute()
         iteration_with_custom_each = []
         #### TODO: ASK PEDRO ABOUT THE EACH METHOD OF THE HIERARCHICAL CLASS (the att parameter) and how it will be migrated in Python
         for (iid, tags) in self.hierarchical.each(att=True):
