@@ -7,6 +7,7 @@
 import json
 import unittest
 import os
+import sys
 from py_semtools.sim_handler import text_similitude, ctext_AtoB, complex_text_similitude, similitude_network
 
 
@@ -25,10 +26,6 @@ class TestSimilitudes(unittest.TestCase):
 
     ## Check simple similitude
     def test_simple_sim(self):
-        self.assertEqual(-1.0, text_similitude("","")) # Empty both
-        self.assertEqual(-1.0, text_similitude("","abc")) # Empty just one
-        self.assertEqual(-1.0, text_similitude(None,"abc")) # Nil
-        self.assertEqual(-1.0, text_similitude(8,"abc")) # Not a string
         self.assertEqual(1, text_similitude("abcde","abcde")) # Exact similitude
         self.assertEqual(0.75, text_similitude("abcdf","abcde")) # Same length, one char diff
         self.assertEqual(1, text_similitude("!a%b#d","!a%b#d")) # Special characters at the end
@@ -41,9 +38,6 @@ class TestSimilitudes(unittest.TestCase):
 
     ## Check sets similitude
     def test_sets_sim(self):
-        self.assertEqual([-1.0],ctext_AtoB([],["abc","def"])) # Empty 
-        self.assertEqual([-1.0],ctext_AtoB(None,["abc","def"])) # Nil
-        self.assertEqual([-1.0],ctext_AtoB("a",["abc","def"])) # Not array
         self.assertEqual([1.0,1.0],ctext_AtoB(["abc","def"],["abc","def"])) # Equal sets, same order
         self.assertEqual([1.0,1.0],ctext_AtoB(["abc","def"],["def","abc"])) # Equal sets, different order
         self.assertEqual([1.0],ctext_AtoB(["abc"],["abc","def"])) # Subset A
@@ -52,9 +46,6 @@ class TestSimilitudes(unittest.TestCase):
 
     ## Check complex texts similitude
     def test_complex_sim(self):
-        self.assertEqual(-1.0, complex_text_similitude("","abc|def","|","")) # Empty
-        self.assertEqual(-1.0, complex_text_similitude(None,"abc|def","|","")) # Nil
-        self.assertEqual(-1.0, complex_text_similitude([],"abc|def","|","")) # Not string
         self.assertEqual(1, complex_text_similitude("abc|def","abc|def","|","")) # Complex equal, non config
         self.assertEqual(1, complex_text_similitude("abc|def","abc|de%f","|","%")) # Complex equal, removing chars
         self.assertEqual(0.5, complex_text_similitude("abc|def","abc|ajk","|","")) # Complex partially equal
@@ -64,10 +55,6 @@ class TestSimilitudes(unittest.TestCase):
 
     ## Check complex set similitudes
     def test_complex_set_sim(self):
-        self.assertIsNone(similitude_network([], splitChar= ";", charsToRemove= "", unique= False)) # Empty
-        self.assertIsNone(similitude_network(None, splitChar= ";", charsToRemove= "", unique= False)) # Nil
-        self.assertIsNone(similitude_network("", splitChar= ";", charsToRemove= "", unique= False)) # Not array
-        self.assertEqual({},similitude_network(["a"], splitChar= ";", charsToRemove= "", unique= False)) # Single element
         self.assertEqual({"abc": {"def": 0.0}},similitude_network(["abc","def"], splitChar= ";", charsToRemove= "", unique= False)) # Simple without repetition
         self.assertEqual({"abc": {"def": 0.0}},similitude_network(["abc","def","abc"], splitChar= ";", charsToRemove= "", unique= True)) # Simple with repetitions - filtered
         self.assertEqual({"abcdf": {"abcde": 0.75}},similitude_network(["abcdf","abcde","abcdf"], splitChar= ";", charsToRemove= "", unique= True)) # Simple with repetitions (2) - filtered

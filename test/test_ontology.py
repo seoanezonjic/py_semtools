@@ -6,7 +6,7 @@ import unittest
 import os
 import sys
 import math
-from py_semtools import Ontology#, JsonParser
+from py_semtools import Ontology, JsonParser
 
 ROOT_PATH = os.path.dirname(__file__)
 DATA_TEST_PATH = os.path.join(ROOT_PATH, 'data')
