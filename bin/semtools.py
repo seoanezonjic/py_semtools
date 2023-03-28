@@ -326,9 +326,9 @@ if len(options['childs'][0]) > 0:
   all_childs = get_childs(ontology, terms, modifiers)
   for ac in all_childs:
     if 'r' in modifiers:
-      print("\t".join(ac) + "\n")
+      print("\t".join(ac))
     else:
-      puts(ac + "\n")
+      print(ac)
 
 if options.get('output_file') != None and options.get('similarity') == None:
   with open(options['output_file'], 'w') as file:
