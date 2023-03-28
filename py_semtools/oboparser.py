@@ -385,7 +385,7 @@ class OboParser(FileParser):
                     if checked == None:
                         ref = t
                     else:
-                        if checked != t and byValue[checked] == None: byValue[checked] = byValue.pop(t)  # Update in byValue
+                        if checked != t and byValue.get(checked) == None: byValue[checked] = byValue.pop(t)  # Update in byValue
                         ref = checked
                     corrected_references.append(ref)
                 byTerm[term] = list(set(corrected_references))
