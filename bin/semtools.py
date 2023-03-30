@@ -195,13 +195,13 @@ def childs(string):
 parser = argparse.ArgumentParser(description='Perform Ontology driven analysis ')
 
 parser.add_argument("-d", "--download", dest="download", default= None, 
-          help="Download obo file from official resource. MONDO, GO and HPO are possible values.")
+          help="Download obo file from an official resource. MONDO, GO and HPO are possible values.")
 parser.add_argument("-i", "--input_file", dest="input_file", default= None, 
           help="Filepath of profile data")
 parser.add_argument("-o", "--output_file", dest="output_file", default= None, 
           help="Output filepath")
 parser.add_argument("-I", "--IC", dest="ic", default= None, 
-          help="Get IC. 'prof' for stored profiles or 'ont' for terms in ontology")
+          help="Get the information content (IC) values: 'prof' for stored profiles or 'ont' for terms in ontology")
 parser.add_argument("-O", "--ontology_file", dest="ontology_file", default= None, 
           help="Path to ontology file")
 parser.add_argument("-T", "--term_filter", dest="term_filter", default= None, 
@@ -217,7 +217,7 @@ parser.add_argument('-c', "--clean_profiles", dest="clean_profiles", default= Fa
 parser.add_argument('-r', "--removed_path", dest="removed_path", default= 'rejected_profs', 
           help="Desired path to write removed profiles file.")
 parser.add_argument('-u', "--untranslated_path", dest="untranslated_path", default= None, 
-          help="Desired path to write removed profiles file.")
+          help="Desired path to write untranslated profiles file.")
 parser.add_argument('-k', "--keyword", dest="keyword", default= None, 
           help="regex used to get xref terms in the ontology file.")
 parser.add_argument('-e', "--expand_profiles", dest="expand_profiles", default= None, 
