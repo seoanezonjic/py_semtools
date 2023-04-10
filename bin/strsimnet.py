@@ -1,6 +1,5 @@
-#! /usr/bin/env ruby
-
 #! /usr/bin/env python
+
 import argparse
 import sys
 import os
@@ -42,7 +41,7 @@ parser.add_argument("-r", "--remove_chars", dest="rm_char", default="",
           help="Chars to be excluded from comparissons.")
 parser.add_argument("-o", "--output_file", dest="output_file", default= None, 
           help="Output similitudes file.")
-opts = parser.parse_args()
+options = parser.parse_args()
 
 #########################################################
 # MAIN
@@ -58,5 +57,5 @@ similitudes_AllVsAll = similitude_network(texts2compare, charsToRemove = options
 # Iter and store
 with open(options.output_file, "w") as f:
   for item, item_similitudes in similitudes_AllVsAll.items():
-    for item2, sim in item_similitudes:
-      f.write(f"{[item,item2,sim].join("\t")}\n")
+    for item2, sim in item_similitudes.items():
+      f.write("\t".join([item, item2 , str(sim)]) + "\n" )
