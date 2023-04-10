@@ -38,7 +38,7 @@ setup(
     ],
     packages=["py_semtools"],
     include_package_data=True,
-    scripts=['bin/semtools.py'],
+    scripts=['bin/semtools.py', 'bin/strsimnet.py'],
     install_requires=['requests', 'numpy']
 
 )
