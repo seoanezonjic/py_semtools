@@ -3,6 +3,7 @@ import argparse
 import sys
 import os
 import glob
+import re
 import requests
 
 ROOT_PATH=os.path.dirname(__file__)
