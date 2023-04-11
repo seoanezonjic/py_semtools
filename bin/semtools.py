@@ -243,6 +243,8 @@ parser.add_argument("--xref_sense", dest="xref_sense", default= 'byValue', actio
           help="Ontology-xref or xref-ontology. By default xref-ontology if set, ontology-xref")
 parser.add_argument('-C', "--childs", dest="childs", default= [[], ''], type=childs,
           help="Term code list (comma separated) to generate child list")
+parser.add_argument("--list", dest="simple_list", default= False, action='store_true', 
+          help="Input file is a simple list with one term/word/code per line, Only use to get a dictionaire with -k.")
 opts = parser.parse_args()
 
 ####################################################################################
@@ -258,7 +260,7 @@ if options.get('ontology_file') != None:
   options['ontology_file'] = get_ontology_file(options['ontology_file'], ont_index_file)
 
 extra_dicts = []
-if options.get('keyword') != None: extra_dicts.append(['xref', {'select_regex': f"({options['keyword']})", 'store_tag': 'tag', 'multiterm': True}]) 
+if options.get('keyword') != None: extra_dicts.append(['xref', {'select_regex': eval('r"'+options['keyword']+'"'), 'store_tag': 'tag', 'multiterm': True}]) 
 ontology = Ontology(file = options['ontology_file'], load_file = True, extra_dicts = extra_dicts)
 ontology.precompute()
 
@@ -267,7 +269,7 @@ if options['root'] != None: Ontology.mutate(options['root'], ontology, clone = F
 if options['input_file'] != None:
   data = load_tabular_file(options['input_file'])
   if options.get('list_translate') == None or options['keyword'] != None:
-    format_tabular_data(data, options.get('separator'), options.get('subject_column'), options.get('annotations_column'))
+    if not options.get('simple_list'): format_tabular_data(data, options.get('separator'), options.get('subject_column'), options.get('annotations_column'))
     if options.get('translate') != 'codes' and options.get('keyword') == None: store_profiles(data, ontology) 
 
 if options.get('list_translate') != None:
@@ -344,14 +346,22 @@ if options.get('list_term_attributes'):
 if options.get('keyword') != None:
   xref_translated = []
   dictio = ontology.dicts['tag'][options['xref_sense']]
-  for info in data:
-    pr_id, prof = info
-    xrefs = []
-    for t in prof:
-      query = dictio.get(t)
-      if query != None: xrefs.extend(query) 
-    if len(xrefs) > 0: xref_translated.append([pr_id, xrefs]) 
-  with open(options['output_file'], 'w') as f:
-    for pr_id, prof in xref_translated:
+  if len(data[0]) == 2: # TRanslate profiles
+    for info in data:
+      pr_id, prof = info
+      xrefs = []
       for t in prof:
-        f.write("\t".join([pr_id, t]) + "\n")
+        query = dictio.get(t)
+        if query != None: xrefs.extend(query) 
+      if len(xrefs) > 0: xref_translated.append([pr_id, xrefs]) 
+    with open(options['output_file'], 'w') as f:
+      for pr_id, prof in xref_translated:
+        for t in prof:
+          f.write("\t".join([pr_id, t]) + "\n")
+  else: # Get dict: term - xreference (We assume that data has only one column)
+    with open(options['output_file'], 'w') as f:
+      for t in data:
+        t = t[0]
+        query = dictio.get(t)
+        if query != None: 
+          for x in query: f.write("\t".join([t, x]) + "\n")

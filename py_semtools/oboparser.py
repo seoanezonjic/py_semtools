@@ -174,7 +174,7 @@ class OboParser(FileParser):
         cls.calc_dictionary('name')
         cls.calc_dictionary('synonym', select_regex = '\"(.*)\"')
         cls.calc_ancestors_dictionary()
-        for dict_tag, extra_parameters in extra_dicts: 
+        for dict_tag, extra_parameters in extra_dicts:
             cls.calc_dictionary(dict_tag, **extra_parameters) # https://www.justinweiss.com/articles/fun-with-keyword-arguments/
         # Fill ontology object
         ontology.terms = cls.stanzas['terms']
@@ -416,8 +416,8 @@ class OboParser(FileParser):
         string_matches = []
         if type(tag_data) is list:
             for value in tag_data:
-                match = re.findall(select_regex, value)[0]
-                if len(match) > 0: string_matches.append(match)
+                match = re.findall(select_regex, value)
+                if len(match) > 0: string_matches.append(match[0])
         else:
             string_matches = re.findall(select_regex, tag_data)[0]
         return string_matches
