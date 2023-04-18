@@ -24,6 +24,18 @@ def load_tabular_file(file):
 def format_tabular_data(data, separator, id_col, terms_col):
   for i, row in enumerate(data): data[i] = [row[id_col], row[terms_col].split(separator)]
 
+def aggregate_tabular_data(data, id_col, terms_col):
+  agg_data = {}
+  for d in data:
+    p_id = d[id_col]
+    term = d[terms_col]
+    query = agg_data.get(p_id)
+    if query == None:
+      agg_data[p_id] = [term]
+    else:
+      query.append(term)
+  return [[p_id, terms] for p_id, terms in agg_data.items()]
+
 def store_profiles(file, ontology):
   for t_id, terms in file: ontology.add_profile(t_id, terms)
 
@@ -245,6 +257,11 @@ parser.add_argument('-C', "--childs", dest="childs", default= [[], ''], type=chi
           help="Term code list (comma separated) to generate child list")
 parser.add_argument("--list", dest="simple_list", default= False, action='store_true', 
           help="Input file is a simple list with one term/word/code per line, Only use to get a dictionaire with -k.")
+parser.add_argument("--2cols", dest="2cols", default= False, action='store_true', 
+          help="Input file is a two column table, first is an id and the second is a simgle ontology term.")
+parser.add_argument("--out2cols", dest="out2cols", default= False, action='store_true', 
+          help="Output file will be a two column table")
+
 opts = parser.parse_args()
 
 ####################################################################################
@@ -269,9 +286,11 @@ if options['root'] != None: Ontology.mutate(options['root'], ontology, clone = F
 if options['input_file'] != None:
   data = load_tabular_file(options['input_file'])
   if options.get('list_translate') == None or options['keyword'] != None:
-    if not options.get('simple_list'): format_tabular_data(data, options.get('separator'), options.get('subject_column'), options.get('annotations_column'))
+    if options.get('2cols') == True:
+      data = aggregate_tabular_data(data, options.get('subject_column'), options.get('annotations_column'))
+    else:
+      if not options.get('simple_list'): format_tabular_data(data, options.get('separator'), options.get('subject_column'), options.get('annotations_column'))
     if options.get('translate') != 'codes' and options.get('keyword') == None: store_profiles(data, ontology) 
-
 if options.get('list_translate') != None:
   for term in data:
     if options['list_translate'] == 'names':
@@ -335,7 +354,12 @@ if len(options['childs'][0]) > 0:
 
 if options.get('output_file') != None and options.get('similarity') == None:
   with open(options['output_file'], 'w') as file:
-    for pr_id, terms in ontology.profiles.items(): file.write("\t".join([pr_id, "|".join(terms)]) + "\n")
+    if options.get('out2cols') == True:
+      for pr_id, terms in ontology.profiles.items(): 
+        for term in terms: 
+          file.write("\t".join([pr_id, term]) + "\n")
+    else:
+      for pr_id, terms in ontology.profiles.items(): file.write("\t".join([pr_id, "|".join(terms)]) + "\n")
 
 if options.get('statistics'): 
   for stat in get_stats(ontology.profile_stats): print("\t".join(stat))
