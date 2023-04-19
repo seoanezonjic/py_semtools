@@ -142,9 +142,9 @@ def get_stats(stats):
 def sort_terms_by_levels(terms, modifiers, ontology, all_childs):
   term_levels = ontology.get_terms_levels(all_childs)
   if 'a' in modifiers:
-    term_levels.sort(reverse=True)
+    term_levels.sort(key=lambda x: x[1], reverse=True)
   else:
-    term_levels.sort()
+    term_levels.sort(key=lambda x: x[1])
   all_childs = [ t[0] for t in term_levels ]
   return all_childs, term_levels
 
@@ -166,7 +166,6 @@ def get_childs(ontology, terms, modifiers):
     if matches:
       target_hops = int(matches.group(1)) + 1 # take into account refernce term (parent/child) addition
       all_childs, term_levels = sort_terms_by_levels(terms, modifiers, ontology, all_childs)
-
     current_level = None
     hops = 0
     for i, term in enumerate(all_childs):
