@@ -374,7 +374,6 @@ if options.get('list_term_attributes'):
 if options.get('keyword') != None:
   xref_translated = []
   dictio = ontology.dicts['tag'][options['xref_sense']]
-  print(dictio, file=sys.stderr)
   if len(data[0]) == 2: # TRanslate profiles
     for info in data:
       pr_id, prof = info
