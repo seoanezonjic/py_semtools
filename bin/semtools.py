@@ -17,8 +17,12 @@ EXTERNAL_DATA=os.path.join(os.path.dirname(py_semtools.__file__), 'external_data
 ######################################################################################
 def load_tabular_file(file):
   records = []
-  with open(file, 'r') as f:
-    for line in f: records.append(line.rstrip().split("\t"))
+  if file == '-':
+    input_data = sys.stdin
+  else:
+    with open(file, 'r') as f:
+      input_data = f.readlines()
+  for line in input_data: records.append(line.rstrip().split("\t"))
   return records
 
 def format_tabular_data(data, separator, id_col, terms_col):
@@ -109,7 +113,6 @@ def download(source, key, output):
           file.close()
         output_path = os.path.join(external_data, file_name)
       except IOError as error: 
-        print('B')
         output_path = file_name
     if url != None:
       r = requests.get(url, allow_redirects=True)
@@ -142,7 +145,7 @@ def get_stats(stats):
 def sort_terms_by_levels(terms, modifiers, ontology, all_childs):
   term_levels = ontology.get_terms_levels(all_childs)
   if 'a' in modifiers:
-    term_levels.sort(key=lambda x: x[1], reverse=True)
+    term_levels.sort(key=lambda x: x[1], reverse = True)
   else:
     term_levels.sort(key=lambda x: x[1])
   all_childs = [ t[0] for t in term_levels ]
@@ -166,6 +169,7 @@ def get_childs(ontology, terms, modifiers):
     if matches:
       target_hops = int(matches.group(1)) + 1 # take into account refernce term (parent/child) addition
       all_childs, term_levels = sort_terms_by_levels(terms, modifiers, ontology, all_childs)
+
     current_level = None
     hops = 0
     for i, term in enumerate(all_childs):
@@ -188,7 +192,12 @@ def get_childs(ontology, terms, modifiers):
     all_childs = [ ontology.translate_id(c) for c in all_childs ]  
   return all_childs
 
-
+def format_data(data, options):
+  if options.get('2cols') == True:
+    data = aggregate_tabular_data(data, options.get('subject_column'), options.get('annotations_column'))
+  else:
+    if not options.get('simple_list'): format_tabular_data(data, options.get('separator'), options.get('subject_column'), options.get('annotations_column'))
+  return data
 
 ####################################################################################
 ## OPTPARSE
@@ -285,10 +294,7 @@ if options['root'] != None: Ontology.mutate(options['root'], ontology, clone = F
 if options['input_file'] != None:
   data = load_tabular_file(options['input_file'])
   if options.get('list_translate') == None or options['keyword'] != None:
-    if options.get('2cols') == True:
-      data = aggregate_tabular_data(data, options.get('subject_column'), options.get('annotations_column'))
-    else:
-      if not options.get('simple_list'): format_tabular_data(data, options.get('separator'), options.get('subject_column'), options.get('annotations_column'))
+    data = format_data(data, options)
     if options.get('translate') != 'codes' and options.get('keyword') == None: store_profiles(data, ontology) 
 if options.get('list_translate') != None:
   for term in data:
@@ -303,7 +309,6 @@ if options.get('translate') == 'codes':
   profiles = {}
   for info in data:
     pr_id, terms = info
-    load_value(profiles, pr_id, terms)
     profiles[pr_id] = terms.split(options['separator'])
   translate(ontology, 'codes', options, profiles)
   store_profiles(profiles, ontology)
@@ -369,6 +374,7 @@ if options.get('list_term_attributes'):
 if options.get('keyword') != None:
   xref_translated = []
   dictio = ontology.dicts['tag'][options['xref_sense']]
+  print(dictio, file=sys.stderr)
   if len(data[0]) == 2: # TRanslate profiles
     for info in data:
       pr_id, prof = info
