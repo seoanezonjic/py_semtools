@@ -366,7 +366,7 @@ if options.get('output_file') != None and options.get('similarity') == None:
       for pr_id, terms in ontology.profiles.items(): file.write("\t".join([pr_id, "|".join(terms)]) + "\n")
 
 if options.get('statistics'): 
-  for stat in get_stats(ontology.profile_stats): print("\t".join(stat))
+  for stat in get_stats(ontology.profile_stats()): print("\t".join([str(el) for el in stat]))
 
 if options.get('list_term_attributes'):
   for t_attr in ontology.list_term_attributes(): print("\t".join(t_attr))
