@@ -899,12 +899,11 @@ class Ontology:
     # Remove alternatives (if official term is present) and ancestors terms of stored profiles 
     # ===== Parameters
     # +store+:: if true, clenaed profiles will replace already stored profiles
-    # +remove_alternatives+:: if true, clenaed profiles will replace already stored profiles
     # ===== Returns 
     # a hash with cleaned profiles
-    def clean_profiles(self, store = False, remove_alternatives = True):
+    def clean_profiles(self, store = False):
         cleaned_profiles = {}
-        for pr_id, terms in self.profiles.items():  cleaned_profiles[pr_id] = self.clean_profile(terms, remove_alternatives = remove_alternatives)
+        for pr_id, terms in self.profiles.items():  cleaned_profiles[pr_id] = self.clean_profile_hard(terms)
         if store: self.profiles = cleaned_profiles 
         return cleaned_profiles
 
