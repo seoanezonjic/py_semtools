@@ -901,9 +901,9 @@ class Ontology:
     # +store+:: if true, clenaed profiles will replace already stored profiles
     # ===== Returns 
     # a hash with cleaned profiles
-    def clean_profiles(self, store = False):
+    def clean_profiles(self, store = False, options={}):
         cleaned_profiles = {}
-        for pr_id, terms in self.profiles.items():  cleaned_profiles[pr_id] = self.clean_profile_hard(terms)
+        for pr_id, terms in self.profiles.items():  cleaned_profiles[pr_id] = self.clean_profile_hard(terms, options)
         if store: self.profiles = cleaned_profiles 
         return cleaned_profiles
 
