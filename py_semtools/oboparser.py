@@ -148,7 +148,10 @@ class OboParser(FileParser):
             query = info_hash.get(tag)
             if query != None: # Tag already exists
                 if type(query) is not list: # Check that tag is multivalue
-                    raise Exception(f'Attempt to concatenate plain text with another. The tag is not declared as multivalue. [{tag}]({repr(query)})')
+                    if tag == 'def' or tag == 'comment' or tag == 'name' or tag == 'created_by': # Some ontologies (EFO) could have more tha one def/comment/name line (an this is AGAINST obo standard) so we keep the first and ignore the others.
+                        continue
+                    else:
+                        raise Exception(f'Attempt to concatenate plain text with another. The tag is not declared as multivalue. [{tag}]({repr(query)})')
                 else:
                     query.append(value) # Add new value to tag
             else: # New entry
@@ -355,7 +358,8 @@ class OboParser(FileParser):
             queryTag = tags.get(tag)
             if queryTag != None:
                 # Pre-process
-                if select_regex != None: queryTag = cls.regex2tagData(select_regex, queryTag)
+                if select_regex != None:
+                    queryTag = cls.regex2tagData(select_regex, queryTag)
                 if type(queryTag) is list: # Store
                     if len(queryTag) > 0:
                         if referenceTerm in byTerm:
