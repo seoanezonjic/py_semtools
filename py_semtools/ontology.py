@@ -904,7 +904,9 @@ class Ontology:
     def clean_profiles(self, store = False, options={}):
         cleaned_profiles = {}
         for pr_id, terms in self.profiles.items():  cleaned_profiles[pr_id] = self.clean_profile_hard(terms, options)
-        if store: self.profiles = cleaned_profiles 
+        if store: 
+            self.profiles = cleaned_profiles 
+            self.profiles  = {prof_id: prof_terms for prof_id, prof_terms in self.profiles.items() if prof_terms != []} # talk with PSZ about the necessity of this line when stored.
         return cleaned_profiles
 
     # ID Handlers
