@@ -648,11 +648,11 @@ class Ontology:
         if remove_alternatives: terms_without_ancestors, _ = self.remove_alternatives_from_profile(terms_without_ancestors) 
         return terms_without_ancestors
 
-    def clean_profile_hard(self, profile, options = {}):
+    def clean_profile_hard(self, profile, options = {}, remove_alternatives = True):
         profile, _ = self.check_ids(profile)
         profile = [ t for t in profile if not self.is_obsolete(t)] 
         if options.get('term_filter') != None: profile = [ term for term in profile if options['term_filter'] in self.get_ancestors(term) ] # keep terms with parents in term filter
-        profile = self.clean_profile(list(set(profile)))
+        profile = self.clean_profile(list(set(profile)), remove_alternatives)
         return profile
 
     # Remove terms from a given profile using hierarchical info and scores set given  
@@ -901,9 +901,9 @@ class Ontology:
     # +store+:: if true, clenaed profiles will replace already stored profiles
     # ===== Returns 
     # a hash with cleaned profiles
-    def clean_profiles(self, store = False, options={}):
+    def clean_profiles(self, store = False, options={}, remove_alternatives = True):
         cleaned_profiles = {}
-        for pr_id, terms in self.profiles.items():  cleaned_profiles[pr_id] = self.clean_profile_hard(terms, options)
+        for pr_id, terms in self.profiles.items():  cleaned_profiles[pr_id] = self.clean_profile_hard(terms, options, remove_alternatives)
         if store: 
             self.profiles = cleaned_profiles 
             self.profiles  = {prof_id: prof_terms for prof_id, prof_terms in self.profiles.items() if prof_terms != []} # talk with PSZ about the necessity of this line when stored.
@@ -1009,6 +1009,35 @@ class Ontology:
             freqs.sort(key = lambda f: f[1], reverse=True)
 
         return freqs
+
+
+    # Calculates number of ancestors present (redundant) in each profile stored
+    # ===== Returns 
+    # array of parentals for each profile
+    def parentals_per_profile(self):
+        cleaned_profiles = self.clean_profiles(store = False, options={}, remove_alternatives = False)
+        parentals = [len(terms) - len(cleaned_profiles[id]) for id, terms in self.profiles.items()]
+        return parentals
+
+    def get_profile_redundancy(self):
+        profile_sizes = self.get_profiles_sizes()
+        parental_terms_per_profile = self.parentals_per_profile()# clean_profiles
+        #parental_terms_per_profile = [item[0] for item in parental_terms_per_profile]
+        profile_sizes, parental_terms_per_profile = list(zip(*sorted(list(zip(profile_sizes, parental_terms_per_profile)), key=lambda i: i[0])[::-1]))
+        #profile_sizes, parental_terms_per_profile = profile_sizes.zip(parental_terms_per_profile).sort_by{|i| i.first}.reverse.transpose #this is the ruby version of the above line
+        return profile_sizes, parental_terms_per_profile
+
+    def compute_term_list_and_childs(self):
+        suggested_childs = {}
+        total_terms = 0
+        terms_with_more_specific_childs = 0
+        for id, terms in self.profiles.items():
+            total_terms += len(terms)
+            more_specific_childs = self.get_childs_table(terms)
+            terms_with_more_specific_childs += len([profile for profile in more_specific_childs if len(profile[-1]) > 0]) #Exclude phenotypes with no childs
+            suggested_childs[id] = more_specific_childs  
+        return suggested_childs, terms_with_more_specific_childs / float(total_terms)
+
 
     # Calculates resnik ontology, and resnik observed mean ICs for all profiles stored
     # ===== Returns 

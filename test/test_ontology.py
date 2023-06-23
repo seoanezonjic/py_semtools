@@ -437,6 +437,45 @@ class TestOBOFunctionalities(unittest.TestCase):
         self.assertEqual(2, self.hierarchical.get_profile_length_at_percentile(3.0 / (4 - 1) * 100, increasing_sort= True))
         self.assertEqual(1, self.hierarchical.get_profile_length_at_percentile(4.0 / (5 - 1) * 100, increasing_sort= False))
 
+    def test_parentals_per_profile(self):
+        self.sparse.precompute()
+        self.sparse.add_profile("patient1", ["B", "A"], substitute= False) # Add profiles
+        self.sparse.add_profile("patient2", ["C", "A"], substitute= False)
+        self.sparse.add_profile("patient3", ["B", "C"], substitute= False)
+        returned = self.sparse.parentals_per_profile()
+        expected = [1,1,0] #Given that A is Parental and B and C are childs
+        self.assertEqual(expected, returned)
+
+    def test_get_profile_redundancy(self):
+        self.sparse.precompute()
+        self.sparse.add_profile("patient1", ["B", "A"], substitute= False) # Add profiles
+        self.sparse.add_profile("patient2", ["C", "A"], substitute= False)
+        self.sparse.add_profile("patient3", ["B", "C"], substitute= False)
+        self.sparse.add_profile("patient4", ["C"], substitute= False)
+        
+        returned_profile_sizes, returned_parental_terms_per_profile = self.sparse.get_profile_redundancy()
+        expected_profile_sizes = (2,2,2,1) #These values are sorted by profile size (ascending) and then reversed, so the order is pat3,patt2,pat1,pat4
+        expected_parental_terms_per_profile = (0,1,1,0) ##These values are also sorted by profile size (descending), so same order as above (pat3,patt2,pat1,pat4)
+        
+        self.assertEqual(expected_profile_sizes, returned_profile_sizes)
+        self.assertEqual(expected_parental_terms_per_profile, returned_parental_terms_per_profile)
+
+    def test_compute_term_list_and_childs(self):
+        self.sparse.precompute()
+        self.sparse.add_profile("patient1", ["B", "A"], substitute= False) # Add profiles
+        self.sparse.add_profile("patient2", ["C", "A"], substitute= False)
+        self.sparse.add_profile("patient3", ["B", "C"], substitute= False)
+        self.sparse.add_profile("patient4", ["C"], substitute= False)
+
+        suggested_childs, terms_with_more_specific_childs_proportions = self.sparse.compute_term_list_and_childs()
+        expected_suggested_childs = {'patient1': [[['B', 'B'], []], [['A', 'All'], [['B', 'B'], ['C', 'C']]]], 
+                                     'patient2': [[['C', 'C'], []], [['A', 'All'], [['B', 'B'], ['C', 'C']]]], 
+                                     'patient3': [[['B', 'B'], []], [['C', 'C'], []]], 
+                                     'patient4': [[['C', 'C'], []]]}
+        expected_terms_with_more_specific_childs_proportions = 0.2857142857142857
+        
+        self.assertDictEqual(expected_suggested_childs, suggested_childs)
+        self.assertEqual(expected_terms_with_more_specific_childs_proportions, terms_with_more_specific_childs_proportions)
 
     # IC data
     ####################################
