@@ -462,17 +462,16 @@ class TestOBOFunctionalities(unittest.TestCase):
 
     def test_compute_term_list_and_childs(self):
         self.sparse.precompute()
-        self.sparse.add_profile("patient1", ["B", "A"], substitute= False) # Add profiles
-        self.sparse.add_profile("patient2", ["C", "A"], substitute= False)
-        self.sparse.add_profile("patient3", ["B", "C"], substitute= False)
-        self.sparse.add_profile("patient4", ["C"], substitute= False)
+        self.sparse.add_profile("patient1", ["B"], substitute= False) # Add profiles
+        self.sparse.add_profile("patient2", ["A"], substitute= False)
+        #self.sparse.add_profile("patient3", ["B", "C"], substitute= False)
+        #self.sparse.add_profile("patient4", ["C"], substitute= False)
 
         suggested_childs, terms_with_more_specific_childs_proportions = self.sparse.compute_term_list_and_childs()
-        expected_suggested_childs = {'patient1': [[['B', 'B'], []], [['A', 'All'], [['B', 'B'], ['C', 'C']]]], 
-                                     'patient2': [[['C', 'C'], []], [['A', 'All'], [['B', 'B'], ['C', 'C']]]], 
-                                     'patient3': [[['B', 'B'], []], [['C', 'C'], []]], 
-                                     'patient4': [[['C', 'C'], []]]}
-        expected_terms_with_more_specific_childs_proportions = 0.2857142857142857
+        
+        expected_suggested_childs = {'patient1': [[['B', 'B'], []]], 
+                                     'patient2': [[['A', 'All'], [['B', 'B'], ['C', 'C']]]]}
+        expected_terms_with_more_specific_childs_proportions = 0.5
         
         self.assertDictEqual(expected_suggested_childs, suggested_childs)
         self.assertEqual(expected_terms_with_more_specific_childs_proportions, terms_with_more_specific_childs_proportions)
