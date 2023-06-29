@@ -903,10 +903,11 @@ class Ontology:
     # a hash with cleaned profiles
     def clean_profiles(self, store = False, options={}, remove_alternatives = True):
         cleaned_profiles = {}
-        for pr_id, terms in self.profiles.items():  cleaned_profiles[pr_id] = self.clean_profile_hard(terms, options, remove_alternatives)
-        if store: 
-            self.profiles = cleaned_profiles 
-            self.profiles  = {prof_id: prof_terms for prof_id, prof_terms in self.profiles.items() if prof_terms != []} # talk with PSZ about the necessity of this line when stored.
+        for pr_id, terms in self.profiles.items():  
+            cleaned_profile = self.clean_profile_hard(terms, options, remove_alternatives)
+            if cleaned_profile != []:
+                cleaned_profiles[pr_id] = cleaned_profile
+        if store: self.profiles = cleaned_profiles 
         return cleaned_profiles
 
     # ID Handlers
