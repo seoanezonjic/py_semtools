@@ -6,6 +6,7 @@ import warnings
 import json
 import numpy as np
 from collections import defaultdict
+import networkx as nx
 
 from py_semtools import OboParser
 from py_semtools import JsonParser
@@ -46,8 +47,16 @@ class Ontology:
     #############################################
 
     def precompute(self):
+        self.get_dag()
         self.get_index_frequencies()
         self.calc_term_levels(calc_paths = True)
+
+    def get_dag(self):
+        relations = []
+        for parent, descendants in self.dicts['is_a']['byValue'].items():
+            for desc in descendants: relations.append((parent, desc))
+        dag = nx.DiGraph(relations)
+        self.dag = dag
 
     # Calculates regular frequencies based on ontology structure (using parentals)
     # ===== Returns 
@@ -388,8 +397,7 @@ class Ontology:
     def get_LCA(self, termA, termB, lca_index = False):
         lca = []
         if lca_index:
-            res = self.lca_index.get(termA)
-            if res != None: res = res.get(termB)
+            res = self.lca_index.get((termA, termB))
             if res != None: lca = [res] 
         else:  # Obtain ancestors (include itselfs too)       
             anc_A = self.get_ancestors(termA) 
@@ -1083,6 +1091,9 @@ class Ontology:
             self.add2nestHash(self.mica_index, tA, tB, value)
             self.add2nestHash(self.mica_index, tB, tA, value)
 
+    def get_lca_index_from_profiles(self, pair_index):
+        self.lca_index = dict(nx.all_pairs_lowest_common_ancestor(self.dag, pairs=list(pair_index.keys())))
+
     # Compare internal stored profiles against another set of profiles. If an external set is not provided, internal profiles will be compared with itself 
     # ===== Parameters
     # +external_profiles+:: set of external profiles. If nil, internal profiles will be compared with itself
@@ -1101,8 +1112,10 @@ class Ontology:
             main_profiles = self.profiles
         # Compare
         pair_index = self.get_pair_index(main_profiles, comp_profiles)
+        self.lca_index = {}
+        self.get_lca_index_from_profiles(pair_index)
         self.mica_index = {}
-        self.get_mica_index_from_profiles(pair_index, sim_type = sim_type, ic_type = ic_type, lca_index= False)
+        self.get_mica_index_from_profiles(pair_index, sim_type = sim_type, ic_type = ic_type, lca_index= True)
         for curr_id, current_profile in main_profiles.items():
             for t_id, profile in comp_profiles.items():
                 value = self.compare(current_profile, profile, sim_type = sim_type, ic_type = ic_type, bidirectional = bidirectional, store_mica = True)
