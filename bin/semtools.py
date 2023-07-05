@@ -215,6 +215,8 @@ def childs(string):
 
 parser = argparse.ArgumentParser(description='Perform Ontology driven analysis ')
 
+parser.add_argument('-p', "--processes", dest="processes", default= 2, type=int,
+          help="Number of processes to parallelize calculations. Applied to: semantic similarity.")
 parser.add_argument("-d", "--download", dest="download", default= None, 
           help="Download obo file from an official resource. MONDO, GO and HPO are possible values.")
 parser.add_argument("-i", "--input_file", dest="input_file", default= None, 
@@ -288,6 +290,7 @@ extra_dicts = []
 if options.get('keyword') != None: extra_dicts.append(['xref', {'select_regex': eval('r"'+options['keyword']+'"'), 'store_tag': 'tag', 'multiterm': True}]) 
 ontology = Ontology(file = options['ontology_file'], load_file = True, extra_dicts = extra_dicts)
 ontology.precompute()
+ontology.threads = options['processes']
 
 if options['root'] != None: Ontology.mutate(options['root'], ontology, clone = False)  # TODO fix method and convert in class method
 

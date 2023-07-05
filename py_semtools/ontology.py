@@ -7,6 +7,8 @@ import json
 import numpy as np
 from collections import defaultdict
 import networkx as nx
+from concurrent.futures import ProcessPoolExecutor as PoolExecutor
+from functools import partial
 
 from py_semtools import OboParser
 from py_semtools import JsonParser
@@ -15,6 +17,7 @@ class Ontology:
     allowed_calcs = {'ics': ['resnik', 'resnik_observed', 'seco', 'zhou', 'sanchez'], 'sims': ['resnik', 'lin', 'jiang_conrath']}
     
     def __init__(self, file= None, load_file= False, removable_terms= [], build= True, file_format= None, extra_dicts= []):
+        self.threads = 2
         self.terms = {}
         self.ancestors_index = {}
         self.descendants_index = {}
@@ -398,15 +401,24 @@ class Ontology:
         lca = []
         if lca_index:
             res = self.lca_index.get((termA, termB))
-            if res != None: lca = [res] 
-        else:  # Obtain ancestors (include itselfs too)       
-            anc_A = self.get_ancestors(termA) 
-            anc_B = self.get_ancestors(termB)
-            if not (len(anc_A) == 0 and len(anc_B) == 0):
-                anc_A.append(termA)
-                anc_B.append(termB)
-                lca = self.intersection(anc_A,  anc_B)
+            if res != None: lca = res 
+        else:  # Obtain ancestors (include itselfs too)
+            lca = self.compute_LCA(termA, termB)
         return lca
+
+    def compute_LCA(self, termA, termB):
+        lca = []
+        anc_A = self.get_ancestors(termA) 
+        anc_B = self.get_ancestors(termB)
+        if not (len(anc_A) == 0 and len(anc_B) == 0):
+            anc_A.append(termA)
+            anc_B.append(termB)
+            lca = self.intersection(anc_A,  anc_B)
+        return lca
+
+    def compute_LCA_pair(self, pair):
+        res = self.compute_LCA(pair[0], pair[1])
+        return res
 
     # Find the Most Index Content shared Ancestor (MICA) of two given terms
     # ===== Parameters
@@ -416,14 +428,23 @@ class Ontology:
     # ===== Returns 
     # the MICA(termA,termB) and it's IC
     def get_MICA(self, termA, termB, ic_type = 'resnik', lca_index = False):
-        mica = [None,-1.0]
         if termA == termB: # Special case
             ic = self.get_IC(termA, ic_type = ic_type)
             mica = [termA, ic]
         else:
-            for lca in self.get_LCA(termA, termB, lca_index = lca_index): # Find MICA in shared ancestors
-                ic = self.get_IC(lca, ic_type = ic_type)
-                if ic > mica[1]: mica = [lca, ic] 
+            mica = self.compute_MICA(self.get_LCA(termA, termB, lca_index = lca_index), ic_type)
+        return mica
+
+    def compute_MICA(self, lcas, ic_type):
+        mica = [None,-1.0]
+        for lca in lcas: # Find MICA in shared ancestors
+            ic = self.get_IC(lca, ic_type = ic_type)
+            if ic > mica[1]: mica = [lca, ic]
+        return mica
+
+    def get_MICA_from_pair(self, pair, ic_type = 'resnik'):
+        lcas = self.compute_LCA_pair(pair)
+        mica = self.compute_MICA(lcas, ic_type = ic_type)
         return mica
 
     # Find the IC of the Most Index Content shared Ancestor (MICA) of two given terms
@@ -1091,8 +1112,16 @@ class Ontology:
             self.add2nestHash(self.mica_index, tA, tB, value)
             self.add2nestHash(self.mica_index, tB, tA, value)
 
-    def get_lca_index_from_profiles(self, pair_index):
-        self.lca_index = dict(nx.all_pairs_lowest_common_ancestor(self.dag, pairs=list(pair_index.keys())))
+    def get_mica_index_from_profiles_parallel(self, pair_index, ic_type = 'resnik'):
+        #self.lca_index = dict(nx.all_pairs_lowest_common_ancestor(self.dag, pairs=list(pair_index.keys())))
+        pairs = list(pair_index.keys())
+        with PoolExecutor(max_workers=self.threads) as executor:
+            micas = executor.map(partial(self.get_MICA_from_pair, ic_type= ic_type), pairs, chunksize=20000)
+            for i, mica in enumerate(micas):
+                tA, tB = pairs[i]
+                self.add2nestHash(self.mica_index, tA, tB, mica[1])
+                self.add2nestHash(self.mica_index, tB, tA, mica[1])
+
 
     # Compare internal stored profiles against another set of profiles. If an external set is not provided, internal profiles will be compared with itself 
     # ===== Parameters
@@ -1112,10 +1141,9 @@ class Ontology:
             main_profiles = self.profiles
         # Compare
         pair_index = self.get_pair_index(main_profiles, comp_profiles)
-        self.lca_index = {}
-        self.get_lca_index_from_profiles(pair_index)
         self.mica_index = {}
-        self.get_mica_index_from_profiles(pair_index, sim_type = sim_type, ic_type = ic_type, lca_index= True)
+        self.get_mica_index_from_profiles_parallel(pair_index, ic_type = ic_type)
+        #self.get_mica_index_from_profiles(pair_index, sim_type = sim_type, ic_type = ic_type, lca_index= True)
         for curr_id, current_profile in main_profiles.items():
             for t_id, profile in comp_profiles.items():
                 value = self.compare(current_profile, profile, sim_type = sim_type, ic_type = ic_type, bidirectional = bidirectional, store_mica = True)
