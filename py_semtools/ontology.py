@@ -38,9 +38,9 @@ class Ontology:
             fformat = file_format
             if fformat == None and file != None: fformat = os.path.splitext(file)[1]
             if fformat == 'obo' or fformat == ".obo":
-                OboParser.load(self, file, build = build, black_list = removable_terms, extra_dicts = extra_dicts)
+                OboParser.load(self, file, build = True, black_list = removable_terms, extra_dicts = extra_dicts)
             elif fformat == 'json' or fformat == ".json":
-                JsonParser.load(self, file, build = build)
+                JsonParser.load(self, file, build = False)
             elif fformat != None:
                 warnings.warn('Format not allowed. Loading process will not be performed')
             if build: self.precompute()
@@ -101,7 +101,8 @@ class Ontology:
     # Also calculates paths metadata and stores into @term_paths
     def calc_term_paths(self): 
         self.term_paths = {}
-        if self.structureType in ['hierarchical', 'sparse']:
+        if self.structureType in ['hierarchical', 'sparse', 'circular']: # PSZ: Added circular to incorrect ontology structure detection
+        #if self.structureType in ['hierarchical', 'sparse']:
             for term in self.each():
                 self.expand_path(term)
                 path_attr = self.term_paths[term]

@@ -5,7 +5,7 @@ class JsonParser(FileParser):
 
     @classmethod
     def load(cls, ontology, file, build = True):
-        cls.read(ontology, file) 
+        cls.read(ontology, file, build = build) 
 
    # Read a JSON file with an OBO_Handler object stored
     # ===== Parameters
