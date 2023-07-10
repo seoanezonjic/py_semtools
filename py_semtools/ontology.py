@@ -1145,10 +1145,15 @@ class Ontology:
         self.mica_index = {}
         self.get_mica_index_from_profiles_parallel(pair_index, ic_type = ic_type)
         #self.get_mica_index_from_profiles(pair_index, sim_type = sim_type, ic_type = ic_type, lca_index= True)
-        for curr_id, current_profile in main_profiles.items():
-            for t_id, profile in comp_profiles.items():
-                value = self.compare(current_profile, profile, sim_type = sim_type, ic_type = ic_type, bidirectional = bidirectional, store_mica = True)
-                self.add2nestHash(profiles_similarity, curr_id, t_id, value)
+        comp_profiles_ids = list(main_profiles.keys())
+        comp_profiles_list = list(main_profiles.values())
+        with PoolExecutor(max_workers=self.threads) as executor:    
+            for curr_id, current_profile in comp_profiles.items():
+                values = executor.map(partial(self.compare, current_profile, sim_type = sim_type, ic_type = ic_type, bidirectional = bidirectional, store_mica = True), comp_profiles_list, chunksize=500)
+                #for t_id, profile in comp_profiles.items():
+                    #value = self.compare(current_profile, profile, sim_type = sim_type, ic_type = ic_type, bidirectional = bidirectional, store_mica = True)
+                for i, value in enumerate(values):
+                    self.add2nestHash(profiles_similarity, curr_id, comp_profiles_ids[i], value)
         return profiles_similarity
 
     # specifity_index related methods
