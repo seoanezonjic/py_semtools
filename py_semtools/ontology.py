@@ -1145,7 +1145,6 @@ class Ontology:
             comp_profiles = external_profiles
             main_profiles = self.profiles
             same_profiles = False
-        # Compare
         #start = time.time()
         pair_index = self.get_pair_index(main_profiles, comp_profiles, same_profiles=same_profiles)
         #print(f"pair_index: {time.time() - start}")
@@ -1153,15 +1152,21 @@ class Ontology:
         self.mica_index = defaultdict(lambda: dict())
         self.get_mica_index_from_profiles(pair_index, ic_type = ic_type)
         #print(f"mica_index: {time.time() - start}")
-        #self.get_mica_index_from_profiles(pair_index, sim_type = sim_type, ic_type = ic_type, lca_index= True)
         #start = time.time()
-        #with PoolExecutor(max_workers=self.threads) as executor:    
-        for curr_id, current_profile in main_profiles.items():
-            #values = executor.map(partial(self.compare, current_profile, sim_type = sim_type, ic_type = ic_type, bidirectional = bidirectional, store_mica = True), comp_profiles_list, chunksize=10000)
-            for t_id, profile in comp_profiles.items():
-                value = self.compare(current_profile, profile, sim_type = sim_type, ic_type = ic_type, bidirectional = bidirectional, store_mica = True)
-            #for i, value in enumerate(values):
-                self.add2nestHash(profiles_similarity, curr_id, t_id, value)
+        if same_profiles:
+            profiles = list(comp_profiles.items())
+            while len(profiles) > 0:
+                curr_id, current_profile = profiles[-1]
+                for t_id, profile in profiles:
+                    value = self.compare(current_profile, profile, sim_type = sim_type, ic_type = ic_type, bidirectional = bidirectional, store_mica = True)
+                    self.add2nestHash(profiles_similarity, curr_id, t_id, value)
+                    self.add2nestHash(profiles_similarity, t_id, curr_id, value)
+                profiles.pop()
+        else:
+            for curr_id, current_profile in main_profiles.items():
+                for t_id, profile in comp_profiles.items():
+                    value = self.compare(current_profile, profile, sim_type = sim_type, ic_type = ic_type, bidirectional = bidirectional, store_mica = True)
+                    self.add2nestHash(profiles_similarity, curr_id, t_id, value)
         #print(f"similarity: {time.time() - start}")
         return profiles_similarity
 
