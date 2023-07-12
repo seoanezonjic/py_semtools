@@ -9,6 +9,9 @@ from collections import defaultdict
 import networkx as nx
 from concurrent.futures import ProcessPoolExecutor as PoolExecutor
 from functools import partial
+from collections import defaultdict
+import time
+import itertools
 
 from py_semtools import OboParser
 from py_semtools import JsonParser
@@ -444,8 +447,7 @@ class Ontology:
         return mica
 
     def get_MICA_from_pair(self, pair, ic_type = 'resnik'):
-        lcas = self.compute_LCA_pair(pair)
-        mica = self.compute_MICA(lcas, ic_type = ic_type)
+        mica = self.compute_MICA(self.compute_LCA_pair(pair), ic_type = ic_type)
         return mica
 
     # Find the IC of the Most Index Content shared Ancestor (MICA) of two given terms
@@ -829,13 +831,14 @@ class Ontology:
         micasA = []
         # Compare A -> B
         for tA in termsA:
-            micas = []
-            for tB in termsB:
-                if store_mica:
-                    value = self.mica_index[tA][tB]
-                else:
+            if store_mica:
+                tA_micas = self.mica_index[tA]
+                micas = [ tA_micas[tB] for tB in termsB ]
+            else:    
+                micas = []
+                for tB in termsB:
                     value = self.get_similarity(tA, tB, sim_type = sim_type, ic_type = ic_type)
-                if type(value) is float: micas.append(value)
+                    if type(value) is float: micas.append(value)
             micasA.append(max(micas)) if len(micas) > 0 else micasA.append(0) 
         means_sim = sum(micasA) / len(micasA)
         # Compare B -> A
@@ -1096,33 +1099,33 @@ class Ontology:
 
     # Profiles vs Profiles #
 
-    def get_pair_index(self, profiles_A, profiles_B):
+    def get_pair_index(self, profiles_A, profiles_B, same_profiles=True):
         pair_index = {}
-        for curr_id, profile_A in  profiles_A.items():
-            for pr_id, profile_B in profiles_B.items():
-                for term_A in profile_A:
-                    for term_B in profile_B:                        
-                        pair_index[tuple(sorted([term_A, term_B]))] = True 
+        if same_profiles: # in this way we can save time for one half of the comparations
+            profiles = list(profiles_A.values())
+            while len(profiles) > 0:
+                profile_A = profiles[-1]
+                if len(profiles) > 1:
+                    for profile_B in profiles:
+                        for pair in itertools.product(profile_A, profile_B):
+                            pair_index[tuple(sorted(pair))] = True
+                dropped_profile = profiles.pop()
+            for pair in itertools.product(dropped_profile, dropped_profile):
+                pair_index[tuple(sorted(pair))] = True                
+        else:
+            for profile_A in  profiles_A.values():
+                for profile_B in profiles_B.values():
+                    for pair in itertools.product(profile_A, profile_B):
+                        pair_index[tuple(sorted(pair))] = True
         return pair_index
 
-    def get_mica_index_from_profiles(self, pair_index, sim_type = 'resnik', ic_type = 'resnik', lca_index = True):
+    def get_mica_index_from_profiles(self, pair_index, ic_type = 'resnik'):
         for pair in pair_index.keys():
+            term, value = self.get_MICA_from_pair(pair, ic_type = ic_type)
+            if term == None: value = False  # We use False to save that the operation was made but there is not mica value
             tA, tB = pair
-            value = self.get_similarity(tA, tB, sim_type = sim_type, ic_type = ic_type, lca_index = lca_index)
-            if value == None: value = True  # We use true to save that the operation was made but there is not mica value
-            self.add2nestHash(self.mica_index, tA, tB, value)
-            self.add2nestHash(self.mica_index, tB, tA, value)
-
-    def get_mica_index_from_profiles_parallel(self, pair_index, ic_type = 'resnik'):
-        #self.lca_index = dict(nx.all_pairs_lowest_common_ancestor(self.dag, pairs=list(pair_index.keys())))
-        pairs = list(pair_index.keys())
-        with PoolExecutor(max_workers=self.threads) as executor:
-            micas = executor.map(partial(self.get_MICA_from_pair, ic_type= ic_type), pairs, chunksize=20000)
-            for i, mica in enumerate(micas):
-                tA, tB = pairs[i]
-                self.add2nestHash(self.mica_index, tA, tB, mica[1])
-                self.add2nestHash(self.mica_index, tB, tA, mica[1])
-
+            self.add2nestHashDef(self.mica_index, tA, tB, value)
+            self.add2nestHashDef(self.mica_index, tB, tA, value)
 
     # Compare internal stored profiles against another set of profiles. If an external set is not provided, internal profiles will be compared with itself 
     # ===== Parameters
@@ -1137,23 +1140,29 @@ class Ontology:
         if external_profiles == None:
             comp_profiles = self.profiles
             main_profiles = comp_profiles
+            same_profiles = True
         else:
             comp_profiles = external_profiles
             main_profiles = self.profiles
+            same_profiles = False
         # Compare
-        pair_index = self.get_pair_index(main_profiles, comp_profiles)
-        self.mica_index = {}
-        self.get_mica_index_from_profiles_parallel(pair_index, ic_type = ic_type)
+        #start = time.time()
+        pair_index = self.get_pair_index(main_profiles, comp_profiles, same_profiles=same_profiles)
+        #print(f"pair_index: {time.time() - start}")
+        #start = time.time()
+        self.mica_index = defaultdict(lambda: dict())
+        self.get_mica_index_from_profiles(pair_index, ic_type = ic_type)
+        #print(f"mica_index: {time.time() - start}")
         #self.get_mica_index_from_profiles(pair_index, sim_type = sim_type, ic_type = ic_type, lca_index= True)
-        comp_profiles_ids = list(main_profiles.keys())
-        comp_profiles_list = list(main_profiles.values())
-        with PoolExecutor(max_workers=self.threads) as executor:    
-            for curr_id, current_profile in comp_profiles.items():
-                values = executor.map(partial(self.compare, current_profile, sim_type = sim_type, ic_type = ic_type, bidirectional = bidirectional, store_mica = True), comp_profiles_list, chunksize=500)
-                #for t_id, profile in comp_profiles.items():
-                    #value = self.compare(current_profile, profile, sim_type = sim_type, ic_type = ic_type, bidirectional = bidirectional, store_mica = True)
-                for i, value in enumerate(values):
-                    self.add2nestHash(profiles_similarity, curr_id, comp_profiles_ids[i], value)
+        #start = time.time()
+        #with PoolExecutor(max_workers=self.threads) as executor:    
+        for curr_id, current_profile in main_profiles.items():
+            #values = executor.map(partial(self.compare, current_profile, sim_type = sim_type, ic_type = ic_type, bidirectional = bidirectional, store_mica = True), comp_profiles_list, chunksize=10000)
+            for t_id, profile in comp_profiles.items():
+                value = self.compare(current_profile, profile, sim_type = sim_type, ic_type = ic_type, bidirectional = bidirectional, store_mica = True)
+            #for i, value in enumerate(values):
+                self.add2nestHash(profiles_similarity, curr_id, t_id, value)
+        #print(f"similarity: {time.time() - start}")
         return profiles_similarity
 
     # specifity_index related methods
@@ -1341,6 +1350,9 @@ class Ontology:
             h[key1] = {key2 : val} 
         else:
             query1[key2] = val
+
+    def add2nestHashDef(self, h, key1, key2, val):
+        h[key1][key2] = val
 
     def intersection(self, arr1, arr2):
          return [item for item in arr1 if item in arr2] 
