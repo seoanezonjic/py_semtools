@@ -1103,6 +1103,7 @@ class Ontology:
         pair_index = {}
         if same_profiles: # in this way we can save time for one half of the comparations
             profiles = list(profiles_A.values())
+            dropped_profile = []
             while len(profiles) > 0:
                 profile_A = profiles[-1]
                 if len(profiles) > 1:
