@@ -431,12 +431,14 @@ class Ontology:
     # +ic_type+:: IC formula to be used
     # ===== Returns 
     # the MICA(termA,termB) and it's IC
-    def get_MICA(self, termA, termB, ic_type = 'resnik', lca_index = False):
-        if termA == termB: # Special case
+    def get_MICA(self, termA, termB, ic_type = 'resnik', mica_index = False):
+        if mica_index:
+            mica = self.mica_index[termA][termB]
+        elif termA == termB: # Special case
             ic = self.get_IC(termA, ic_type = ic_type)
             mica = [termA, ic]
         else:
-            mica = self.compute_MICA(self.get_LCA(termA, termB, lca_index = lca_index), ic_type)
+            mica = self.compute_MICA(self.get_LCA(termA, termB, lca_index = False), ic_type)
         return mica
 
     def compute_MICA(self, lcas, ic_type):
@@ -469,10 +471,10 @@ class Ontology:
     # +ic_type+:: IC formula to be used
     # ===== Returns 
     # the similarity between both sets or false if frequencies are not available yet
-    def get_similarity(self, termA, termB, sim_type = 'resnik', ic_type = 'resnik', lca_index = False):
+    def get_similarity(self, termA, termB, sim_type = 'resnik', ic_type = 'resnik', mica_index = False):
         if sim_type not in self.allowed_calcs['sims']: raise Exception(f"SIM type specified ({sim_type}) is not allowed") 
         sim = None
-        mica, sim_res = self.get_MICA(termA, termB, ic_type, lca_index)
+        mica, sim_res = self.get_MICA(termA, termB, ic_type, mica_index)
         if mica != None:
             match sim_type:
                 case 'resnik':
@@ -832,14 +834,17 @@ class Ontology:
         # Compare A -> B
         for tA in termsA:
             if store_mica:
-                tA_micas = self.mica_index[tA]
+                tA_micas = self.sim_index[tA]
                 micas = [ tA_micas[tB] for tB in termsB ]
             else:    
                 micas = []
                 for tB in termsB:
                     value = self.get_similarity(tA, tB, sim_type = sim_type, ic_type = ic_type)
                     if type(value) is float: micas.append(value)
-            micasA.append(max(micas)) if len(micas) > 0 else micasA.append(0) 
+            if len(micas) > 0:
+                micasA.append(max(micas))  
+            else:
+                micasA.append(0) 
         means_sim = sum(micasA) / len(micasA)
         # Compare B -> A
         if bidirectional:
@@ -1120,13 +1125,17 @@ class Ontology:
                         pair_index[tuple(sorted(pair))] = True
         return pair_index
 
-    def get_mica_index_from_profiles(self, pair_index, ic_type = 'resnik'):
+    def get_mica_index_from_profiles(self, pair_index, ic_type = 'resnik', sim_type = 'resnik'):
         for pair in pair_index.keys():
-            term, value = self.get_MICA_from_pair(pair, ic_type = ic_type)
-            if term == None: value = False  # We use False to save that the operation was made but there is not mica value
+            value = self.get_MICA_from_pair(pair, ic_type = ic_type)
+            #if term == None: value = False  # We use False to save that the operation was made but there is not mica value
             tA, tB = pair
             self.add2nestHashDef(self.mica_index, tA, tB, value)
             self.add2nestHashDef(self.mica_index, tB, tA, value)
+            value = self.get_similarity(tA, tB, sim_type = sim_type, ic_type = ic_type, mica_index = False)
+            if value == None: value = 0
+            self.add2nestHashDef(self.sim_index, tA, tB, value)
+            self.add2nestHashDef(self.sim_index, tB, tA, value)
 
     # Compare internal stored profiles against another set of profiles. If an external set is not provided, internal profiles will be compared with itself 
     # ===== Parameters
@@ -1151,7 +1160,8 @@ class Ontology:
         #print(f"pair_index: {time.time() - start}")
         #start = time.time()
         self.mica_index = defaultdict(lambda: dict())
-        self.get_mica_index_from_profiles(pair_index, ic_type = ic_type)
+        self.sim_index = defaultdict(lambda: dict())
+        self.get_mica_index_from_profiles(pair_index, ic_type = ic_type, sim_type=sim_type)
         #print(f"mica_index: {time.time() - start}")
         #start = time.time()
         if same_profiles:
