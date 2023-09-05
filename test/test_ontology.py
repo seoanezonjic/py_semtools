@@ -335,6 +335,8 @@ class TestOBOFunctionalities(unittest.TestCase):
         profB = ["Child2"]
         profC = ["Parental"]
         profD = ["Parental", "Child2"]
+        
+        self.assertEqual( 1.0, self.hierarchical.compare(profB, profB, bidirectional= False, sim_type = "lin"))
         self.assertEqual(-(math.log10(1/2.0)), self.hierarchical.compare(profB, profB, bidirectional= False))
         self.assertEqual(-(math.log10(1/2.0)), self.hierarchical.compare(profB, profB, bidirectional= True))
         self.assertEqual(-(math.log10(1/2.0)), self.hierarchical.compare(profA, profB, bidirectional= False))

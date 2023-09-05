@@ -481,7 +481,7 @@ class Ontology:
                     sim = sim_res
                 case 'lin':
                     if termA == termB:
-                        sim = 1
+                        sim = 1.0
                     else:
                         sim = (2.0 * sim_res) / (self.get_IC(termA, ic_type=ic_type) + self.get_IC(termB, ic_type=ic_type))
                 case 'jiang_conrath': # This is not a similarity, this is a disimilarity (distance)
