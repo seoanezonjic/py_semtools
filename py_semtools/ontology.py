@@ -16,6 +16,8 @@ import itertools
 from py_semtools import OboParser
 from py_semtools import JsonParser
 
+from py_exp_calc import intersection, union, diff
+
 class Ontology:
     allowed_calcs = {'ics': ['resnik', 'resnik_observed', 'seco', 'zhou', 'sanchez'], 'sims': ['resnik', 'lin', 'jiang_conrath']}
     
@@ -1369,15 +1371,6 @@ class Ontology:
 
     def add2nestHashDef(self, h, key1, key2, val):
         h[key1][key2] = val
-
-    def intersection(self, arr1, arr2):
-         return [item for item in arr1 if item in arr2] 
-
-    def union(self, arr1, arr2):
-        return arr1 + [item for item in arr2 if item not in arr1]
-
-    def diff(self, arr1, arr2):
-        return [item for item in arr1 if item not in arr2]
 
     def concatItems(self, itemA, itemB): # NEED TEST, CHECK WITH PSZ THIS METHOD
         # A is Array :: RETURN ARRAY
