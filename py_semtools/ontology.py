@@ -16,7 +16,7 @@ import itertools
 from py_semtools import OboParser
 from py_semtools import JsonParser
 
-from py_exp_calc import intersection, union, diff
+from py_exp_calc.exp_calc import intersection, union, diff
 
 class Ontology:
     allowed_calcs = {'ics': ['resnik', 'resnik_observed', 'seco', 'zhou', 'sanchez'], 'sims': ['resnik', 'lin', 'jiang_conrath']}
