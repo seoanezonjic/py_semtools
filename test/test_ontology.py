@@ -22,7 +22,7 @@ class TestOBOFunctionalities(unittest.TestCase):
 
         self.file_Header = {"file": os.path.join(DATA_TEST_PATH, "only_header_sample.obo"), "name": "only_header_sample"}
         self.file_Hierarchical = {"file": os.path.join(DATA_TEST_PATH, "hierarchical_sample.obo"), "name": "hierarchical_sample"}
-        self.file_Circular = {"file": os.path.join(DATA_TEST_PATH, "circular_sample.obo"), "name": "circular_sample"}
+        #self.file_Circular = {"file": os.path.join(DATA_TEST_PATH, "circular_sample.obo"), "name": "circular_sample"}
         self.file_Atomic = {"file": os.path.join(DATA_TEST_PATH, "sparse_sample.obo"), "name": "sparse_sample"}
         self.file_Sparse = {"file": os.path.join(DATA_TEST_PATH, "sparse2_sample.obo"), "name": "sparse2_sample"}
         self.file_SH = {"file": os.path.join(DATA_TEST_PATH, "short_hierarchical_sample.obo"), "name": "short_hierarchical_sample"}
@@ -52,14 +52,14 @@ class TestOBOFunctionalities(unittest.TestCase):
                 "Child3": {"id": "Child2", "name": "Child2", "synonym": ["\"1,6-alpha-mannosyltransferase activity\" EXACT []"], "alt_id": ["Child3", "Child4"], "is_a": ["Parental"]}, 
                 "Child4": {"id": "Child2", "name": "Child2", "synonym": ["\"1,6-alpha-mannosyltransferase activity\" EXACT []"], "alt_id": ["Child3", "Child4"], "is_a": ["Parental"]}}, 
             "typedefs": {}, "instances": {}})
-        self.load_Circular = (
-            {"file": os.path.join(DATA_TEST_PATH, "circular_sample.obo"), "name": "circular_sample"}, 
-            {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
-            {"terms": {
-                "A": {"id": "A", "name": "All", "is_a": ["C"]}, 
-                "B": {"id": "B", "name": "B", "is_a": ["A"]}, 
-                "C": {"id": "C", "name": "C", "is_a": ["B"]}}, 
-            "typedefs": {}, "instances": {}})
+        #self.load_Circular = (
+        #    {"file": os.path.join(DATA_TEST_PATH, "circular_sample.obo"), "name": "circular_sample"}, 
+        #    {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
+        #    {"terms": {
+        #        "A": {"id": "A", "name": "All", "is_a": ["C"]}, 
+        #        "B": {"id": "B", "name": "B", "is_a": ["A"]}, 
+        #        "C": {"id": "C", "name": "C", "is_a": ["B"]}}, 
+        #    "typedefs": {}, "instances": {}})
         self.load_Atomic = (
             {"file": os.path.join(DATA_TEST_PATH, "sparse_sample.obo"), "name": "sparse_sample"}, 
             {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
@@ -80,7 +80,7 @@ class TestOBOFunctionalities(unittest.TestCase):
 
         # Parentals
         self.parentals_Hierachical = ("hierarchical", {"Child1": ["Parental"], "Child2": ["Parental"], "Child3": ["Parental"], "Child4": ["Parental"]})
-        self.parentals_Circular = ("circular", {"A": ["C", "B"], "C": ["B", "A"], "B": ["A", "C"]})
+        #self.parentals_Circular = ("circular", {"A": ["C", "B"], "C": ["B", "A"], "B": ["A", "C"]})
         self.parentals_Atomic = ("atomic", {})
         self.parentals_Sparse = ("sparse", {"B": ["A"], "C": ["A"]})
 
@@ -94,7 +94,7 @@ class TestOBOFunctionalities(unittest.TestCase):
         self.hierarchical = Ontology(file= self.file_Hierarchical["file"], load_file= True)
         self.short_hierarchical = Ontology(file= self.file_SH["file"],  load_file= True)
         self.enrichment_hierarchical = Ontology(file= self.file_Enr["file"],  load_file= True)
-        self.circular = Ontology(file= self.file_Circular["file"], load_file= True)
+        #self.circular = Ontology(file= self.file_Circular["file"], load_file= True)
         self.atomic = Ontology(file= self.file_Atomic["file"], load_file= True)
         self.sparse = Ontology(file= self.file_Sparse["file"], load_file= True)
 

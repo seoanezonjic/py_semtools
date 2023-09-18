@@ -419,7 +419,7 @@ class Ontology:
         if not (len(anc_A) == 0 and len(anc_B) == 0):
             anc_A.append(termA)
             anc_B.append(termB)
-            lca = self.intersection(anc_A,  anc_B)
+            lca = intersection(anc_A,  anc_B)
         return lca
 
     def compute_LCA_pair(self, pair):
@@ -608,7 +608,7 @@ class Ontology:
                     if query == None:
                         self.items[term] = propagated_items
                     else:
-                        terms = self.union(self.items[term], propagated_items)
+                        terms = union(self.items[term], propagated_items)
                         if clean_profiles and ontology != None: terms = ontology.clean_profile(terms)
                         self.items[term] = terms
     
@@ -648,8 +648,8 @@ class Ontology:
     def expand_profile_with_parents(self, profile):
         new_terms = []
         for term in profile:
-            new_terms = self.union(new_terms, self.get_ancestors(term))
-        return self.union(new_terms, profile)
+            new_terms = union(new_terms, self.get_ancestors(term))
+        return union(new_terms, profile)
 
     # Clean a given profile returning cleaned set of terms and removed ancestors term.
     # ===== Parameters
@@ -659,8 +659,8 @@ class Ontology:
     def remove_ancestors_from_profile(self, prof):
         ancestors = []
         for term in prof: ancestors.extend(self.get_ancestors(term))
-        redundant = self.intersection(prof, set(ancestors))
-        return self.diff(prof, redundant), redundant
+        redundant = intersection(prof, set(ancestors))
+        return diff(prof, redundant), redundant
 
     # Remove alternative IDs if official ID is present. DOES NOT REMOVE synonyms or alternative IDs of the same official ID
     # ===== Parameters
@@ -670,7 +670,7 @@ class Ontology:
     def remove_alternatives_from_profile(self, prof):
         alternatives = [ term for term in prof if term in self.alternatives_index]
         redundant = [ alt_id for alt_id in alternatives if self.alternatives_index.get(alt_id) in prof ]
-        return self.diff(prof, redundant), redundant
+        return diff(prof, redundant), redundant
 
     # Remove alternatives (if official term is present) and ancestors terms of a given profile 
     # ===== Parameters
@@ -928,7 +928,7 @@ class Ontology:
 
     def expand_profiles(self, meth, unwanted_terms = [], calc_metadata = True, ontology = None, minimum_childs = 1, clean_profiles = True):
         if meth == 'parental':
-            for pr_id, terms in self.profiles.items(): self.profiles[pr_id] = sorted(self.diff(self.expand_profile_with_parents(terms), unwanted_terms))
+            for pr_id, terms in self.profiles.items(): self.profiles[pr_id] = sorted(diff(self.expand_profile_with_parents(terms), unwanted_terms))
             if calc_metadata: self.get_items_from_profiles()
         elif meth == 'propagate':
             self.get_items_from_profiles()
@@ -1387,7 +1387,7 @@ class Ontology:
             # A_single : B_single
         concatenated = None
         if type(itemA) is list and type(itemB) is list:
-            concatenated = self.union(itemA, itemB)
+            concatenated = union(itemA, itemB)
         elif type(itemA) is dict and type(itemB) is dict:
             itemB_concatenated = {}
             for k, newV in itemB.items():
@@ -1398,7 +1398,7 @@ class Ontology:
                     itemB_concatenated[k] = self.concatItems(oldV, newV)
             concatenated = itemA | itemB_concatenated
         elif type(itemB) is list:
-            concatenated = self.union([itemA] + itemB)
+            concatenated = union([itemA] + itemB)
         elif type(itemB) is not dict:
             concatenated = list(set([itemA, itemB]))
         return concatenated
