@@ -164,6 +164,10 @@ class Ontology:
         # Add frequency
         if self.meta[term]['observed_freq'] == -1: self.meta[term]['observed_freq'] = 0 
         self.meta[term]['observed_freq'] += increase
+        # Add observation to parents, we assume that observing the child implies the existence of the parent
+        for anc in self.get_ancestors(term): 
+            self.meta[anc]['observed_freq'] += increase
+            if self.max_freqs['observed_freq'] < self.meta[anc]['observed_freq']: self.max_freqs['observed_freq'] = self.meta[anc]['observed_freq']
         # Check maximum frequency
         if self.max_freqs['observed_freq'] < self.meta[term]['observed_freq']: self.max_freqs['observed_freq'] = self.meta[term]['observed_freq']
 
