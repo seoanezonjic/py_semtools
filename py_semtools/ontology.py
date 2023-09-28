@@ -639,11 +639,7 @@ class Ontology:
     # +transform_to_sym+:: if true, transform observed terms to symbols. Default: false
     # ===== Return
     # true if process ends without errors and false in other cases
-    def add_observed_terms(self, terms = None, increase = 1.0, expand2parentals = True):
-        if expand2parentals: 
-            expanded_terms = []
-            for term in terms: expanded_terms.extend(self.get_ancestors(term))
-            terms = terms + expanded_terms
+    def add_observed_terms(self, terms = None, increase = 1.0):
         for t_id in terms: self.add_observed_term(t_id, increase = increase)
 
     # Modifying Profile
