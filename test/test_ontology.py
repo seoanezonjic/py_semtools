@@ -233,18 +233,35 @@ class TestOBOFunctionalities(unittest.TestCase):
         self.enrichment_hierarchical.precompute()
         self.sparse.precompute()
         self.hierarchical.add_observed_terms(terms= ["Child2","Child2","Child2","Parental","Parental","Parental","Parental"])
+        self.enrichment_hierarchical.add_observed_terms(terms= [
+            "branchAChild1","branchAChild1","branchAChild1",
+            "branchB","branchB",
+            "branchAChild2","branchAChild2","branchAChild2","branchAChild2",
+            "branchA","branchA","branchA",
+            "root","root"])
+        ## Structural ##
         self.assertEqual(1, self.hierarchical.get_structural_frequency("Child2")) ## Term by term frequencies
-        self.assertEqual(3, self.hierarchical.get_observed_frequency("Child2"))
         self.assertEqual(2, self.hierarchical.get_structural_frequency("Parental"))
+        ## Observed ##
+        self.assertEqual(3, self.hierarchical.get_observed_frequency("Child2"))
         self.assertEqual(7, self.hierarchical.get_observed_frequency("Parental"))
 
-
+        ## Structural ##
         self.assertEqual(["Child2",-(math.log10(1/2.0))], self.hierarchical.get_MICA("Child2", "Child2")) # MICA
         self.assertEqual(-(math.log10(3/5.0)), self.enrichment_hierarchical.get_ICMICA("branchAChild1", "branchAChild2")) #ICMICA
         self.assertEqual(0, self.enrichment_hierarchical.get_ICMICA("branchAChild1", "branchB")) #ICMICA
         self.assertIsNone(self.sparse.get_ICMICA("B","D")) #ICMICA
         self.assertEqual(["Parental",0], self.hierarchical.get_MICA("Child2", "Parental")) # ERR
         self.assertEqual(["Parental",0], self.hierarchical.get_MICA("Parental", "Parental")) # ERR
+        ## Observed ##
+        self.assertEqual(["Child2",-(math.log10(3/7.0))], self.hierarchical.get_MICA("Child2", "Child2", ic_type = 'resnik_observed')) # MICA
+        self.assertEqual(["Parental",0], self.hierarchical.get_MICA("Child2", "Parental", ic_type = 'resnik_observed')) 
+        self.assertEqual(["Parental",0], self.hierarchical.get_MICA("Parental", "Parental", ic_type = 'resnik_observed')) 
+        self.assertEqual(["branchA",-(math.log10(10/14))], self.enrichment_hierarchical.get_MICA("branchAChild1", "branchAChild2", ic_type = 'resnik_observed')) 
+        self.assertEqual(["branchA",-(math.log10(10/14))], self.enrichment_hierarchical.get_MICA("branchAChild1", "branchA", ic_type = 'resnik_observed')) 
+        self.assertEqual(["root",0], self.enrichment_hierarchical.get_MICA("branchB", "branchAChild2", ic_type = 'resnik_observed')) 
+        self.assertEqual(["root",0], self.enrichment_hierarchical.get_MICA("branchB", "branchA", ic_type = 'resnik_observed')) 
+
         self.assertEqual(0.0, self.hierarchical.get_similarity("Parental", "Parental")) # SIM
         self.assertEqual(0.0, self.hierarchical.get_similarity("Parental", "Child2"))
         self.assertEqual(-(math.log10(1/2.0)), self.hierarchical.get_similarity("Child2", "Child2"))
@@ -255,7 +272,10 @@ class TestOBOFunctionalities(unittest.TestCase):
         self.assertEqual((0+0) - (2.0 * 0), self.hierarchical.get_similarity("Parental", "Parental",sim_type="jiang_conrath"))
         self.assertEqual( (-math.log10(1/2.0) + -math.log10(1/2.0)) - (2.0 * -(math.log10(1/2.0))), 
                             self.hierarchical.get_similarity("Child2", "Child2",sim_type="jiang_conrath"))
-
+        ## Observed ##
+        self.assertEqual(0.0, self.hierarchical.get_similarity("Parental", "Parental", sim_type = 'resnik', ic_type = 'resnik_observed')) 
+        self.assertEqual(0.0, self.hierarchical.get_similarity("Parental", "Child2", sim_type = 'resnik', ic_type = 'resnik_observed'))
+        self.assertEqual(-(math.log10(3/7)), self.hierarchical.get_similarity("Child2", "Child2", sim_type = 'resnik', ic_type = 'resnik_observed'))
 
     # Checking valid terms
     ####################################
