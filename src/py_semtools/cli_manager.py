@@ -1,6 +1,7 @@
 import argparse
 import sys
 import os
+import requests
 
 from py_semtools.ontology import Ontology
 import py_semtools # For external_data
@@ -14,31 +15,32 @@ EXTERNAL_DATA=os.path.join(os.path.dirname(py_semtools.__file__), 'external_data
 def text_list(string): return string.split(',')
 
 def childs(string):
-    if '/' in string:
-      modifiers, terms = string.split('/')
-    else:
-      modifiers = ''
-      terms = string
-    terms = terms.split(',')
-    return [terms, modifiers]  
+	if '/' in string:
+		modifiers, terms = string.split('/')
+	else:
+		modifiers = ''
+		terms = string
+	terms = terms.split(',')
+	return [terms, modifiers]  
 
 ##############################################
 
 def semtools(args = None):
-    if args == None: args = sys.argv[1:]
+	if args is None:
+		args = sys.argv[1:]
 
 	parser = argparse.ArgumentParser(description='Perform Ontology driven analysis ')
 
-	parser.add_argument('-p', "--processes", dest="processes", default= 2, type=int,
-	          help="Number of processes to parallelize calculations. Applied to: semantic similarity.")
-	parser.add_argument("-d", "--download", dest="download", default= None, 
-	          help="Download obo file from an official resource. MONDO, GO and HPO are possible values.")
-	parser.add_argument("-i", "--input_file", dest="input_file", default= None, 
-	          help="Filepath of profile data")
-	parser.add_argument("-o", "--output_file", dest="output_file", default= None, 
-	          help="Output filepath")
-	parser.add_argument("-I", "--IC", dest="ic", default= None, 
-	          help="Get the information content (IC) values: 'prof' for stored profiles or 'ont' for terms in ontology")
+	parser.add_argument('-p', "--processes", dest="processes", default=2, type=int,
+						help="Number of processes to parallelize calculations. Applied to: semantic similarity.")
+	parser.add_argument("-d", "--download", dest="download", default=None,
+						help="Download obo file from an official resource. MONDO, GO and HPO are possible values.")
+	parser.add_argument("-i", "--input_file", dest="input_file", default=None,
+						help="Filepath of profile data")
+	parser.add_argument("-o", "--output_file", dest="output_file", default=None,
+					help="Output filepath")
+	parser.add_argument("-I", "--IC", dest="ic", default=None,
+					help="Get the information content (IC) values: 'prof' for stored profiles or 'ont' for terms in ontology")
 	parser.add_argument("-O", "--ontology_file", dest="ontology_file", default= None, 
 	          help="Path to ontology file")
 	parser.add_argument("-T", "--term_filter", dest="term_filter", default= None, 
@@ -85,129 +87,142 @@ def semtools(args = None):
 	          help="Input file is a two column table, first is an id and the second is a simgle ontology term.")
 	parser.add_argument("--out2cols", dest="out2cols", default= False, action='store_true', 
 	          help="Output file will be a two column table")
-    opts =  parser.parse_args(args)
-    main_semtools(opts)
+	opts =  parser.parse_args(args)
+	main_semtools(opts)
 
 def main_semtools(opts):
 	options = vars(opts)
 	ont_index_file = os.path.join(EXTERNAL_DATA, 'ontologies.txt')
 	if options.get('download') != None:
-	  download(ont_index_file, options['download'], options['output_file'])
-	  exit()
+		download(ont_index_file, options['download'], options['output_file'])
+		exit()
 
 	if options.get('ontology_file') != None:
-	  options['ontology_file'] = get_ontology_file(options['ontology_file'], ont_index_file)
+		options['ontology_file'] = get_ontology_file(options['ontology_file'], ont_index_file)
 
 	extra_dicts = []
-	if options.get('keyword') != None: extra_dicts.append(['xref', {'select_regex': eval('r"'+options['keyword']+'"'), 'store_tag': 'tag', 'multiterm': True}]) 
+	if options.get('keyword') != None:
+		extra_dicts.append(['xref', {'select_regex': eval('r"'+options['keyword']+'"'), 'store_tag': 'tag', 'multiterm': True}]) 
 	ontology = Ontology(file = options['ontology_file'], load_file = True, extra_dicts = extra_dicts)
 	ontology.precompute()
 	ontology.threads = options['processes']
 
-	if options['root'] != None: Ontology.mutate(options['root'], ontology, clone = False)  # TODO fix method and convert in class method
+	if options['root'] != None:
+		Ontology.mutate(options['root'], ontology, clone = False)  # TODO fix method and convert in class method
 
 	if options['input_file'] != None:
-	  data = load_tabular_file(options['input_file'])
-	  if options.get('list_translate') == None or options['keyword'] != None:
-	    data = format_data(data, options)
-	    if options.get('translate') != 'codes' and options.get('keyword') == None: store_profiles(data, ontology) 
+		data = load_tabular_file(options['input_file'])
+		if options.get('list_translate') == None or options['keyword'] != None:
+			data = format_data(data, options)
+			if options.get('translate') != 'codes' and options.get('keyword') == None:
+				store_profiles(data, ontology) 
 	if options.get('list_translate') != None:
-	  for term in data:
-	    if options['list_translate'] == 'names':
-	      translation, untranslated = ontology.translate_ids(term)
-	    elif options['list_translate'] == 'codes':
-	      translation, untranslated = ontology.translate_names(term)
-	    print(f"{term[0]}\t{ '-' if len(translation) == 0 else translation[0]}")
-	  exit()
+		for term in data:
+			if options['list_translate'] == 'names':
+				translation, untranslated = ontology.translate_ids(term)
+			elif options['list_translate'] == 'codes':
+				translation, untranslated = ontology.translate_names(term)
+			print(f"{term[0]}\t{ '-' if len(translation) == 0 else translation[0]}")
+		exit()
 
 	if options.get('translate') == 'codes':
-	  profiles = {}
-	  for info in data:
-	    pr_id, terms = info
-	    profiles[pr_id] = terms.split(options['separator'])
-	  translate(ontology, 'codes', options, profiles)
-	  store_profiles(profiles, ontology)
-	   
+		profiles = {}
+		for info in data:
+			pr_id, terms = info
+			profiles[pr_id] = terms.split(options['separator'])
+		translate(ontology, 'codes', options, profiles)
+		store_profiles(profiles, ontology)
+		   
 	if options.get('clean_profiles'):
-	  removed_profiles = clean_profiles(ontology.profiles, ontology, options)	
-	  if removed_profiles != None and len(removed_profiles) > 0:
-	    with open(options['removed_path'], 'w') as f:
-	      for profile in removed_profiles: f.write(profile + "\n")
+		removed_profiles = clean_profiles(ontology.profiles, ontology, options)    
+		if removed_profiles != None and len(removed_profiles) > 0:
+			with open(options['removed_path'], 'w') as f:
+				for profile in removed_profiles:
+					f.write(profile + "\n")
 
 	if options.get('expand_profiles') != None:
-	  ontology.expand_profiles(options['expand_profiles'], unwanted_terms = options['unwanted_terms'])
+		ontology.expand_profiles(options['expand_profiles'], unwanted_terms = options['unwanted_terms'])
 
 	if options.get('similarity') != None:
-	  refs = None
-	  if options.get('reference_profiles') != None:
-	    refs = load_tabular_file(options['reference_profiles'])
-	    format_tabular_data(refs, options['separator'], 0, 1)
-	    refs = dict(refs)
-	    if options['clean_profiles']: refs = clean_profiles(ontology.profiles, ontology, options) 
-	    if refs == None or len(refs) == 0: raise Exception('Reference profiles are empty after cleaning ')
-	  write_similarity_profile_list(options['output_file'], ontology, options['similarity'], refs)
+		refs = None
+		if options.get('reference_profiles') != None:
+			refs = load_tabular_file(options['reference_profiles'])
+			format_tabular_data(refs, options['separator'], 0, 1)
+			refs = dict(refs)
+			if options['clean_profiles']:
+				refs = clean_profiles(ontology.profiles, ontology, options) 
+			if refs == None or len(refs) == 0:
+				raise Exception('Reference profiles are empty after cleaning ')
+		write_similarity_profile_list(options['output_file'], ontology, options['similarity'], refs)
 
 
 	if options.get('ic') == 'prof':
-	  ontology.add_observed_terms_from_profiles()
-	  by_ontology, by_freq = ontology.get_profiles_resnik_dual_ICs()
-	  ic_file = os.path.splittext(os.path.basename(options['input_file']))[0]+'_IC_onto_freq'
-	  with open(ic_file , 'w') as file:
-	    for pr_id in ontology.profiles.keys():
-	      file.write("\t".join([pr_id, by_ontology[pr_id], by_freq[pr_id]]) + "\n")
+		ontology.add_observed_terms_from_profiles()
+		by_ontology, by_freq = ontology.get_profiles_resnik_dual_ICs()
+		ic_file = os.path.splittext(os.path.basename(options['input_file']))[0]+'_IC_onto_freq'
+		with open(ic_file , 'w') as file:
+			for pr_id in ontology.profiles.keys():
+				file.write("\t".join([pr_id, by_ontology[pr_id], by_freq[pr_id]]) + "\n")
 	elif options.get('ic') == 'ont':
-	  with open('ont_IC' , 'w') as file:
-	    for term in ontology.each():
-	        file.write(f"{term}\t{ontology.get_IC(term)}\n")
+		with open('ont_IC' , 'w') as file:
+			for term in ontology.each():
+				file.write(f"{term}\t{ontology.get_IC(term)}\n")
 
-	if options.get('translate') == 'names': translate(ontology, 'names', options)  
+	if options.get('translate') == 'names':
+		translate(ontology, 'names', options)  
 
 	if len(options['childs'][0]) > 0:
-	  terms, modifiers = options['childs']
-	  all_childs = get_childs(ontology, terms, modifiers)
-	  for ac in all_childs:
-	    if 'r' in modifiers:
-	      print("\t".join(ac))
-	    else:
-	      print(ac)
+		terms, modifiers = options['childs']
+		all_childs = get_childs(ontology, terms, modifiers)
+		for ac in all_childs:
+			if 'r' in modifiers:
+				print("\t".join(ac))
+			else:
+				print(ac)
 
 	if options.get('output_file') != None and options.get('similarity') == None:
-	  with open(options['output_file'], 'w') as file:
-	    if options.get('out2cols') == True:
-	      for pr_id, terms in ontology.profiles.items(): 
-	        for term in terms: 
-	          file.write("\t".join([pr_id, term]) + "\n")
-	    else:
-	      for pr_id, terms in ontology.profiles.items(): file.write("\t".join([pr_id, "|".join(terms)]) + "\n")
+		with open(options['output_file'], 'w') as file:
+			if options.get('out2cols') == True:
+				for pr_id, terms in ontology.profiles.items(): 
+					for term in terms: 
+						file.write("\t".join([pr_id, term]) + "\n")
+			else:
+				for pr_id, terms in ontology.profiles.items():
+					file.write("\t".join([pr_id, "|".join(terms)]) + "\n")
 
 	if options.get('statistics'): 
-	  for stat in get_stats(ontology.profile_stats()): print("\t".join([str(el) for el in stat]))
+		for stat in get_stats(ontology.profile_stats()):
+			print("\t".join([str(el) for el in stat]))
 
 	if options.get('list_term_attributes'):
-	  for t_attr in ontology.list_term_attributes(): print("\t".join(t_attr))
+		for t_attr in ontology.list_term_attributes():
+			print("\t".join(t_attr))
 
 	if options.get('keyword') != None:
-	  xref_translated = []
-	  dictio = ontology.dicts['tag'][options['xref_sense']]
-	  if len(data[0]) == 2: # TRanslate profiles
-	    for info in data:
-	      pr_id, prof = info
-	      xrefs = []
-	      for t in prof:
-	        query = dictio.get(t)
-	        if query != None: xrefs.extend(query) 
-	      if len(xrefs) > 0: xref_translated.append([pr_id, xrefs]) 
-	    with open(options['output_file'], 'w') as f:
-	      for pr_id, prof in xref_translated:
-	        for t in prof:
-	          f.write("\t".join([pr_id, t]) + "\n")
-	  else: # Get dict: term - xreference (We assume that data has only one column)
-	    with open(options['output_file'], 'w') as f:
-	      for t in data:
-	        t = t[0]
-	        query = dictio.get(t)
-	        if query != None: 
-	          for x in query: f.write("\t".join([t, x]) + "\n")
+		xref_translated = []
+		dictio = ontology.dicts['tag'][options['xref_sense']]
+		if len(data[0]) == 2: # TRanslate profiles
+			for info in data:
+				pr_id, prof = info
+				xrefs = []
+				for t in prof:
+					query = dictio.get(t)
+					if query != None:
+						xrefs.extend(query) 
+				if len(xrefs) > 0:
+					xref_translated.append([pr_id, xrefs]) 
+			with open(options['output_file'], 'w') as f:
+				for pr_id, prof in xref_translated:
+					for t in prof:
+						f.write("\t".join([pr_id, t]) + "\n")
+		else: # Get dict: term - xreference (We assume that data has only one column)
+			with open(options['output_file'], 'w') as f:
+				for t in data:
+					t = t[0]
+					query = dictio.get(t)
+					if query != None: 
+						for x in query:
+							f.write("\t".join([t, x]) + "\n")
 
 def load_tabular_file(file):
   records = []
@@ -394,7 +409,7 @@ def format_data(data, options):
   return data
 
 def strsimnet(args = None):
-    if args == None: args = sys.argv[1:]
+	if args == None: args = sys.argv[1:]
 	parser = argparse.ArgumentParser(description='Perform text similarity analysis')
 	parser.add_argument("-i", "--input_file", dest="input_file", default= None, 
 	          help="Input OMIM diseases file.")
@@ -410,8 +425,8 @@ def strsimnet(args = None):
 	          help="Chars to be excluded from comparissons.")
 	parser.add_argument("-o", "--output_file", dest="output_file", default= None, 
 	          help="Output similitudes file.")
-    opts =  parser.parse_args(args)
-    main_strsimnet(opts)
+	opts =  parser.parse_args(args)
+	main_strsimnet(opts)
 
 def main_strsimnet(options):
 	texts2compare = load_table_file(input_file = options.input_file,
