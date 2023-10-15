@@ -2,10 +2,10 @@ import argparse
 import sys
 import os
 import requests
-
 from py_semtools.ontology import Ontology
 import py_semtools # For external_data
 from py_semtools.sim_handler import *
+import py_exp_calc.exp_calc as pxc
 
 
 EXTERNAL_DATA=os.path.join(os.path.dirname(py_semtools.__file__), 'external_data')
@@ -45,7 +45,7 @@ def semtools(args = None):
 	          help="Path to ontology file")
 	parser.add_argument("-T", "--term_filter", dest="term_filter", default= None, 
 	          help="If specified, only terms that are descendants of the specified term will be kept on a profile when cleaned")
-	parser.add_argument("-t", "--translate", dest="translate", default= None, 
+	parser.add_argument("-t", "--translate", dest="translate", default= None,
 	          help="Translate to 'names' or to 'codes'")
 	parser.add_argument("-s", "--similarity_method", dest="similarity", default= None, 
 	          help="Calculate similarity between profile IDs computed by 'resnik', 'lin' or 'jiang_conrath' methods.")
@@ -65,6 +65,8 @@ def semtools(args = None):
 	          help="Comma separated terms not wanted to be included in profile expansion.")
 	parser.add_argument('-S', "--separator", dest="separator", default= ';',
 	          help="Separator used for the terms profile.")
+	parser.add_argument('-E', "--external_separator", dest="external_separator", default= None,
+	          help="External separator used for the terms profile.")
 	parser.add_argument('-n', "--statistics", dest="statistics", default= False, action='store_true', 
 	          help="To obtain main statistical descriptors of the profiles file.")
 	parser.add_argument('-l', "--list_translate", dest="list_translate", default= None, 
@@ -92,6 +94,7 @@ def semtools(args = None):
 
 def main_semtools(opts):
 	options = vars(opts)
+	if options["external_separator"] is None: options["external_separator"] = options["separator"]
 	ont_index_file = os.path.join(EXTERNAL_DATA, 'ontologies.txt')
 	if options.get('download') != None:
 		download(ont_index_file, options['download'], options['output_file'])
@@ -129,9 +132,9 @@ def main_semtools(opts):
 		profiles = {}
 		for info in data:
 			pr_id, terms = info
-			profiles[pr_id] = terms.split(options['separator'])
+			profiles[pr_id] = terms
 		translate(ontology, 'codes', options, profiles)
-		store_profiles(profiles, ontology)
+		store_profiles(list(profiles.items()), ontology)
 		   
 	if options.get('clean_profiles'):
 		removed_profiles = clean_profiles(ontology.profiles, ontology, options)    
@@ -159,10 +162,10 @@ def main_semtools(opts):
 	if options.get('ic') == 'prof':
 		ontology.add_observed_terms_from_profiles()
 		by_ontology, by_freq = ontology.get_profiles_resnik_dual_ICs()
-		ic_file = os.path.splittext(os.path.basename(options['input_file']))[0]+'_IC_onto_freq'
+		ic_file = os.path.splitext(os.path.basename(options['input_file']))[0]+'_IC_onto_freq'
 		with open(ic_file , 'w') as file:
 			for pr_id in ontology.profiles.keys():
-				file.write("\t".join([pr_id, by_ontology[pr_id], by_freq[pr_id]]) + "\n")
+				file.write("\t".join([pr_id, str(by_ontology[pr_id]), str(by_freq[pr_id])]) + "\n")
 	elif options.get('ic') == 'ont':
 		with open('ont_IC' , 'w') as file:
 			for term in ontology.each():
@@ -188,10 +191,10 @@ def main_semtools(opts):
 						file.write("\t".join([pr_id, term]) + "\n")
 			else:
 				for pr_id, terms in ontology.profiles.items():
-					file.write("\t".join([pr_id, "|".join(terms)]) + "\n")
+					file.write("\t".join([pr_id, options["external_separator"].join(terms)]) + "\n")
 
 	if options.get('statistics'): 
-		for stat in get_stats(ontology.profile_stats()):
+		for stat in ontology.profile_stats():
 			print("\t".join([str(el) for el in stat]))
 
 	if options.get('list_term_attributes'):
@@ -277,7 +280,7 @@ def translate(ontology, mode, options, profiles = None):
   elif mode == 'codes':
     for pr_id, terms in profiles.items():
       translation, untranslated = ontology.translate_names(terms)
-      profiles[pr_id] = options['separator'].join(translation)
+      profiles[pr_id] = translation
       if len(untranslated) > 0: not_translated[pr_id] = untranslated
   if len(not_translated) > 0:
     with open(options['untranslated_path'], 'w') as file:
@@ -336,21 +339,6 @@ def get_ontology_file(path, source):
       raise Exception("Input ontology file not exists")
   return path
 
-def get_stats(stats):
-  report_stats = []
-  report_stats.append(['Elements', stats['count']])
-  report_stats.append(['Elements Non Zero', stats['countNonZero']])
-  report_stats.append(['Non Zero Density', stats['countNonZero'] / stats['count']])
-  report_stats.append(['Max', stats['max']])
-  report_stats.append(['Min', stats['min']])
-  report_stats.append(['Average', stats['average']])
-  report_stats.append(['Variance', stats['variance']])
-  report_stats.append(['Standard Deviation', stats['standardDeviation']])
-  report_stats.append(['Q1', stats['q1']])
-  report_stats.append(['Median', stats['median']])
-  report_stats.append(['Q3', stats['q3']])
-  return report_stats
-
 def sort_terms_by_levels(terms, modifiers, ontology, all_childs):
   term_levels = ontology.get_terms_levels(all_childs)
   if 'a' in modifiers:
@@ -369,10 +357,10 @@ def get_childs(ontology, terms, modifiers):
   all_childs = []
   for term in terms:
     childs = ontology.get_ancestors(term) if 'a' in modifiers else ontology.get_descendants(term) 
-    all_childs = list(set(all_childs) | set(childs))
+    all_childs = pxc.union(pxc.uniq(all_childs),pxc.uniq(childs)) 
   if 'r' in modifiers:
     relations = []
-    all_childs = list(set(all_childs) | set(terms)) # Add parents that generated child list
+    all_childs = pxc.union(pxc.uniq(all_childs),pxc.uniq(terms))  # Add parents that generated child list
     target_hops = None
     matches = re.search(r"h([0-9]+)", modifiers) 
     if matches:

@@ -445,15 +445,16 @@ class TestOBOFunctionalities(unittest.TestCase):
         self.hierarchical.add_profile("B", ["Child2", "Parental", "FakeID"], substitute= False)
         self.hierarchical.add_profile("C", ["Child2", "Parental"], substitute= False)
         self.hierarchical.add_profile("D", ["Parental"], substitute= False)
-
+        expected_stats = [['Elements', '4'], ['Elements Non Zero', '4'], ['Non Zero Density', '1.0'], 
+         ['Max', '2'], ['Min', '1'], ['Average', '1.75'], 
+         ['Variance', '0.1875'], ['Standard Deviation', '0.4330127018922193'], ['Q1', '1.75'], 
+         ['Median', '2.0'], ['Q3', '2.0'], ['Min Non Zero', '1'],
+         ['Average Non Zero', '1.75'], ['Variance Non Zero', '0.1875'], ['Standard Deviation Non Zero', '0.4330127018922193'],
+         ['Q1 Non Zero', '1.75'], ['Median Non Zero', '2.0'], ['Q3 Non Zero', '2.0']]
         # Getiings
         self.assertEqual([2, 2, 2, 1], self.hierarchical.get_profiles_sizes()) # Check metadata
         self.assertEqual(round(7 /4.0, 4), self.hierarchical.get_profiles_mean_size())
-        self.assertEqual({"average": 1.75, 
-                      "variance": 0.1875,
-                      "standardDeviation": math.sqrt(0.1875), 
-                      "max": 2, "min": 1, "count": 4, "countNonZero": 4, 
-                      "q1": 1.75, "median": 2.0, "q3": 2.0}, self.hierarchical.profile_stats())
+        self.assertEqual(expected_stats, self.hierarchical.profile_stats())
         self.assertEqual(1, self.hierarchical.get_profile_length_at_percentile(0, increasing_sort= True))
         self.assertEqual(2, self.hierarchical.get_profile_length_at_percentile(2.0 / (4 - 1) * 100, increasing_sort= True))
         self.assertEqual(2, self.hierarchical.get_profile_length_at_percentile(3.0 / (4 - 1) * 100, increasing_sort= True))

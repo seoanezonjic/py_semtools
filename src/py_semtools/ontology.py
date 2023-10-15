@@ -12,6 +12,7 @@ from functools import partial
 from collections import defaultdict
 import time
 import itertools
+import py_exp_calc.exp_calc as pxc
 
 from py_semtools import OboParser
 from py_semtools import JsonParser
@@ -688,7 +689,7 @@ class Ontology:
         profile, _ = self.check_ids(profile)
         profile = [ t for t in profile if not self.is_obsolete(t)] 
         if options.get('term_filter') != None: profile = [ term for term in profile if options['term_filter'] in self.get_ancestors(term) ] # keep terms with parents in term filter
-        profile = self.clean_profile(list(set(profile)), remove_alternatives)
+        profile = self.clean_profile(pxc.uniq(profile), remove_alternatives)
         return profile
 
     # Remove terms from a given profile using hierarchical info and scores set given  
@@ -975,19 +976,7 @@ class Ontology:
     ####################################
 
     def profile_stats(self):
-        stats = {}
-        data = np.array(self.get_profiles_sizes())
-        stats["average"] = np.mean(data)
-        stats["variance"] = np.var(data)
-        stats["standardDeviation"] = np.std(data)
-        stats["max"] = data.max()
-        stats["min"] = data.min()
-        stats["count"] = len(data)
-        stats["countNonZero"] = len([non_zero_element for non_zero_element in data if non_zero_element != 0])
-        stats["q1"] = np.quantile(data, 0.25)
-        stats["median"] = np.quantile(data, 0.5)
-        stats["q3"] = np.quantile(data, 0.75)
-        return stats
+        return list(pxc.get_stats_from_list(self.get_profiles_sizes()))
 
     # ===== Returns 
     # mean size of stored profiles

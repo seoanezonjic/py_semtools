@@ -1,0 +1,5 @@
+P1	branchA;branchAChild1;root
+P2	branchA;branchAChild1;branchB;root
+P3	branchA;branchAChild1;branchAChild2;root
+P4	branchA;root
+P5	branchA;branchAChild1;root

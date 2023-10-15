@@ -1,0 +1,5 @@
+P1	All;Child2;Child1
+P2	All;Child5;Child2
+P3	Child2;All;Child4
+P4	Child1
+P5	Child2
