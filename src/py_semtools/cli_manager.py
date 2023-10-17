@@ -13,6 +13,7 @@ import py_exp_calc.exp_calc as pxc
 from py_cmdtabs import CmdTabs
 
 ONTOLOGY_INDEX = str(files('py_semtools.external_data').joinpath('ontologies.txt'))
+#https://pypi.org/project/platformdirs/
 ONTOLOGIES=os.path.join(user_data_dir("semtools", "seoane"), 'ontologies')
 
 ## TYPES
