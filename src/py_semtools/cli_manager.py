@@ -6,6 +6,7 @@ from py_semtools.ontology import Ontology
 import py_semtools # For external_data
 from py_semtools.sim_handler import *
 import py_exp_calc.exp_calc as pxc
+from py_cmdtabs import CmdTabs
 
 
 EXTERNAL_DATA=os.path.join(os.path.dirname(py_semtools.__file__), 'external_data')
@@ -24,6 +25,26 @@ def childs(string):
 	return [terms, modifiers]  
 
 ##############################################
+
+def strsimnet(args = None):
+	if args == None: args = sys.argv[1:]
+	parser = argparse.ArgumentParser(description='Perform text similarity analysis')
+	parser.add_argument("-i", "--input_file", dest="input_file", default= None, 
+	          help="Input OMIM diseases file.")
+	parser.add_argument("-s", "--split_char", dest="split_char", default="\t", 
+	          help="Character for splitting input file. Default: tab.")
+	parser.add_argument("-c", "--column", dest="cindex", default=0, type=int, 
+	          help="Column index wich contains texts to be compared. Default: 0.")
+	parser.add_argument("-C", "--filter_column", dest="findex", default=-1, type=int, 
+	          help="[OPTIONAL] Column index wich contains to be used as filters. Default: -1.")
+	parser.add_argument("-f", "--filter_value", dest="filter_value", default=None, 
+	          help="[OPTIONAL] Value to be used as filter.")
+	parser.add_argument("-r", "--remove_chars", dest="rm_char", default="", 
+	          help="Chars to be excluded from comparissons.")
+	parser.add_argument("-o", "--output_file", dest="output_file", default= None, 
+	          help="Output similitudes file.")
+	opts =  parser.parse_args(args)
+	main_strsimnet(opts)
 
 def semtools(args = None):
 	if args is None:
@@ -126,7 +147,7 @@ def main_semtools(opts):
 			elif options['list_translate'] == 'codes':
 				translation, untranslated = ontology.translate_names(term)
 			print(f"{term[0]}\t{ '-' if len(translation) == 0 else translation[0]}")
-		exit()
+		sys.exit(0)
 
 	if options.get('translate') == 'codes':
 		profiles = {}
@@ -240,35 +261,8 @@ def load_tabular_file(file):
 def format_tabular_data(data, separator, id_col, terms_col):
   for i, row in enumerate(data): data[i] = [row[id_col], row[terms_col].split(separator)]
 
-def aggregate_tabular_data(data, id_col, terms_col):
-  agg_data = {}
-  for d in data:
-    p_id = d[id_col]
-    term = d[terms_col]
-    query = agg_data.get(p_id)
-    if query == None:
-      agg_data[p_id] = [term]
-    else:
-      query.append(term)
-  return [[p_id, terms] for p_id, terms in agg_data.items()]
-
 def store_profiles(file, ontology):
   for t_id, terms in file: ontology.add_profile(t_id, terms)
-
-def load_value(hash_to_load, key, value, unique = True):
-    query = hash_to_load.get(key)
-    if query == None:
-       if type(value)  is not list: value = [value]
-       hash_to_load[key] = value
-    else:
-        if type(value) is list:
-            query.extend(value)
-        else:
-            query.append(value)
-        if unique: 
-          uniq_query = list(set(query))
-          query.clear()
-          query.extend(uniq_query)
 
 def translate(ontology, mode, options, profiles = None):
   not_translated = {}
@@ -390,31 +384,10 @@ def get_childs(ontology, terms, modifiers):
   return all_childs
 
 def format_data(data, options):
-  if options.get('2cols') == True:
-    data = aggregate_tabular_data(data, options.get('subject_column'), options.get('annotations_column'))
-  else:
-    if not options.get('simple_list'): format_tabular_data(data, options.get('separator'), options.get('subject_column'), options.get('annotations_column'))
-  return data
-
-def strsimnet(args = None):
-	if args == None: args = sys.argv[1:]
-	parser = argparse.ArgumentParser(description='Perform text similarity analysis')
-	parser.add_argument("-i", "--input_file", dest="input_file", default= None, 
-	          help="Input OMIM diseases file.")
-	parser.add_argument("-s", "--split_char", dest="split_char", default="\t", 
-	          help="Character for splitting input file. Default: tab.")
-	parser.add_argument("-c", "--column", dest="cindex", default=0, type=int, 
-	          help="Column index wich contains texts to be compared. Default: 0.")
-	parser.add_argument("-C", "--filter_column", dest="findex", default=-1, type=int, 
-	          help="[OPTIONAL] Column index wich contains to be used as filters. Default: -1.")
-	parser.add_argument("-f", "--filter_value", dest="filter_value", default=None, 
-	          help="[OPTIONAL] Value to be used as filter.")
-	parser.add_argument("-r", "--remove_chars", dest="rm_char", default="", 
-	          help="Chars to be excluded from comparissons.")
-	parser.add_argument("-o", "--output_file", dest="output_file", default= None, 
-	          help="Output similitudes file.")
-	opts =  parser.parse_args(args)
-	main_strsimnet(opts)
+	if options.get('2cols') == True:
+		data = CmdTabs.aggregate_column(data, options.get('subject_column'), options.get('annotations_column'), sep=options.get('separator'))
+	if not options.get('simple_list'): format_tabular_data(data, options.get('separator'), options.get('subject_column'), options.get('annotations_column'))
+	return data
 
 def main_strsimnet(options):
 	texts2compare = load_table_file(input_file = options.input_file,
@@ -439,5 +412,5 @@ def load_table_file(input_file, splitChar = "\t", targetCol = 1, filterCol = -1,
 			if filterCol >= 0 and row[filterCol] != filterValue: continue 
 			texts.append(row[targetCol]) 
 		# Remove uniques
-		texts = list(set(texts))
+		texts = pxc.uniq(texts)
 		return texts

@@ -1,0 +1,10 @@
+abcde	abcdf	0.75
+abcde	abcd	0.8571428571428571
+abcde	asdabcde	0.7272727272727273
+abcde	abcdefd	0.8
+abcdf	abcd	0.8571428571428571
+abcdf	asdabcde	0.5454545454545454
+abcdf	abcdefd	0.6
+abcd	asdabcde	0.6
+abcd	abcdefd	0.6666666666666666
+asdabcde	abcdefd	0.6153846153846154

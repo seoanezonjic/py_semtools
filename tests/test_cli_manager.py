@@ -70,6 +70,14 @@ def test_clean_profiles(tmp_dir): # -c -T
     expected_result = CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'cleaned_profiles'))
     os.remove("./rejected_profs")
     assert expected_result == test_result
+
+    # Cheing the --2cols option
+    input_file = os.path.join(DATA_TEST_PATH, 'profiles_2cols')
+    args = f"-i {input_file} -c -T branchA -O {ontology_file} --2cols -o {output_file}".split(" ")
+    script2test(args)
+    test_result = CmdTabs.load_input_data(output_file)
+    os.remove("./rejected_profs")
+    assert expected_result == test_result
     
 def test_profile_expansion(tmp_dir): 
     input_file = os.path.join(DATA_TEST_PATH, 'profiles')
@@ -106,12 +114,15 @@ def test_translate(tmp_dir):
     expected_result =  CmdTabs.load_input_data(input_file)
     assert expected_result == test_result
 
-# Talk with PSZ the exit()
-"""     args = f"-i {input_file_terms} -O {ontology_file} -l codes -o {output_file_codes}".split(" ")
+    args = f"-i {input_file_terms} -O {ontology_file} -l codes".split(" ")
+    @capture_stdout
+    def script2test(lsargs):
+        with pytest.raises(SystemExit):
+            return py_semtools.semtools(lsargs)
     _, printed = script2test(args)
     test_result = strng2table(printed)
     expected_result =  CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'translated_terms_codes'))
-    assert expected_result == test_result """
+    assert expected_result == test_result
 
 ### Analysis
 def test_get_ic(tmp_dir): # -I
@@ -158,3 +169,25 @@ def test_semantic_similarity(tmp_dir):
                         ['P3', 'P2', '0.7195656342523358'], ['P3', 'P3', '1.0'], ['P4', 'P5', '0.48185106713808395'],
                         ['P4', 'P1', '0.6204627667845211'], ['P4', 'P2', '0.24092553356904198'], ['P4', 'P3', '0.36138830035356295'], ['P4', 'P4', '1.0']]
     assert test_result == expected_result
+
+# Testing strsimnet
+
+def test_strsimnet(tmp_dir):
+    input_file = os.path.join(DATA_TEST_PATH, 'string_values')
+    output_file1 = os.path.join(tmp_dir, 'strsimnet')
+    args1 = f"-i {input_file} -c 0 -o {output_file1}".split(" ")
+    output_file2 = os.path.join(tmp_dir, 'strsimnet_with_filter')
+    args2 = f"-i {input_file} -c 0 -C 1 -f 2 -o {output_file2}".split(" ")
+    @capture_stdout
+    def script2test(lsargs):
+        return py_semtools.strsimnet(lsargs)
+    
+    script2test(args1)
+    test_result = CmdTabs.load_input_data(output_file1)
+    expected_result = CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'strsimnet'))
+    assert expected_result == test_result
+
+    script2test(args2)
+    test_result = CmdTabs.load_input_data(output_file2)
+    expected_result = CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'strsimnet_cutoff2'))
+    assert expected_result == test_result
