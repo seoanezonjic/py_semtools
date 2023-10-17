@@ -50,35 +50,67 @@ def test_get_ancestors_descendants():
     def script2test(lsargs):
         return py_semtools.semtools(lsargs)
     _, printed = script2test(args)
-    print(printed)
     test_result = strng2table(printed)
     expected_result = CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'parental_from_terms'))
+    assert expected_result == test_result
+
+    args = f"-C anh2/branchAChild1,branchAChild2,branchB -O {ontology_file}".split(" ")
+    _, printed = script2test(args)
+    test_result = strng2table(printed)
+    test_result = sort_table(test_result, 0)
+    expected_result = [["All"],["Child1"]]
+    assert expected_result == test_result
+
+    args = f"-C branchAChild1,branchAChild2,branchB,branchA -O {ontology_file}".split(" ")
+    _, printed = script2test(args)
+    test_result = strng2table(printed)
+    test_result = sort_table(test_result, 0)
+    expected_result = [['branchAChild1'], ['branchAChild2']]
     assert expected_result == test_result
 
 ## Profile operations
 ### Modification
 def test_clean_profiles(tmp_dir): # -c -T
     input_file = os.path.join(DATA_TEST_PATH, 'profiles')
+    removed_profile = os.path.join(tmp_dir, 'removed_profiles')
     ontology_file = os.path.join(ONTOLOGY_PATH, 'enrichment_ontology.obo')
     output_file = os.path.join(tmp_dir, 'cleaned_profiles')
-    args = f"-i {input_file} -c -T branchA -O {ontology_file} -o {output_file}".split(" ")
+    args = f"-i {input_file} -c -T branchA -O {ontology_file} -o {output_file} -r {removed_profile}".split(" ")
     @capture_stdout
     def script2test(lsargs):
         return py_semtools.semtools(lsargs)
     script2test(args)
     test_result = CmdTabs.load_input_data(output_file)
     expected_result = CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'cleaned_profiles'))
-    os.remove("./rejected_profs")
     assert expected_result == test_result
+    test_result = CmdTabs.load_input_data(removed_profile)
+    expected_removed = [['P4']]
+    assert expected_removed == test_result
 
-    # Cheing the --2cols option
+    # Checking the --out2cols option
+    output_file_out2cols = os.path.join(tmp_dir, 'cleaned_profiles_2cols')
+    args = f"-i {input_file} -c -T branchA -O {ontology_file} --out2cols -o {output_file_out2cols} -r {removed_profile}".split(" ")
+    script2test(args)
+    test_result = CmdTabs.load_input_data(output_file_out2cols)
+    expected_result_out2cols = CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'cleaned_profiles_2cols'))
+    assert test_result == expected_result_out2cols
+
+    # Checking the --2cols option
     input_file = os.path.join(DATA_TEST_PATH, 'profiles_2cols')
-    args = f"-i {input_file} -c -T branchA -O {ontology_file} --2cols -o {output_file}".split(" ")
+    args = f"-i {input_file} -c -T branchA -O {ontology_file} --2cols -o {output_file} -r {removed_profile}".split(" ")
     script2test(args)
     test_result = CmdTabs.load_input_data(output_file)
-    os.remove("./rejected_profs")
     assert expected_result == test_result
-    
+
+
+    # get profs with no removed profiles
+    input_file = os.path.join(DATA_TEST_PATH, 'profiles')
+    args = f"-i {input_file} -c -T root -O {ontology_file} -o {output_file} -r {removed_profile}".split(" ")
+    script2test(args)
+    test_result = CmdTabs.load_input_data(output_file)
+    expected =  [['P1', 'branchAChild1'], ['P2', 'branchB;branchAChild1'], ['P3', 'branchAChild1;branchAChild2'], ['P4', 'branchA'], ['P5', 'branchAChild1']]
+    assert expected == test_result
+
 def test_profile_expansion(tmp_dir): 
     input_file = os.path.join(DATA_TEST_PATH, 'profiles')
     ontology_file = os.path.join(ONTOLOGY_PATH, 'enrichment_ontology.obo')
@@ -138,6 +170,13 @@ def test_get_ic(tmp_dir): # -I
     expected_result =  CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'profiles_IC_onto_freq'))
     assert test_result == expected_result
 
+    args = f"-O {ontology_file} -I ont".split(" ")
+    _, printed = script2test(args)
+    test_result =  CmdTabs.load_input_data("./ont_IC")
+    os.remove("./ont_IC")
+    expected_result = CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'expected_IC_ont'))
+    assert test_result == expected_result
+
 def test_statistics_profiler(): # -n    
     input_file = os.path.join(DATA_TEST_PATH, 'profiles')
     ontology_file = os.path.join(ONTOLOGY_PATH, 'enrichment_ontology.obo')
@@ -170,6 +209,64 @@ def test_semantic_similarity(tmp_dir):
                         ['P4', 'P1', '0.6204627667845211'], ['P4', 'P2', '0.24092553356904198'], ['P4', 'P3', '0.36138830035356295'], ['P4', 'P4', '1.0']]
     assert test_result == expected_result
 
+    # With reference profiles
+    reference_file = os.path.join(DATA_TEST_PATH, 'profiles_with_removedTerms')
+    args = f"-i {input_file} -O {ontology_file} -o {output_file} -s lin --reference_profiles {reference_file}".split(" ")
+    _, printed = script2test(args)
+    test_result =  CmdTabs.load_input_data(output_file)
+    expected_result = [['P1', 'P1', '1.0'], ['P1', 'P2', '0.7469751778563474'], ['P1', 'P3', '0.8272836890460279'], 
+    ['P2', 'P1', '0.7469751778563474'], ['P2', 'P2', '1.0'], ['P2', 'P3', '0.7195656342523358'], 
+    ['P3', 'P1', '0.8272836890460279'], ['P3', 'P2', '0.7195656342523358'], ['P3', 'P3', '1.0'],
+    ['P4', 'P1', '0.6204627667845211'], ['P4', 'P2', '0.24092553356904198'], ['P4', 'P3', '0.36138830035356295'], 
+    ['P5', 'P1', '0.6204627667845211'], ['P5', 'P2', '0.5'], ['P5', 'P3', '0.5793484513785037']]
+    assert expected_result == test_result
+
+def test_xref(tmp_dir):
+    input_file = os.path.join(DATA_TEST_PATH, 'profiles')
+    output_file = os.path.join(tmp_dir, 'xref_profile')
+    ontology_file = os.path.join(ONTOLOGY_PATH, 'enrichment_ontology.obo')
+    args = f"-i {input_file} -O {ontology_file} -o {output_file} --xref_sense -k wikipedia".split(" ")
+    @capture_stdout
+    def script2test(lsargs):
+        return py_semtools.semtools(lsargs)
+    _, printed = script2test(args)
+    test_result = CmdTabs.load_input_data(output_file)
+    expected_result = [['P1', 'wikipedia'], ['P2', 'wikipedia'], ['P3', 'wikipedia'], ['P5', 'wikipedia']]
+    assert expected_result == test_result
+
+    input_file = os.path.join(DATA_TEST_PATH, 'terms_for_xref')
+    output_file = os.path.join(tmp_dir, 'xref_profile')
+    ontology_file = os.path.join(ONTOLOGY_PATH, 'enrichment_ontology.obo')
+    args = f"-i {input_file} --list -O {ontology_file} -o {output_file} --xref_sense -k wikipedia".split(" ")
+    _, printed = script2test(args)
+    test_result = CmdTabs.load_input_data(output_file)
+    expected_result = [['branchAChild1', 'wikipedia']]
+    assert test_result == expected_result
+
+def test_download(tmp_dir):
+    output_file = os.path.join(tmp_dir, 'downloaded_ontology')
+    args = f"-d HPO -o {output_file}".split(" ")
+    @capture_stdout
+    def script2test(lsargs):
+        with pytest.raises(SystemExit):
+            return py_semtools.semtools(lsargs)
+    script2test(args)
+    assert os.path.getsize(output_file) > 0
+
+    input_file = os.path.join(DATA_TEST_PATH, 'profiles')
+    output_file = os.path.join(tmp_dir, 'downloaded_ontology')
+    download_args = f"-d GO".split(" ")
+    removed_profile = os.path.join(tmp_dir, 'removed_profiles')
+    get_ont_args = f"-i {input_file} -c -O GO -r {removed_profile}".split(" ")
+    
+    script2test(download_args)# Talk with PSZ
+    def script2test(lsargs):
+        return py_semtools.semtools(lsargs)
+    script2test(get_ont_args)
+    test_result = CmdTabs.load_input_data(removed_profile)
+    expected_result = [['P1'], ['P2'], ['P3'], ['P4'], ['P5']]
+    assert expected_result == test_result
+
 # Testing strsimnet
 
 def test_strsimnet(tmp_dir):
@@ -191,3 +288,15 @@ def test_strsimnet(tmp_dir):
     test_result = CmdTabs.load_input_data(output_file2)
     expected_result = CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'strsimnet_cutoff2'))
     assert expected_result == test_result
+
+def test_list_term_attributes():
+    ontology_file = os.path.join(ONTOLOGY_PATH, 'enrichment_ontology.obo')
+    args = f"-O {ontology_file} --list_term_attributes".split(" ")
+    @capture_stdout
+    def script2test(lsargs):
+        return py_semtools.semtools(lsargs)
+    _, printed = script2test(args)
+    test_result = strng2table(printed)
+    expected_result = CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'terms_attr'))
+    assert test_result == expected_result
+     

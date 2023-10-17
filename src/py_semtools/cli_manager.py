@@ -14,7 +14,7 @@ from py_cmdtabs import CmdTabs
 
 ONTOLOGY_INDEX = str(files('py_semtools.external_data').joinpath('ontologies.txt'))
 #https://pypi.org/project/platformdirs/
-ONTOLOGIES=os.path.join(user_data_dir("semtools", "seoane"), 'ontologies')
+ONTOLOGIES=os.path.join(user_data_dir("semtools", "seoane"), 'ontologies') # Why seoane?
 
 ## TYPES
 def text_list(string): return string.split(',')
@@ -122,7 +122,7 @@ def main_semtools(opts):
 	if options["external_separator"] is None: options["external_separator"] = options["separator"]
 	if options.get('download') != None:
 		download(ONTOLOGY_INDEX, options['download'], options['output_file'], ONTOLOGIES)
-		exit()
+		sys.exit()
 
 	if options.get('ontology_file') != None:
 		options['ontology_file'] = get_ontology_file(options['ontology_file'], ONTOLOGY_INDEX, ONTOLOGIES)
@@ -223,6 +223,7 @@ def main_semtools(opts):
 
 	if options.get('list_term_attributes'):
 		for t_attr in ontology.list_term_attributes():
+			t_attr = [str(el) for el in t_attr]
 			print("\t".join(t_attr))
 
 	if options.get('keyword') != None:

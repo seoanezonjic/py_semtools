@@ -1,0 +1,5 @@
+root	All	1
+branchA	Child1	2
+branchAChild1	Child2	3
+branchAChild2	Child4	3
+branchB	Child5	2
