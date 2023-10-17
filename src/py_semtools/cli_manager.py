@@ -1,16 +1,19 @@
 import argparse
 import sys
 import os
+import glob
 import requests
+from importlib.resources import files
+from platformdirs import *
+
 from py_semtools.ontology import Ontology
 import py_semtools # For external_data
 from py_semtools.sim_handler import *
 import py_exp_calc.exp_calc as pxc
 from py_cmdtabs import CmdTabs
 
-
-EXTERNAL_DATA=os.path.join(os.path.dirname(py_semtools.__file__), 'external_data')
-
+ONTOLOGY_INDEX = str(files('py_semtools.external_data').joinpath('ontologies.txt'))
+ONTOLOGIES=os.path.join(user_data_dir("semtools", "seoane"), 'ontologies')
 
 ## TYPES
 def text_list(string): return string.split(',')
@@ -116,13 +119,12 @@ def semtools(args = None):
 def main_semtools(opts):
 	options = vars(opts)
 	if options["external_separator"] is None: options["external_separator"] = options["separator"]
-	ont_index_file = os.path.join(EXTERNAL_DATA, 'ontologies.txt')
 	if options.get('download') != None:
-		download(ont_index_file, options['download'], options['output_file'])
+		download(ONTOLOGY_INDEX, options['download'], options['output_file'], ONTOLOGIES)
 		exit()
 
 	if options.get('ontology_file') != None:
-		options['ontology_file'] = get_ontology_file(options['ontology_file'], ont_index_file)
+		options['ontology_file'] = get_ontology_file(options['ontology_file'], ONTOLOGY_INDEX, ONTOLOGIES)
 
 	extra_dicts = []
 	if options.get('keyword') != None:
@@ -302,11 +304,12 @@ def write_similarity_profile_list(output, onto_obj, similarity_type, refs):
     for profA, profB_and_sim in profiles_similarity.items():
       for profB, sim in profB_and_sim.items(): f.write(f"{profA}\t{profB}\t{sim}\n")
 
-def download(source, key, output):
+def download(source, key, output, ontologies_folder):
   source_list = dict(load_tabular_file(source))
-  external_data = os.path.dirname(source)
+  if not os.path.exists(os.path.dirname(ontologies_folder)): os.mkdir(os.path.dirname(ontologies_folder))
+  if not os.path.exists(ontologies_folder): os.mkdir(ontologies_folder)
   if key == 'list':
-    for f in glob.glob(os.path.join(external_data,'*.obo')): print(f)
+    for f in glob.glob(os.path.join(ontologies_folder,'*.obo')): print(f)
   else:
     url = source_list[key]
     if output != None:
@@ -314,21 +317,21 @@ def download(source, key, output):
     else:
       file_name = key + '.obo'
       try:
-        with open(os.path.join(external_data, file_name), 'w') as file:
+        with open(os.path.join(ontologies_folder, file_name), 'w') as file:
           file.write('')
           file.close()
-        output_path = os.path.join(external_data, file_name)
+        output_path = os.path.join(ontologies_folder, file_name)
       except IOError as error: 
         output_path = file_name
     if url != None:
       r = requests.get(url, allow_redirects=True)
       open(output_path, 'wb').write(r.content)
 
-def get_ontology_file(path, source):
+def get_ontology_file(path, source, ontologies_folder):
   if not os.path.exists(path):
     ont_index = dict(load_tabular_file(source))
     if ont_index.get(path) != None:
-      path = os.path.join(os.path.dirname(source), path + '.obo')
+      path = os.path.join(ontologies_folder, path + '.obo')
     else:
       raise Exception("Input ontology file not exists")
   return path
