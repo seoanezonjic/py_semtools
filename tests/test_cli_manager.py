@@ -16,6 +16,14 @@ def tmp_dir(tmpdir_factory):
     fn = tmpdir_factory.mktemp("./tmp_output")
     return fn
 
+@pytest.fixture
+def enrichment_ontology():
+    return os.path.join(ONTOLOGY_PATH, 'enrichment_ontology.obo')
+
+@pytest.fixture
+def profiles():
+    return os.path.join(DATA_TEST_PATH, 'profiles')
+
 def capture_stdout(func):
     def wrapper(*args, **kwargs):
         original_stdout = sys.stdout
@@ -26,6 +34,14 @@ def capture_stdout(func):
         sys.stdout = original_stdout
         return returned, printed
     return wrapper
+
+@capture_stdout
+def pysemtools(lsargs):
+    return py_semtools.semtools(lsargs)
+
+@capture_stdout
+def pystrsimnet(lsargs):
+    return py_semtools.strsimnet(lsargs)
 
 def strng2table(strng, fs="\t", rs="\n"):
 	table = [row.split(fs) for row in strng.split(rs)][0:-1]
@@ -42,27 +58,22 @@ def sort_table(table, sort_by, transposed=False):
 
 ## Terms Operations
 
-def test_get_ancestors_descendants():
-    input_file = os.path.join(DATA_TEST_PATH, 'profiles')
-    ontology_file = os.path.join(ONTOLOGY_PATH, 'enrichment_ontology.obo')
-    args = f"-C ranh2/branchAChild1,branchAChild2,branchB -O {ontology_file}".split(" ")
-    @capture_stdout
-    def script2test(lsargs):
-        return py_semtools.semtools(lsargs)
-    _, printed = script2test(args)
+def test_get_ancestors_descendants(enrichment_ontology):
+    args = f"-C ranh2/branchAChild1,branchAChild2,branchB -O {enrichment_ontology}".split(" ")
+    _, printed = pysemtools(args)
     test_result = strng2table(printed)
     expected_result = CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'parental_from_terms'))
     assert expected_result == test_result
 
-    args = f"-C anh2/branchAChild1,branchAChild2,branchB -O {ontology_file}".split(" ")
-    _, printed = script2test(args)
+    args = f"-C anh2/branchAChild1,branchAChild2,branchB -O {enrichment_ontology}".split(" ")
+    _, printed = pysemtools(args)
     test_result = strng2table(printed)
     test_result = sort_table(test_result, 0)
     expected_result = [["All"],["Child1"]]
     assert expected_result == test_result
 
-    args = f"-C branchAChild1,branchAChild2,branchB,branchA -O {ontology_file}".split(" ")
-    _, printed = script2test(args)
+    args = f"-C branchAChild1,branchAChild2,branchB,branchA -O {enrichment_ontology}".split(" ")
+    _, printed = pysemtools(args)
     test_result = strng2table(printed)
     test_result = sort_table(test_result, 0)
     expected_result = [['branchAChild1'], ['branchAChild2']]
@@ -70,16 +81,11 @@ def test_get_ancestors_descendants():
 
 ## Profile operations
 ### Modification
-def test_clean_profiles(tmp_dir): # -c -T
-    input_file = os.path.join(DATA_TEST_PATH, 'profiles')
+def test_clean_profiles(tmp_dir,enrichment_ontology,profiles): # -c -T
     removed_profile = os.path.join(tmp_dir, 'removed_profiles')
-    ontology_file = os.path.join(ONTOLOGY_PATH, 'enrichment_ontology.obo')
     output_file = os.path.join(tmp_dir, 'cleaned_profiles')
-    args = f"-i {input_file} -c -T branchA -O {ontology_file} -o {output_file} -r {removed_profile}".split(" ")
-    @capture_stdout
-    def script2test(lsargs):
-        return py_semtools.semtools(lsargs)
-    script2test(args)
+    args = f"-i {profiles} -c -T branchA -O {enrichment_ontology} -o {output_file} -r {removed_profile}".split(" ")
+    pysemtools(args)
     test_result = CmdTabs.load_input_data(output_file)
     expected_result = CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'cleaned_profiles'))
     assert expected_result == test_result
@@ -89,115 +95,89 @@ def test_clean_profiles(tmp_dir): # -c -T
 
     # Checking the --out2cols option
     output_file_out2cols = os.path.join(tmp_dir, 'cleaned_profiles_2cols')
-    args = f"-i {input_file} -c -T branchA -O {ontology_file} --out2cols -o {output_file_out2cols} -r {removed_profile}".split(" ")
-    script2test(args)
+    args = f"-i {profiles} -c -T branchA -O {enrichment_ontology} --out2cols -o {output_file_out2cols} -r {removed_profile}".split(" ")
+    pysemtools(args)
     test_result = CmdTabs.load_input_data(output_file_out2cols)
     expected_result_out2cols = CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'cleaned_profiles_2cols'))
     assert test_result == expected_result_out2cols
 
     # Checking the --2cols option
     input_file = os.path.join(DATA_TEST_PATH, 'profiles_2cols')
-    args = f"-i {input_file} -c -T branchA -O {ontology_file} --2cols -o {output_file} -r {removed_profile}".split(" ")
-    script2test(args)
+    args = f"-i {input_file} -c -T branchA -O {enrichment_ontology} --2cols -o {output_file} -r {removed_profile}".split(" ")
+    pysemtools(args)
     test_result = CmdTabs.load_input_data(output_file)
     assert expected_result == test_result
 
-
     # get profs with no removed profiles
-    input_file = os.path.join(DATA_TEST_PATH, 'profiles')
-    args = f"-i {input_file} -c -T root -O {ontology_file} -o {output_file} -r {removed_profile}".split(" ")
-    script2test(args)
+    args = f"-i {profiles} -c -T root -O {enrichment_ontology} -o {output_file} -r {removed_profile}".split(" ")
+    pysemtools(args)
     test_result = CmdTabs.load_input_data(output_file)
     expected =  [['P1', 'branchAChild1'], ['P2', 'branchB;branchAChild1'], ['P3', 'branchAChild1;branchAChild2'], ['P4', 'branchA'], ['P5', 'branchAChild1']]
     assert expected == test_result
 
-def test_profile_expansion(tmp_dir): 
-    input_file = os.path.join(DATA_TEST_PATH, 'profiles')
-    ontology_file = os.path.join(ONTOLOGY_PATH, 'enrichment_ontology.obo')
+def test_profile_expansion(tmp_dir,enrichment_ontology,profiles): 
     output_file = os.path.join(tmp_dir, 'expanded_profiles')
-    args = f"-i {input_file} -O {ontology_file} -e parental -o {output_file}".split(" ")
-    @capture_stdout
-    def script2test(lsargs):
-        return py_semtools.semtools(lsargs)
-    _, printed = script2test(args)
+    args = f"-i {profiles} -O {enrichment_ontology} -e parental -o {output_file}".split(" ")
+    pysemtools(args)
     test_result =  CmdTabs.load_input_data(output_file)
     expected_result =  CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'expanded_profiles'))
     assert expected_result == test_result
 
-def test_translate(tmp_dir): 
-    input_file = os.path.join(DATA_TEST_PATH, 'profiles')
-    input_file_terms = os.path.join(DATA_TEST_PATH, 'terms')
-    ontology_file = os.path.join(ONTOLOGY_PATH, 'enrichment_ontology.obo')
-    output_file = os.path.join(tmp_dir, 'translated_profiles')
-    output_file_codes = os.path.join(tmp_dir, 'translated_profiles_codes')
-    @capture_stdout
-    def script2test(lsargs):
-        return py_semtools.semtools(lsargs)
-    
-    args = f"-i {input_file} -O {ontology_file} -t names -o {output_file}".split(" ")
-    _, printed = script2test(args)
-    test_result =  CmdTabs.load_input_data(output_file)
-    expected_result =  CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'translated_profiles_names'))
-    assert expected_result == test_result
-
-    args = f"-i {output_file} -O {ontology_file} -t codes -o {output_file_codes}".split(" ")
-    _, printed = script2test(args)
-    test_result =  CmdTabs.load_input_data(output_file_codes)
-    expected_result =  CmdTabs.load_input_data(input_file)
-    assert expected_result == test_result
-
-    args = f"-i {input_file_terms} -O {ontology_file} -l codes".split(" ")
+def test_translate(tmp_dir,enrichment_ontology,profiles): 
     @capture_stdout
     def script2test(lsargs):
         with pytest.raises(SystemExit):
             return py_semtools.semtools(lsargs)
+        
+    input_file_terms = os.path.join(DATA_TEST_PATH, 'terms')
+    output_file = os.path.join(tmp_dir, 'translated_profiles')
+    output_file_codes = os.path.join(tmp_dir, 'translated_profiles_codes')
+    
+    args = f"-i {profiles} -O {enrichment_ontology} -t names -o {output_file}".split(" ")
+    pysemtools(args)
+    test_result =  CmdTabs.load_input_data(output_file)
+    expected_result =  CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'translated_profiles_names'))
+    assert expected_result == test_result
+
+    args = f"-i {output_file} -O {enrichment_ontology} -t codes -o {output_file_codes}".split(" ")
+    pysemtools(args)
+    test_result =  CmdTabs.load_input_data(output_file_codes)
+    expected_result =  CmdTabs.load_input_data(profiles)
+    assert expected_result == test_result
+
+    args = f"-i {input_file_terms} -O {enrichment_ontology} -l codes".split(" ")
     _, printed = script2test(args)
     test_result = strng2table(printed)
     expected_result =  CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'translated_terms_codes'))
     assert expected_result == test_result
 
 ### Analysis
-def test_get_ic(tmp_dir): # -I
-    input_file = os.path.join(DATA_TEST_PATH, 'profiles')
-    ontology_file = os.path.join(ONTOLOGY_PATH, 'enrichment_ontology.obo')
-    args = f"-i {input_file} -O {ontology_file} -I prof".split(" ")
-    @capture_stdout
-    def script2test(lsargs):
-        return py_semtools.semtools(lsargs)
-    _, printed = script2test(args)
+def test_get_ic(tmp_dir,enrichment_ontology,profiles): # -I
+    args = f"-i {profiles} -O {enrichment_ontology} -I prof".split(" ")
+    pysemtools(args)
     test_result =  CmdTabs.load_input_data("./profiles_IC_onto_freq")
     os.remove("./profiles_IC_onto_freq")
     expected_result =  CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'profiles_IC_onto_freq'))
     assert test_result == expected_result
 
-    args = f"-O {ontology_file} -I ont".split(" ")
-    _, printed = script2test(args)
+    args = f"-O {enrichment_ontology} -I ont".split(" ")
+    pysemtools(args)
     test_result =  CmdTabs.load_input_data("./ont_IC")
     os.remove("./ont_IC")
     expected_result = CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'expected_IC_ont'))
     assert test_result == expected_result
 
-def test_statistics_profiler(): # -n    
-    input_file = os.path.join(DATA_TEST_PATH, 'profiles')
-    ontology_file = os.path.join(ONTOLOGY_PATH, 'enrichment_ontology.obo')
-    args = f"-i {input_file} -O {ontology_file} -n".split(" ")
-    @capture_stdout
-    def script2test(lsargs):
-        return py_semtools.semtools(lsargs)
-    _, printed = script2test(args)
+def test_statistics_profiler(enrichment_ontology,profiles): # -n    
+    args = f"-i {profiles} -O {enrichment_ontology} -n".split(" ")
+    _, printed = pysemtools(args)
     test_result =  strng2table(printed)
     expected_result =  CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'profile_stats'))
     assert test_result == expected_result
 
-def test_semantic_similarity(tmp_dir): 
-    input_file = os.path.join(DATA_TEST_PATH, 'profiles')
+def test_semantic_similarity(tmp_dir,enrichment_ontology,profiles): 
     output_file = os.path.join(tmp_dir, 'similarity_profiles')
-    ontology_file = os.path.join(ONTOLOGY_PATH, 'enrichment_ontology.obo')
-    args = f"-i {input_file} -O {ontology_file} -o {output_file} -s lin".split(" ")
-    @capture_stdout
-    def script2test(lsargs):
-        return py_semtools.semtools(lsargs)
-    _, printed = script2test(args)
+    args = f"-i {profiles} -O {enrichment_ontology} -o {output_file} -s lin".split(" ")
+    pysemtools(args)
     test_result =  CmdTabs.load_input_data(output_file)
     expected_result =  [['P5', 'P1', '0.6204627667845211'], ['P5', 'P2', '0.5'], ['P5', 'P3', '0.5793484513785037'],
                         ['P5', 'P4', '0.48185106713808395'], ['P5', 'P5', '1.0'], ['P1', 'P5', '0.6204627667845211'],
@@ -211,8 +191,8 @@ def test_semantic_similarity(tmp_dir):
 
     # With reference profiles
     reference_file = os.path.join(DATA_TEST_PATH, 'profiles_with_removedTerms')
-    args = f"-i {input_file} -O {ontology_file} -o {output_file} -s lin --reference_profiles {reference_file}".split(" ")
-    _, printed = script2test(args)
+    args = f"-i {profiles} -O {enrichment_ontology} -o {output_file} -s lin --reference_profiles {reference_file}".split(" ")
+    pysemtools(args)
     test_result =  CmdTabs.load_input_data(output_file)
     expected_result = [['P1', 'P1', '1.0'], ['P1', 'P2', '0.7469751778563474'], ['P1', 'P3', '0.8272836890460279'], 
     ['P2', 'P1', '0.7469751778563474'], ['P2', 'P2', '1.0'], ['P2', 'P3', '0.7195656342523358'], 
@@ -221,48 +201,38 @@ def test_semantic_similarity(tmp_dir):
     ['P5', 'P1', '0.6204627667845211'], ['P5', 'P2', '0.5'], ['P5', 'P3', '0.5793484513785037']]
     assert expected_result == test_result
 
-def test_xref(tmp_dir):
-    input_file = os.path.join(DATA_TEST_PATH, 'profiles')
+def test_xref(tmp_dir,enrichment_ontology,profiles):
     output_file = os.path.join(tmp_dir, 'xref_profile')
-    ontology_file = os.path.join(ONTOLOGY_PATH, 'enrichment_ontology.obo')
-    args = f"-i {input_file} -O {ontology_file} -o {output_file} --xref_sense -k wikipedia".split(" ")
-    @capture_stdout
-    def script2test(lsargs):
-        return py_semtools.semtools(lsargs)
-    _, printed = script2test(args)
+    input_file = os.path.join(DATA_TEST_PATH, 'terms_for_xref')
+    
+    args = f"-i {profiles} -O {enrichment_ontology} -o {output_file} --xref_sense -k wikipedia".split(" ")
+    pysemtools(args)
     test_result = CmdTabs.load_input_data(output_file)
     expected_result = [['P1', 'wikipedia'], ['P2', 'wikipedia'], ['P3', 'wikipedia'], ['P5', 'wikipedia']]
     assert expected_result == test_result
 
-    input_file = os.path.join(DATA_TEST_PATH, 'terms_for_xref')
-    output_file = os.path.join(tmp_dir, 'xref_profile')
-    ontology_file = os.path.join(ONTOLOGY_PATH, 'enrichment_ontology.obo')
-    args = f"-i {input_file} --list -O {ontology_file} -o {output_file} --xref_sense -k wikipedia".split(" ")
-    _, printed = script2test(args)
+    args = f"-i {input_file} --list -O {enrichment_ontology} -o {output_file} --xref_sense -k wikipedia".split(" ")
+    pysemtools(args)
     test_result = CmdTabs.load_input_data(output_file)
     expected_result = [['branchAChild1', 'wikipedia']]
     assert test_result == expected_result
 
-def test_download(tmp_dir):
-    output_file = os.path.join(tmp_dir, 'downloaded_ontology')
-    args = f"-d HPO -o {output_file}".split(" ")
+def test_download(tmp_dir, profiles):
     @capture_stdout
     def script2test(lsargs):
         with pytest.raises(SystemExit):
             return py_semtools.semtools(lsargs)
+        
+    output_file = os.path.join(tmp_dir, 'downloaded_ontology')
+    args = f"-d HPO -o {output_file}".split(" ")
     script2test(args)
     assert os.path.getsize(output_file) > 0
 
-    input_file = os.path.join(DATA_TEST_PATH, 'profiles')
-    output_file = os.path.join(tmp_dir, 'downloaded_ontology')
     download_args = f"-d GO".split(" ")
     removed_profile = os.path.join(tmp_dir, 'removed_profiles')
-    get_ont_args = f"-i {input_file} -c -O GO -r {removed_profile}".split(" ")
-    
+    get_ont_args = f"-i {profiles} -c -O GO -r {removed_profile}".split(" ")
     script2test(download_args)# Talk with PSZ
-    def script2test(lsargs):
-        return py_semtools.semtools(lsargs)
-    script2test(get_ont_args)
+    pysemtools(get_ont_args)
     test_result = CmdTabs.load_input_data(removed_profile)
     expected_result = [['P1'], ['P2'], ['P3'], ['P4'], ['P5']]
     assert expected_result == test_result
@@ -275,27 +245,20 @@ def test_strsimnet(tmp_dir):
     args1 = f"-i {input_file} -c 0 -o {output_file1}".split(" ")
     output_file2 = os.path.join(tmp_dir, 'strsimnet_with_filter')
     args2 = f"-i {input_file} -c 0 -C 1 -f 2 -o {output_file2}".split(" ")
-    @capture_stdout
-    def script2test(lsargs):
-        return py_semtools.strsimnet(lsargs)
     
-    script2test(args1)
+    pystrsimnet(args1)
     test_result = CmdTabs.load_input_data(output_file1)
     expected_result = CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'strsimnet'))
     assert expected_result == test_result
 
-    script2test(args2)
+    pystrsimnet(args2)
     test_result = CmdTabs.load_input_data(output_file2)
     expected_result = CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'strsimnet_cutoff2'))
     assert expected_result == test_result
 
-def test_list_term_attributes():
-    ontology_file = os.path.join(ONTOLOGY_PATH, 'enrichment_ontology.obo')
-    args = f"-O {ontology_file} --list_term_attributes".split(" ")
-    @capture_stdout
-    def script2test(lsargs):
-        return py_semtools.semtools(lsargs)
-    _, printed = script2test(args)
+def test_list_term_attributes(enrichment_ontology):
+    args = f"-O {enrichment_ontology} --list_term_attributes".split(" ")
+    _, printed = pysemtools(args)
     test_result = strng2table(printed)
     expected_result = CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'terms_attr'))
     assert test_result == expected_result
