@@ -12,6 +12,7 @@ from functools import partial
 from collections import defaultdict
 import time
 import itertools
+import re
 import py_exp_calc.exp_calc as pxc
 
 from py_semtools import OboParser
@@ -1334,6 +1335,26 @@ class Ontology:
         terms = [ [term, self.translate_id(term), self.get_term_level(term)] for term in self.each()]
         return terms
 
+    def return_terms_by_keyword_match(self, keyword, fields = ['name', 'synonym', 'def']):
+        terms = []
+        query_kwd = re.compile(keyword, re.IGNORECASE)
+        for term, attrs in self.each(att=True):
+            breakit = False
+            for field in fields:
+                if breakit == True: break
+                if attrs.get(field):
+                    if type(attrs[field]) == str:
+                        if re.search(query_kwd, attrs[field]):
+                            terms.append(term)
+                            break
+                    elif type(attrs[field]) == list:
+                        for subfield in attrs[field]:
+                            if re.search(query_kwd, subfield):
+                                terms.append(term)
+                                breakit = True
+                                break
+        return terms
+    
     # Gets ontology levels calculated
     # ===== Returns 
     # ontology levels calculated

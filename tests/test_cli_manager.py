@@ -262,4 +262,18 @@ def test_list_term_attributes(enrichment_ontology):
     test_result = strng2table(printed)
     expected_result = CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'terms_attr'))
     assert test_result == expected_result
-     
+    
+# Testing the semtools keyword based search
+
+def test_retrieve_keyword_matched_hps(enrichment_ontology):
+    args = f"-O {enrichment_ontology} --keyword_search child|name,synonym".split(" ")
+    expected = "\n".join(["branchA", "branchAChild1", "branchAChild2", "branchB\n"])
+    _, printed = pysemtools(args)
+    print(expected)
+    print(printed)
+    assert expected == printed
+
+    args.extend(["--translate_keyword_search"])
+    expected = "\n".join(["Child1", "Child2" ,"Child4" ,"Child5\n"])
+    _, printed = pysemtools(args)
+    assert expected == printed

@@ -634,7 +634,23 @@ class TestOBOFunctionalities(unittest.TestCase):
         onto_notroot_items = {"root": ["branchA"], "Child1": ["branchAChild1"], "Child2": ["branchAChild2", "branchB"]}
         self.short_hierarchical.load_item_relations_to_terms(initial_items, True)
         self.short_hierarchical.expand_items_to_parentals(ontology= self.enrichment_hierarchical, clean_profiles= False)
-        self.assertEqual(onto_notroot_items, self.short_hierarchical.items)		
+        self.assertEqual(onto_notroot_items, self.short_hierarchical.items)
+
+    def test_return_terms_by_keyword_match(self):
+        expected = ["Child2"]
+        returned = self.hierarchical.return_terms_by_keyword_match("Child", fields = ['name'])
+        returned2 = self.hierarchical.return_terms_by_keyword_match("Child", fields = ['name', 'name']) #Checking that no duplicated terms are returned even if the fields parameter is duplicated
+        returned3 = self.hierarchical.return_terms_by_keyword_match("mannosyltransferase", fields = ['name', 'synonym'])
+        returned4 = self.hierarchical.return_terms_by_keyword_match("mannosyltransferase", fields = ['name', 'synonym', 'synonym']) #Checking that no duplicated terms are returned even if the fields parameter is duplicated
+        self.assertEqual(expected, returned)
+        self.assertEqual(expected, returned2)
+        self.assertEqual(expected, returned3)
+        self.assertEqual(expected, returned4)
+
+        expected = ["branchA", "branchAChild1", "branchAChild2", "branchB"]
+        returned = self.enrichment_hierarchical.return_terms_by_keyword_match("Child", fields = ['name'])
+        self.assertEqual(expected, returned)
+
 
     #################################
     # AUXILIAR METHODS

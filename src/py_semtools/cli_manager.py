@@ -26,7 +26,12 @@ def childs(string):
 		modifiers = ''
 		terms = string
 	terms = terms.split(',')
-	return [terms, modifiers]  
+	return [terms, modifiers]
+
+def split_keyword_and_fields(string):
+	keyword, fields = string.split('|')
+	fields = fields.split(',')
+	return [keyword, fields]
 
 ##############################################
 
@@ -108,6 +113,10 @@ def semtools(args = None):
 	          help="Ontology-xref or xref-ontology. By default xref-ontology if set, ontology-xref")
 	parser.add_argument('-C', "--childs", dest="childs", default= [[], ''], type=childs,
 	          help="Term code list (comma separated) to generate child list")
+	parser.add_argument("--keyword_search", dest="keyword_search", default= None, type=split_keyword_and_fields, 
+	          help="Retrieve HP codes that match a regex against the given keyword in one of the specified term attribute fields")
+	parser.add_argument("--translate_keyword_search", dest="translate_keyword_search", default= False, action='store_true', 
+	          help="Print the matches from --keyword_seach as terms names instead of codes")
 	parser.add_argument("--list", dest="simple_list", default= False, action='store_true', 
 	          help="Input file is a simple list with one term/word/code per line, Only use to get a dictionaire with -k.")
 	parser.add_argument("--2cols", dest="2cols", default= False, action='store_true', 
@@ -251,6 +260,13 @@ def main_semtools(opts):
 					if query != None: 
 						for x in query:
 							f.write("\t".join([t, x]) + "\n")
+
+	if options.get('keyword_search') != None:
+		keyword, fields = options['keyword_search']
+		hits = ontology.return_terms_by_keyword_match(keyword, fields)
+		for hit in hits:
+			if options['translate_keyword_search']: print(ontology.translate_id(hit))
+			else: print(hit)
 
 def load_tabular_file(file):
   records = []
