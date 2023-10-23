@@ -9,7 +9,7 @@ ROOT_PATH=os.path.dirname(__file__)
 ONTOLOGY_PATH = os.path.join(ROOT_PATH, 'data')
 DATA_TEST_PATH = os.path.join(ONTOLOGY_PATH, 'input_scripts')
 REF_DATA_PATH=os.path.join(ONTOLOGY_PATH ,'ref_output_scripts')
-
+GET_SORTED_SUGG_PATH = os.path.join(ROOT_PATH, 'data', 'get_sorted_suggestions')
 
 @pytest.fixture(scope="session")
 def tmp_dir(tmpdir_factory):
@@ -269,11 +269,72 @@ def test_retrieve_keyword_matched_hps(enrichment_ontology):
     args = f"-O {enrichment_ontology} --keyword_search child|name,synonym".split(" ")
     expected = "\n".join(["branchA", "branchAChild1", "branchAChild2", "branchB\n"])
     _, printed = pysemtools(args)
-    print(expected)
-    print(printed)
     assert expected == printed
 
     args.extend(["--translate_keyword_search"])
     expected = "\n".join(["Child1", "Child2" ,"Child4" ,"Child5\n"])
     _, printed = pysemtools(args)
     assert expected == printed
+
+
+# Test get_sorted_suggestions binary
+
+def test_get_sorted_suggestions():
+    relations_file = os.path.join(GET_SORTED_SUGG_PATH, 'input_data', 'relations.txt')
+    query_hps_file = os.path.join(GET_SORTED_SUGG_PATH, 'input_data', 'query_hps.txt')
+    ontology_file =  os.path.join(GET_SORTED_SUGG_PATH, 'input_data', 'enrichment_ontology3.obo')
+    os.makedirs(os.path.join(GET_SORTED_SUGG_PATH, 'returned'), exist_ok=True)
+
+    #Asserting base case without filter neither limits
+    returned_file_no_filter_no_limit = os.path.join(GET_SORTED_SUGG_PATH, 'returned', 'no_filter_no_limit.txt')
+    args = f"-q {query_hps_file} -r {relations_file} -O {ontology_file} -o {returned_file_no_filter_no_limit}".split()
+
+    py_semtools.get_sorted_suggestions(args)
+    expected = CmdTabs.load_input_data(os.path.join(GET_SORTED_SUGG_PATH, 'expected', 'no_filter_no_limit.txt'))
+    returned = CmdTabs.load_input_data(returned_file_no_filter_no_limit)
+    assert expected == returned
+
+    #Asserting case without filter but limit to 2 targets
+    returned_file_no_filter_limit_2 = os.path.join(GET_SORTED_SUGG_PATH, 'returned', 'no_filter_limit_2.txt')
+    args2 = f"-q {query_hps_file} -r {relations_file} -O {ontology_file} -o {returned_file_no_filter_limit_2} --max_targets 2".split(" ")
+
+    py_semtools.get_sorted_suggestions(args2)
+    expected = CmdTabs.load_input_data(os.path.join(GET_SORTED_SUGG_PATH, 'expected', 'no_filter_limit_2.txt'))
+    returned = CmdTabs.load_input_data(returned_file_no_filter_limit_2)
+    assert expected == returned
+
+
+    #Asserting case with target parentals filter
+    returned_file_filter_target_parentals = os.path.join(GET_SORTED_SUGG_PATH, 'returned', 'filter_target_parentals.txt')
+    args3 = f"-q {query_hps_file} -r {relations_file} -O {ontology_file} -o {returned_file_filter_target_parentals} -f"
+    args_list3 = args3.split(" ")
+
+    py_semtools.get_sorted_suggestions(args_list3)
+    expected = CmdTabs.load_input_data(os.path.join(GET_SORTED_SUGG_PATH, 'expected', 'filter_target_parentals.txt'))
+    returned = CmdTabs.load_input_data(returned_file_filter_target_parentals)
+    assert expected == returned
+
+    #Asserting case with query parentals filter
+    returned_file_filter_query_parentals = os.path.join(GET_SORTED_SUGG_PATH, 'returned', 'filter_query_parentals.txt')
+    args4 = f"-q {query_hps_file} -r {relations_file} -O {ontology_file} -o {returned_file_filter_query_parentals} -c"
+    args_list4 = args4.split(" ")
+
+    py_semtools.get_sorted_suggestions(args_list4)
+    expected = CmdTabs.load_input_data(os.path.join(GET_SORTED_SUGG_PATH, 'expected', 'filter_query_parentals.txt'))
+    returned = CmdTabs.load_input_data(returned_file_filter_query_parentals)
+    assert expected == returned
+
+    #Asserting case with both query and target parentals filter
+    returned_file_filter_both_parentals = os.path.join(GET_SORTED_SUGG_PATH, 'returned', 'filter_target_and_query_parentals.txt')
+    args5 = f"-q {query_hps_file} -r {relations_file} -O {ontology_file} -o {returned_file_filter_both_parentals} -f -c"
+    args_list5 = args5.split(" ")
+
+    py_semtools.get_sorted_suggestions(args_list5)
+    expected = CmdTabs.load_input_data(os.path.join(GET_SORTED_SUGG_PATH, 'expected', 'filter_target_and_query_parentals.txt'))
+    returned = CmdTabs.load_input_data(returned_file_filter_both_parentals)
+    assert expected == returned
+
+    #Remove the returned files
+    path_to_remove_files = os.path.join(GET_SORTED_SUGG_PATH, 'returned')
+    for file in os.listdir(path_to_remove_files):
+        os.remove(os.path.join(path_to_remove_files, file))

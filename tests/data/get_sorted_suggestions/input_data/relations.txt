@@ -1,0 +1,8 @@
+branchA	branchB	6
+branchA	branchC	5
+branchAChild1	branchB	8
+branchAChild1	branchAChild2	9
+branchCChild1	branchB	4
+branchCChild1	branchAChild2	3
+UnrelatedChild8	unrelatedChild9	10
+Child1	Child2	10
