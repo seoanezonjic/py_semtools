@@ -7,7 +7,7 @@ import requests
 import warnings
 from collections import defaultdict
 from importlib.resources import files
-from platformdirs import *
+import site
 
 from py_semtools.ontology import Ontology
 import py_semtools # For external_data
@@ -18,7 +18,7 @@ from py_exp_calc.exp_calc import invert_nested_hash, flatten
 
 ONTOLOGY_INDEX = str(files('py_semtools.external_data').joinpath('ontologies.txt'))
 #https://pypi.org/project/platformdirs/
-ONTOLOGIES=os.path.join(user_data_dir("semtools", "seoane"), 'ontologies') # Why seoane?
+ONTOLOGIES=os.path.join(site.USER_BASE, "semtools", 'ontologies')
 
 ###########################################################################
 ## TYPES
