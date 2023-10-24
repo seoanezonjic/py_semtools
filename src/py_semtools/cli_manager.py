@@ -157,8 +157,9 @@ def get_sorted_suggestions(args = None):
     parser.add_argument("-m", "--max_targets", dest="max_targets", default= 0, type = int, 
             help="Parameter to set the limit of targets terms to retrieve")
 
-    parser.add_argument("-t", "--translate", dest="translate", default=False, action="store_true",
-            help="Use if you want to be returned human readable names instead of terms codes")
+    parser.add_argument("-t", "--translate", dest="translate", default="c",
+            help="Use if you want to be returned human readable names (use n), codes (use c), or both (use cn or nc depending on the order you want them to be returned)")
+
     parser.add_argument("-f", "--filter_parental_targets", dest="filter_parental_targets", default=False, action="store_true",
             help="Use if you want to filter out parental terms of the query terms present in the targets")
     parser.add_argument("-c", "--clean_query_terms", dest="clean_query_terms", default=False, action="store_true",
@@ -389,8 +390,16 @@ def main_get_sorted_suggestions(opts):
     queries_heatmap_sort_list = [term_mean_pair[0] for term_mean_pair in sorted(queries_mean_hypergeometric.items(), key=lambda term_mean_pair: term_mean_pair[1], reverse=True)]
 
     #### CHECKING WETHER TO TRANSLATE TERMS CODES TO HUMAN READABLE NAMES
-    if options["translate"]: code_to_name = {term: ontology.translate_ids([term])[0][0] for term in queries_heatmap_sort_list+targets_heatmap_sort_list}
-    else: code_to_name = { term: term for term in queries_heatmap_sort_list+targets_heatmap_sort_list }
+    if options["translate"] == "c": 
+      code_to_name = { term: term for term in queries_heatmap_sort_list+targets_heatmap_sort_list }
+    elif options["translate"] == "c": 
+      code_to_name = { term: ontology.translate_ids([term])[0][0] for term in queries_heatmap_sort_list+targets_heatmap_sort_list }
+    elif options["translate"] == "cn":
+      code_to_name = { term: f"({term}) {ontology.translate_ids([term])[0][0]}" for term in queries_heatmap_sort_list+targets_heatmap_sort_list }
+    elif options["translate"] == "nc":
+      code_to_name = { term: f"{ontology.translate_ids([term])[0][0]} ({term})" for term in queries_heatmap_sort_list+targets_heatmap_sort_list }
+    else:
+      raise Exception("Invalid translate parameter value. Valid values are: c, n, cn, nc")
 
     #### PREPARING AND WRITTING THE OUTPUT TABLE AND DELETED QUERY TERMS FILE
     report_table_format = [  ["queries"] + [ code_to_name[term] for term in targets_heatmap_sort_list[:options["max_targets"]] ]  ]
