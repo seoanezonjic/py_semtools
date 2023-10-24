@@ -351,13 +351,11 @@ def main_get_sorted_suggestions(opts):
     else:
         cleaned_query_terms = ontology.clean_profile_hard(query_terms)
         _, removed_queries_self_parentals = ontology.remove_ancestors_from_profile(query_terms)
-        print(removed_queries_self_parentals)
 
     # IF FILTER_PARENTAL_TARGETS IS SET, CREATE A SET OF QUERY PARENTAL TERMS TO REMOVE CORRESPONDING TARGETS FROM THE RELATIONS FILE
     query_terms_parental_targets = set()
     if options["filter_parental_targets"]:
       for query_term in cleaned_query_terms: query_terms_parental_targets.update(ontology.get_ancestors(query_term))
-      print(query_terms_parental_targets)
 
     # IF BLACK_LIST IS SET, REMOVE TERMS IN THE BLACK LIST FROM THE TARGETS
     black_list = [] if options["black_list"] == None else set(flatten(CmdTabs.load_input_data(options["black_list"])))
