@@ -363,7 +363,7 @@ def main_get_sorted_suggestions(opts):
 
 
     ##### LOADING ONLY TERMS RELATED WITH QUERY TERMS FROM RELATIONS FILE
-    query_related_terms = load_query_related_target_terms(options["term_relations"], cleaned_query_terms, black_list)
+    query_related_terms, blacklisted_terms = load_query_related_target_terms(options["term_relations"], cleaned_query_terms, black_list)
 
     ##### CALCULATING NUMBER OF HITS (RELATION WITH A QUERY) FOR EACH TARGET TERM AND SORTING THEM FROM HIGHEST TO LOWEST 
     related_terms_query = invert_nested_hash(query_related_terms)
@@ -390,18 +390,21 @@ def main_get_sorted_suggestions(opts):
     queries_heatmap_sort_list = [term_mean_pair[0] for term_mean_pair in sorted(queries_mean_hypergeometric.items(), key=lambda term_mean_pair: term_mean_pair[1], reverse=True)]
 
     #### CHECKING WETHER TO TRANSLATE TERMS CODES TO HUMAN READABLE NAMES
+    all_terms_list = set(query_related_terms.keys()).union(set(related_terms_query.keys())).union(set(black_list))
     if options["translate"] == "c": 
-      code_to_name = { term: term for term in queries_heatmap_sort_list+targets_heatmap_sort_list }
+      code_to_name = { term: term for term in all_terms_list }
     elif options["translate"] == "c": 
-      code_to_name = { term: ontology.translate_ids([term])[0][0] for term in queries_heatmap_sort_list+targets_heatmap_sort_list }
+      code_to_name = { term: ontology.translate_ids([term])[0][0] for term in all_terms_list }
     elif options["translate"] == "cn":
-      code_to_name = { term: f"({term}) {ontology.translate_ids([term])[0][0]}" for term in queries_heatmap_sort_list+targets_heatmap_sort_list }
+      code_to_name = { term: f"({term}) {ontology.translate_ids([term])[0][0]}" for term in all_terms_list }
     elif options["translate"] == "nc":
-      code_to_name = { term: f"{ontology.translate_ids([term])[0][0]} ({term})" for term in queries_heatmap_sort_list+targets_heatmap_sort_list }
+      code_to_name = { term: f"{ontology.translate_ids([term])[0][0]} ({term})" for term in all_terms_list }
     else:
       raise Exception("Invalid translate parameter value. Valid values are: c, n, cn, nc")
 
     #### PREPARING AND WRITTING THE OUTPUT TABLE AND DELETED QUERY TERMS FILE
+
+    #Preparing query-targets hyper values heatmap table
     report_table_format = [  ["queries"] + [ code_to_name[term] for term in targets_heatmap_sort_list[:options["max_targets"]] ]  ]
 
     for query_term in queries_heatmap_sort_list:
@@ -416,10 +419,20 @@ def main_get_sorted_suggestions(opts):
             row.append(-math.log10(value))
         report_table_format.append(row)
 
+    #Preparing targets and number of hits datatable
+    blacklisted_terms_inverted = invert_nested_hash(blacklisted_terms)
+    blacklisted_terms_hits = {target: len(queries.values()) for target, queries in blacklisted_terms_inverted.items()}
+    targets_and_n_hits = [["Target HP name", "Target HP Code", "Number of hits"]] + [
+                          [ontology.translate_ids([target])[0][0], target, target_number_of_hits[target]] for target in unfiltered_targets_heatmap_sort_list]
+    targets_and_n_hits += [[ontology.translate_ids([target])[0][0], target, blacklisted_terms_hits[target]] for target in blacklisted_terms_hits.keys()]
 
-    CmdTabs.write_output_data(report_table_format, options["output_file"])
+    #Writting output files
+    output_file_dir = os.path.dirname(options["output_file"])
     sample_name = os.path.basename(options["output_file"]).replace(".txt", "")
-
+    
+    CmdTabs.write_output_data(report_table_format, options["output_file"])
+    CmdTabs.write_output_data(targets_and_n_hits, os.path.join(output_file_dir, "targets_number_of_hits.txt"))
+    
     if options["deleted_terms"] != None:
       CmdTabs.write_output_data([[ontology.translate_ids([term])[0][0]+f" ({term})"] for term in deleted_empty_query_terms], os.path.join(options["deleted_terms"], f"{sample_name}_deleted_empty_query_terms.txt"))
       CmdTabs.write_output_data([[ontology.translate_ids([term])[0][0]+f" ({term})"] for term in removed_queries_self_parentals], os.path.join(options["deleted_terms"], f"{sample_name}_deleted_query_self_parentals.txt"))
@@ -593,6 +606,7 @@ def load_ontology(external_data, ontology_file):
 
 def load_query_related_target_terms(filename, cleaned_query_terms, black_list):
   query_related_terms = {query_term: defaultdict(lambda: 0) for query_term in cleaned_query_terms}
+  blacklisted_terms = {query_term: defaultdict(lambda: 0) for query_term in cleaned_query_terms}
   with open(filename) as file:
    for line in file:
         term1, term2, value = line.strip().split("\t")
@@ -606,9 +620,11 @@ def load_query_related_target_terms(filename, cleaned_query_terms, black_list):
         else:
             query = term2
             target = term1
-        if target in black_list: continue       
-        query_related_terms[query][target] = value
-  return query_related_terms
+        if target in black_list: 
+            blacklisted_terms[query][target] = value
+        else:
+            query_related_terms[query][target] = value
+  return query_related_terms, blacklisted_terms
 
 def custom_mean(values, target_terms_subset):
    if len(values) == 0: return 0
