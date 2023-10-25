@@ -9,7 +9,7 @@ from collections import defaultdict
 import networkx as nx
 from concurrent.futures import ProcessPoolExecutor as PoolExecutor
 from functools import partial
-from collections import defaultdict
+from collections import defaultdict, deque
 import time
 import itertools
 import re
@@ -191,7 +191,7 @@ class Ontology:
             case _:
                 warnings.warn('Relation type not allowed. Returning None')
         query = self.dicts['is_a'][target].get(term)
-        return query
+        return copy.deepcopy(query)
 
     # Return direct ancestors/descendants of a given term
     # Return direct ancestors of a given term
@@ -216,12 +216,22 @@ class Ontology:
     # +return_ancestors+:: return ancestors if true or descendants if false
     # ===== Returns 
     # an array with all ancestors/descendants of given term or nil if parents are not available yet
-    def get_familiar(self, term, return_ancestors = True):
-        familiars = self.ancestors_index.get(term) if return_ancestors else self.descendants_index.get(term)
-        if familiars != None:
-            familiars = copy.copy(familiars)
-        else:
+    def get_familiar(self, term, return_ancestors = True, sorted_by_level = False):
+        if sorted_by_level:
             familiars = []
+            stack = deque(copy.deepcopy(self.get_direct_ancentors(term) if return_ancestors else self.get_direct_descendants(term)))
+            while len(stack) > 0:
+                next_term = stack.popleft()
+                familiars.append(next_term)
+                next_term_childs = self.get_direct_ancentors(next_term) if return_ancestors else self.get_direct_descendants(next_term) 
+                if next_term_childs != None: 
+                    for term in next_term_childs: stack.append(term)  
+        else:
+            familiars = self.ancestors_index.get(term) if return_ancestors else self.descendants_index.get(term)
+            if familiars != None:
+                familiars = copy.copy(familiars)
+            else:
+                familiars = []
         return familiars
 
     # Find ancestors of a given term
@@ -229,16 +239,16 @@ class Ontology:
     # +term+:: to be checked
     # ===== Returns 
     # an array with all ancestors of given term or false if parents are not available yet
-    def get_ancestors(self, term):
-        return self.get_familiar(term, True)
+    def get_ancestors(self, term, sorted_by_level = False):
+        return self.get_familiar(term, True, sorted_by_level)
 
     # Find descendants of a given term
     # ===== Parameters
     # +term+:: to be checked
     # ===== Returns 
     # an array with all descendants of given term or false if parents are not available yet
-    def get_descendants(self, term):
-        return self.get_familiar(term, False)        
+    def get_descendants(self, term, sorted_by_level = False):
+        return self.get_familiar(term, False, sorted_by_level)        
 
     # Gets ontology level of a specific term
     # ===== Returns 

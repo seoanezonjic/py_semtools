@@ -533,13 +533,15 @@ def get_childs(ontology, terms, modifiers):
   # - r: get parent-child relations instead of list descendants/ancestors
   # - hN: when list of relations, it is limited to N hops from given term
   # - n: give terms names instead of term codes
+  # - s: sort terms by level in the ontology
   all_childs = []
+  sort_by_level = True if 's' in modifiers else False
   for term in terms:
-    childs = ontology.get_ancestors(term) if 'a' in modifiers else ontology.get_descendants(term) 
+    childs = ontology.get_ancestors(term, sort_by_level) if 'a' in modifiers else ontology.get_descendants(term, sort_by_level) 
     all_childs = pxc.union(pxc.uniq(all_childs),pxc.uniq(childs)) 
   if 'r' in modifiers:
     relations = []
-    all_childs = pxc.union(pxc.uniq(all_childs),pxc.uniq(terms))  # Add parents that generated child list
+    all_childs = pxc.union(pxc.uniq(terms),pxc.uniq(all_childs))  # Add parents that generated child list
     target_hops = None
     matches = re.search(r"h([0-9]+)", modifiers) 
     if matches:
