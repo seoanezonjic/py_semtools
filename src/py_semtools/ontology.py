@@ -868,6 +868,16 @@ class Ontology:
         # Return
         return means_sim
 
+    def get_profile_similarities(self, terms, sim_type = 'resnik', ic_type = 'resnik'):
+        all_terms = copy.copy(terms)
+        sims = []
+        while len(all_terms) > 1:
+            t1 = all_terms.pop()
+            for t2 in all_terms:
+                value = self.get_similarity(t1, t2, sim_type = sim_type, ic_type = ic_type)
+                if type(value) is float: sims.append(value)
+        return mean(sims)
+
 
     #############################################
     # PROFILE INTERNAL METHODS 
@@ -1181,6 +1191,13 @@ class Ontology:
                     value = self.compare(current_profile, profile, sim_type = sim_type, ic_type = ic_type, bidirectional = bidirectional, store_mica = True)
                     self.add2nestHash(profiles_similarity, curr_id, t_id, value)
         #print(f"similarity: {time.time() - start}")
+        return profiles_similarity
+
+    def get_profile_similarities_from_profiles(self, sim_type = 'resnik', ic_type = 'resnik'):
+        profiles_similarity = {}
+        for t_id, prof in self.profiles.items():
+            sim = self.get_profile_similarities(prof, sim_type = sim_type, ic_type = ic_type)
+            profiles_similarity[t_id] = sim
         return profiles_similarity
 
     # specifity_index related methods
