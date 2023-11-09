@@ -879,7 +879,7 @@ class Ontology:
                 else:
                     value = self.get_similarity(t1, t2, sim_type = sim_type, ic_type = ic_type)
                 if type(value) is float: sims.append(value)
-        return mean(sims)
+        return np.mean(sims)
 
 
     #############################################
@@ -917,9 +917,13 @@ class Ontology:
     # +id+:: assigned to profile
     # +terms+:: array of terms
     # +substitute+:: subsstitute flag from check_ids
-    def add_profile(self, pr_id, terms, substitute = True): # FRED: Talk with PSZ about the uniqness of IDs translated
-        if pr_id in self.profiles: warnings.warn(f"Profile assigned to ID ({pr_id}) is going to be replaced") 
-        correct_terms, rejected_terms = self.check_ids(terms, substitute = substitute)
+    def add_profile(self, pr_id, terms, substitute = True, clean_hard=False): # FRED: Talk with PSZ about the uniqness of IDs translated
+        if pr_id in self.profiles: warnings.warn(f"Profile assigned to ID ({pr_id}) is going to be replaced")
+        if clean_hard:
+            correct_terms = self.clean_profile_hard(terms)
+            rejected_terms = []
+        else:
+            correct_terms, rejected_terms = self.check_ids(terms, substitute = substitute)
         if len(rejected_terms) > 0: warnings.warn(f"Given terms contains erroneus IDs: {','.join(rejected_terms)}. These IDs will be removed")
         self.profiles[pr_id] = correct_terms              
 
@@ -1204,7 +1208,7 @@ class Ontology:
         self.get_mica_index_from_profiles(pair_index, ic_type = ic_type, sim_type=sim_type)
         for t_id, prof in self.profiles.items():
             sim = self.get_profile_similarities(prof, sim_type = sim_type, ic_type = ic_type, store_mica = True)
-            profiles_similarity[t_id] = sim
+            profiles_similarity[t_id] = 1 if (np.isnan(sim) and len(prof) == 1) else sim
         return profiles_similarity
 
     # specifity_index related methods

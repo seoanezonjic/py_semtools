@@ -75,6 +75,8 @@ def semtools(args = None):
                         help="Download obo file from an official resource. MONDO, GO and HPO are possible values.")
     parser.add_argument("-i", "--input_file", dest="input_file", default=None,
                         help="Filepath of profile data")
+    parser.add_argument("--load_hard_cleaned_profiles", dest="load_hard_cleaned_profiles", default=False, action='store_true',
+                        help="When loading profiles for similarities calculation or other purposes, set if you want to perform a hard cleaning of the profiles or not (default: False)")
     parser.add_argument("-o", "--output_file", dest="output_file", default=None,
                     help="Output filepath")
     parser.add_argument("-I", "--IC", dest="ic", default=None,
@@ -131,6 +133,10 @@ def semtools(args = None):
               help="Input file is a two column table, first is an id and the second is a simgle ontology term.")
     parser.add_argument("--out2cols", dest="out2cols", default= False, action='store_true', 
               help="Output file will be a two column table")
+    parser.add_argument("--profiles_self_similarities", dest="profiles_self_similarities", default= None, 
+              help="Use to get the self-similarities of the profiles in the input file (resnik', 'lin' or 'jiang_conrath)")
+    parser.add_argument("--profiles_self_similarities_output", dest="profiles_self_similarities_output", default= None, 
+              help="Use to save the self-similarities of the profiles in the input file (of --profiles_self_similarities) to a file")        
     opts =  parser.parse_args(args)
     main_semtools(opts)
 
@@ -201,7 +207,7 @@ def main_semtools(opts):
         if options.get('list_translate') == None or options['keyword'] != None:
             data = format_data(data, options)
             if options.get('translate') != 'codes' and options.get('keyword') == None:
-                store_profiles(data, ontology) 
+                store_profiles(data, ontology, load_hard_cleaned_profiles = options['load_hard_cleaned_profiles']) 
     if options.get('list_translate') != None:
         for term in data:
             if options['list_translate'] == 'names':
@@ -217,7 +223,7 @@ def main_semtools(opts):
             pr_id, terms = info
             profiles[pr_id] = terms
         translate(ontology, 'codes', options, profiles)
-        store_profiles(list(profiles.items()), ontology)
+        store_profiles(list(profiles.items()), ontology, load_hard_cleaned_profiles = options['load_hard_cleaned_profiles'])
            
     if options.get('clean_profiles'):
         removed_profiles = clean_profiles(ontology.profiles, ontology, options)    
@@ -317,6 +323,12 @@ def main_semtools(opts):
         for hit in hits:
             if options['translate_keyword_search']: print(ontology.translate_id(hit))
             else: print(hit)
+    
+    if options["profiles_self_similarities"] != None:
+      self_similarities = ontology.get_profile_similarities_from_profiles(sim_type = options["profiles_self_similarities"])
+      with open(options["profiles_self_similarities_output"], "w") as f:
+        for profile, similarity in self_similarities.items():
+          f.write(f"{profile}\t{similarity}\n")
 
 def main_strsimnet(options):
     texts2compare = load_table_file(input_file = options.input_file,
@@ -445,8 +457,8 @@ def main_get_sorted_suggestions(opts):
 def format_tabular_data(data, separator, id_col, terms_col):
   for i, row in enumerate(data): data[i] = [row[id_col], row[terms_col].split(separator)]
 
-def store_profiles(file, ontology):
-  for t_id, terms in file: ontology.add_profile(t_id, terms)
+def store_profiles(file, ontology, load_hard_cleaned_profiles = False):
+  for t_id, terms in file: ontology.add_profile(t_id, terms, clean_hard = load_hard_cleaned_profiles)
 
 def translate(ontology, mode, options, profiles = None):
   not_translated = {}
