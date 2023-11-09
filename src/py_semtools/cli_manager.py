@@ -135,7 +135,7 @@ def semtools(args = None):
               help="Output file will be a two column table")
     parser.add_argument("--profiles_self_similarities", dest="profiles_self_similarities", default= None, 
               help="Use to get the self-similarities of the profiles in the input file (resnik', 'lin' or 'jiang_conrath)")
-    parser.add_argument("--profiles_self_similarities_output", dest="profiles_self_similarities_output", default= None, 
+    parser.add_argument("--profiles_self_similarities_output", dest="profiles_self_similarities_output", default= 'profiles_self_similarities.txt', 
               help="Use to save the self-similarities of the profiles in the input file (of --profiles_self_similarities) to a file")        
     opts =  parser.parse_args(args)
     main_semtools(opts)
@@ -553,7 +553,7 @@ def get_childs(ontology, terms, modifiers):
     all_childs = pxc.union(pxc.uniq(all_childs),pxc.uniq(childs)) 
   if 'r' in modifiers:
     relations = []
-    all_childs = pxc.union(pxc.uniq(terms),pxc.uniq(all_childs))  # Add parents that generated child list
+    all_childs = pxc.union(pxc.uniq(terms),pxc.uniq(all_childs)) if "s" in modifiers else pxc.union(pxc.uniq(all_childs),pxc.uniq(terms))# Add parents that generated child list
     target_hops = None
     matches = re.search(r"h([0-9]+)", modifiers) 
     if matches:
