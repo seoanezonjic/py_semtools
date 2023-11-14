@@ -917,10 +917,10 @@ class Ontology:
     # +id+:: assigned to profile
     # +terms+:: array of terms
     # +substitute+:: subsstitute flag from check_ids
-    def add_profile(self, pr_id, terms, substitute = True, clean_hard=False): # FRED: Talk with PSZ about the uniqness of IDs translated
+    def add_profile(self, pr_id, terms, substitute = True, clean_hard=False, options={}): # FRED: Talk with PSZ about the uniqness of IDs translated
         if pr_id in self.profiles: warnings.warn(f"Profile assigned to ID ({pr_id}) is going to be replaced")
         if clean_hard:
-            correct_terms = self.clean_profile_hard(terms)
+            correct_terms = self.clean_profile_hard(terms, options=options)
             rejected_terms = []
         else:
             correct_terms, rejected_terms = self.check_ids(terms, substitute = substitute)
