@@ -1,12 +1,14 @@
 import math
 import os
 import sys
+import time
 import copy
 import warnings
 import json
 import numpy as np
 from collections import defaultdict
 import networkx as nx
+import entrezpy.esearch.esearcher
 from concurrent.futures import ProcessPoolExecutor as PoolExecutor
 from functools import partial
 from collections import defaultdict, deque
@@ -324,6 +326,11 @@ class Ontology:
     def translate_id(self, t_id):
         name = self.translate(t_id, 'name', byValue = False)
         return None if name == None else name[0]
+
+    def get_synonims(self, t_id):
+        syns = self.dicts['synonym']['byTerm'].get(t_id)
+        if syns == None: syns = []
+        return syns
 
     # Get term frequency and information
     ####################################
@@ -1300,7 +1307,37 @@ class Ontology:
             lss = self.get_weigthed_level_contribution(lowSection, maxL, maxL)
             dsi = hss / lss
         return dsi
- 
+
+    ########################################
+    ## INTERNET QUERY METHODS
+    ######################################## 
+    def query_ncbi(self, db): # Due a hardcoded limit in NCBI API we only can retrieve 10000 records. To download the complete dataset, we need the E-Direct tools. Install from https://www.ncbi.nlm.nih.gov/books/NBK179288/ and add detection and implementation
+        #import entrezpy.log.logger
+        #entrezpy.log.logger.set_level('DEBUG')
+        count = 0
+        ont_term_res = {}
+        for t_id, tags in self.each(att = True):
+            if count == 1000: break
+            name = tags['name']
+            syns = self.get_synonims(t_id)
+            strings = [name]
+            if len(syns) > 0:
+                strings.extend(syns)
+                strings = list(set(strings))
+            query = ' OR '.join(strings)
+            es = entrezpy.esearch.esearcher.Esearcher('esearcher', 'mail', threads=1)
+            #es.requests_per_sec = 2
+            es.num_threads = 1
+            a = es.inquire({'db': db,'term':query, 'retmax': 10000, 'rettype': 'uilist'})
+            count += 1
+            if a != None: 
+                result = a.get_result().uids
+                a.result = None # This resets class/object to avoid the bug of result aggregation from one query to other
+                print(f"{t_id} => {len(result)}")
+                if len(result) > 0 : ont_term_res[t_id] = [strings, result]
+        return ont_term_res
+
+
     ########################################
     ## GENERAL ONTOLOGY METHODS
     ########################################

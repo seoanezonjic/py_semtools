@@ -3,6 +3,8 @@ import sys
 import os
 import glob
 import math
+import re
+import subprocess
 import requests
 import warnings
 from collections import defaultdict
@@ -63,6 +65,18 @@ def strsimnet(args = None):
     opts =  parser.parse_args(args)
     main_strsimnet(opts)
 
+def remote_retriever(args = None):
+    if args == None: args = sys.argv[1:]
+    parser = argparse.ArgumentParser(description='Retrieve data in remote server by keywords')
+    parser.add_argument("-i", "--input_file", dest="input_file", default= None, 
+              help="Input file with keywords (one column with an ID, a second one with the keyword and last optional column with alternatives strings separated by ','')")
+    parser.add_argument("-s", "--source", dest="source", default= None, 
+              help="Remote search engine source to perform search. options: pubmed ")
+    parser.add_argument("-o", "--output_file", dest="output_file", default= None, 
+              help="Output matches by keyword file.")
+    opts =  parser.parse_args(args)
+    main_remote_retriever(opts)
+
 def semtools(args = None):
     if args is None:
         args = sys.argv[1:]
@@ -111,6 +125,8 @@ def semtools(args = None):
               help="To obtain main statistical descriptors of the profiles file.")
     parser.add_argument('-l', "--list_translate", dest="list_translate", default= None, 
               help="Translate to 'names' or to 'codes' input list.")
+    parser.add_argument('-q', "--query_ncbi", dest="query_ncbi", default= None, 
+              help="Get specified item for each term in loaded ontology.")
     parser.add_argument('-f', "--subject_column", dest="subject_column", default= 0, type=int,
               help="The number of the column for the subject id.")
     parser.add_argument('-a', "--annotations_column", dest="annotations_column", default= 1, type=int,
@@ -202,6 +218,14 @@ def main_semtools(opts):
     if options['root'] != None:
         Ontology.mutate(options['root'], ontology, clone = False)  # TODO fix method and convert in class method
 
+    if options.get('query_ncbi') != None:
+        results = ontology.query_ncbi(options['query_ncbi'])
+        with open(options['output_file'], 'w') as f:
+            for t_id, items in results.items():
+                query, ids = items
+                f.write(f"{t_id}\t{','.join(query)}\t{','.join(ids)}\n")
+        sys.exit()
+
     if options['input_file'] != None:
         data = CmdTabs.load_input_data(options['input_file'])
         if options.get('list_translate') == None or options['keyword'] != None:
@@ -267,7 +291,7 @@ def main_semtools(opts):
         terms, modifiers = options['childs']
         all_childs = get_childs(ontology, terms, modifiers)
         for ac in all_childs:
-            if 'r' in modifiers:
+            if 'r' in modifiers or 'CNS' in modifiers:
                 print("\t".join(ac))
             else:
                 print(ac)
@@ -345,6 +369,39 @@ def main_strsimnet(options):
         for item2, sim in item_similitudes.items():
           f.write("\t".join([item, item2 , str(sim)]) + "\n" )
 
+
+def main_remote_retriever(opts):
+    keywords = load_keywords(opts.input_file)
+    if opts.source == 'pubmed':
+        query_pubmed(keywords, opts.output_file)
+
+def load_keywords(file):
+    keywords = []
+    with open(file) as f:
+        for line in f:
+            fields = line.rstrip().split("\t")
+            if len(fields) == 2:
+                id, keyword = fields
+                keywords.append([id, keyword])
+            else:
+                id, keyword, alternatives = fields
+                alternatives = alternatives.split(',')
+                keywords.append([id, keyword, alternatives])
+    return keywords
+
+def query_pubmed(keywords, file):
+    with open(file, 'w') as f:
+        for keyword in keywords:
+            if len(keyword) == 2:
+                id , kw = keyword
+            elif len(keyword) == 3:
+                id , main_kw, synonims = keyword
+                kw = '" OR "'.join([main_kw] + synonims)
+            cmd = f"esearch -db pubmed -query '\"{kw}\"' 2> /dev/null | efetch -format uid 2> /dev/null"
+            query = subprocess.check_output(cmd, shell=True)
+            query = query.decode("utf-8")
+            query = re.sub("\n", ",", query)
+            f.write(f"{id}\t{query}\n") # write on the fly to avoid lose the previous queries for any incovenience
 
 def main_get_sorted_suggestions(opts):
     options = vars(opts)
@@ -546,6 +603,7 @@ def get_childs(ontology, terms, modifiers):
   # - hN: when list of relations, it is limited to N hops from given term
   # - n: give terms names instead of term codes
   # - s: sort terms by level in the ontology
+  # - CNS: git list with Code, Name and synonims
   all_childs = []
   sort_by_level = True if 's' in modifiers else False
   for term in terms:
@@ -579,7 +637,9 @@ def get_childs(ontology, terms, modifiers):
       if 'n' in modifiers: rel, _ = ontology.translate_ids(rel) 
       all_childs.append(rel)
   elif 'n' in modifiers:
-    all_childs = [ ontology.translate_id(c) for c in all_childs ]  
+    all_childs = [ ontology.translate_id(c) for c in all_childs ]
+  elif 'CNS' in modifiers:
+    all_childs = [ [c, ontology.translate_id(c), ','.join(ontology.get_synonims(c))] for c in all_childs ]    
   return all_childs
 
 def format_data(data, options):
