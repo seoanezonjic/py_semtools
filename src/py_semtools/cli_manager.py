@@ -5,6 +5,7 @@ import glob
 import math
 import re
 import subprocess
+import time
 import requests
 import warnings
 from collections import defaultdict
@@ -389,7 +390,7 @@ def load_keywords(file):
                 keywords.append([id, keyword, alternatives])
     return keywords
 
-def query_pubmed(keywords, file):
+def query_pubmed(keywords, file): 
     with open(file, 'w') as f:
         for keyword in keywords:
             if len(keyword) == 2:
@@ -398,10 +399,14 @@ def query_pubmed(keywords, file):
                 id , main_kw, synonims = keyword
                 kw = '" OR "'.join([main_kw] + synonims)
             cmd = f"esearch -db pubmed -query '\"{kw}\"' 2> /dev/null | efetch -format uid 2> /dev/null"
-            query = subprocess.check_output(cmd, shell=True)
-            query = query.decode("utf-8")
-            query = re.sub("\n", ",", query)
+            query_sp = subprocess.run(cmd, input="", shell=True, capture_output=True, encoding='UTF-8')
+            if query_sp.returncode != 0:
+                print(cmd) 
+                print(f"{id} has returned the following non zero code error:{query_sp.returncode}") 
+                break
+            query = re.sub("\n", ",", query_sp.stdout.strip())
             f.write(f"{id}\t{query}\n") # write on the fly to avoid lose the previous queries for any incovenience
+            time.sleep(1)
 
 def main_get_sorted_suggestions(opts):
     options = vars(opts)
