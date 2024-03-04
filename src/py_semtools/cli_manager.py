@@ -383,10 +383,11 @@ def load_keywords(file):
             fields = line.rstrip().split("\t")
             if len(fields) == 2:
                 id, keyword = fields
-                keywords.append([id, keyword])
+                keywords.append([id, lower(keyword)])
             else:
                 id, keyword, alternatives = fields
                 alternatives = alternatives.split(',')
+                alternatives = [ lower(a) for a in alternatives ]
                 keywords.append([id, keyword, alternatives])
     return keywords
 
