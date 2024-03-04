@@ -388,7 +388,7 @@ def load_keywords(file):
                 id, keyword, alternatives = fields
                 alternatives = alternatives.split(',')
                 alternatives = [ a.lower() for a in alternatives ]
-                keywords.append([id, keyword, alternatives])
+                keywords.append([id, keyword.lower(), alternatives])
     return keywords
 
 def query_pubmed(keywords, file): 
@@ -398,7 +398,7 @@ def query_pubmed(keywords, file):
                 id , kw = keyword
             elif len(keyword) == 3:
                 id , main_kw, synonims = keyword
-                kw = r'\" OR \"'.join([main_kw] + synonims)
+                kw = r'\" OR \"'.join(list(set([main_kw] + synonims))) #inner list/set makes uniq keywords
             cmd = f"esearch -db pubmed -query \"\\\"{kw}\\\"\" 2> /dev/null | efetch -format uid 2> /dev/null"
             # query must be a string with "" to enclose putative ' characters. For this reason, when " is use to skip the NCBI translation is escaped with \\ (one additional \ to send the slash character to the terminal)
             query_sp = subprocess.run(cmd, input="", shell=True, capture_output=True, encoding='UTF-8')
