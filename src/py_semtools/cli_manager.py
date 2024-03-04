@@ -397,11 +397,12 @@ def query_pubmed(keywords, file):
                 id , kw = keyword
             elif len(keyword) == 3:
                 id , main_kw, synonims = keyword
-                kw = '" OR "'.join([main_kw] + synonims)
-            cmd = f"esearch -db pubmed -query '\"{kw}\"' 2> /dev/null | efetch -format uid 2> /dev/null"
+                kw = r'\" OR \"'.join([main_kw] + synonims)
+            cmd = f"esearch -db pubmed -query \"\\\"{kw}\\\"\" 2> /dev/null | efetch -format uid 2> /dev/null"
+            # query must be a string with "" to enclose putative ' characters. For this reason, when " is use to skip the NCBI translation is escaped with \\ (one additional \ to send the slash character to the terminal)
             query_sp = subprocess.run(cmd, input="", shell=True, capture_output=True, encoding='UTF-8')
             if query_sp.returncode != 0:
-                print(cmd) 
+                print(cmd)
                 print(f"{id} has returned the following non zero code error:{query_sp.returncode}") 
                 break
             query = re.sub("\n", ",", query_sp.stdout.strip())
