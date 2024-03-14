@@ -19,6 +19,10 @@ import py_exp_calc.exp_calc as pxc
 from py_cmdtabs import CmdTabs
 from py_exp_calc.exp_calc import invert_nested_hash, flatten
 
+#For stENGINE
+from sentence_transformers import SentenceTransformer, util
+import gzip, pickle
+
 ONTOLOGY_INDEX = str(files('py_semtools.external_data').joinpath('ontologies.txt'))
 #https://pypi.org/project/platformdirs/
 ONTOLOGIES=os.path.join(site.USER_BASE, "semtools", 'ontologies')
@@ -195,9 +199,120 @@ def get_sorted_suggestions(args = None):
     opts =  parser.parse_args(args)
     main_get_sorted_suggestions(opts)
 
+def launch_stEngine(args = None):
+    if args is None:
+        args = sys.argv[1:]
+
+    parser = argparse.ArgumentParser(description='Perform Ontology driven analysis ')
+
+    parser.add_argument('-m', "--model_name", dest="model_name", default= None,
+            help="Name of the model to be used")
+    parser.add_argument('-p', "--model_path", dest="model_path", default= None,
+            help="Path where the model is cached or where it will be stored")
+    parser.add_argument('-q', "--query", dest="query", default= None,
+            help="Path to the query file. Wildcards are accepted to process multiple files")
+    parser.add_argument('-c', "--corpus", dest="corpus", default= None,
+            help="Path to the corpus file. Wildcards are accepted to process multiple files")    
+    parser.add_argument('-Q', "--query_embedded", dest="query_embedded", default= None,
+            help="Path to save/load the embedded query file. Wildcards are accepted to LOAD multiple files")    
+    parser.add_argument('-C', "--corpus_embedded", dest="corpus_embedded", default= None,
+            help="Path to save/load the embedded corpus file. Wildcards are accepted to LOAD multiple files")
+    parser.add_argument('-o', "--output_file", dest="output_file", default= None,
+            help="Path to save the output file with semantic scores")
+    parser.add_argument('-k', "--top_k", dest="top_k", default= 20, type = int,
+            help="Get top scores per keyword")
+    parser.add_argument('-v', "--verbose", dest="verbose", default= False, action='store_true',
+            help="Toogle on to get verbose output")    
+    
+    opts =  parser.parse_args(args)
+    main_launch_stEngine(opts)
+
+
 #########################################################################
 # MAIN FUNCTIONS 
 #########################################################################
+
+def main_launch_stEngine(opts):
+    options = vars(opts)
+
+    ### LOAD OR DOWNLOAD MODEL
+    if options.get("model_name") != None and options.get("model_path") != None:
+        #print(f"descargando o cargando modelo {options['model_name']} en {options['model_path']}")
+        embedder = SentenceTransformer(options["model_name"], cache_folder = options["model_path"])
+
+    ### LOAD AND EMBED QUERIES
+    if options.get("query") != None:
+        #print("cargando y embebiendo queries:")
+        queries_filenames = glob.glob(options["query"])
+        queries_content = {}
+        for query_filename in queries_filenames:
+            keyword_index = load_keyword_index(query_filename) # keywords used in queries
+            queries = []
+            query_ids = []
+            for kwdID, kwds in keyword_index.items():
+                queries.extend(kwds)
+                query_ids.extend([kwdID for i in range(0, len(kwds))])
+            query_embeddings = embedder.encode(queries, show_progress_bar = options["verbose"], convert_to_numpy=True) #convert_to_tensor=True
+            query_basename = os.path.splitext(os.path.basename(query_filename))[0]
+            queries_content[query_basename] = {'query_ids': query_ids, "queries": queries, "embeddings": query_embeddings}
+            if options.get("query_embedded") != None:
+                #print(f"guardando query embebida de {query_basename}")
+                with open(os.path.join(options["query_embedded"], query_basename) + '.pkl', "wb") as fOut:
+                    pickle.dump(queries_content[query_basename], fOut)
+
+    ### LOAD QUERIES IF ALREADY EMBEDDED
+    elif options.get("query_embedded") != None:
+        #print("cargando queries embebidas:")
+        embedded_queries_filenames = glob.glob(options["query_embedded"])
+        queries_content = {}
+        for embedded_query_filename in embedded_queries_filenames:
+            embedded_query_basename = os.path.splitext(os.path.basename(embedded_query_filename))[0]
+            with open(embedded_query_filename, "rb") as fIn:
+                #print(f"cargando query embebida de {embedded_query_basename}")
+                queries_content[embedded_query_basename] = pickle.load(fIn)
+    
+    ### LOAD AND EMBED CORPUS AND CALCULATE SIMILARITIES IF ASKED
+    if options.get("corpus") != None:
+        #print("cargando y embebiendo corpus:")
+        corpus_filenames = glob.glob(options["corpus"])
+        for corpus_filename in corpus_filenames:
+            corpus_basename = os.path.splitext(os.path.basename(corpus_filename))[0]
+            pubmed_index = load_pubmed_index(corpus_filename) # abstracts
+            textIDs = list(pubmed_index.keys())
+            corpus = list(pubmed_index.values())
+            corpus_embeddings = embedder.encode(corpus, convert_to_numpy=True, show_progress_bar = options["verbose"]) #convert_to_tensor=True
+            corpus_info = {'textIDs': textIDs, "corpus": corpus, "embeddings": corpus_embeddings}        
+            if options.get("corpus_embedded") != None:
+                #print(f"guardando corpus embebido de {corpus_basename}")
+                with open(os.path.join(options["corpus_embedded"], corpus_basename) + '.pkl', "wb") as fOut:
+                    pickle.dump(corpus_info, fOut)
+            if options.get("output_file"):
+                for query_basename, query_info in queries_content.items():
+                    #print(f"calculando similitudes de corpus {corpus_basename} y query {query_basename}")
+                    best_matches = calculate_similarities(query_info, corpus_info, options["top_k"])
+                    output_filename = os.path.join(options["output_file"],query_basename)
+                    #print(f"guardando similitudes en {output_filename}")
+                    save_similarities(output_filename, best_matches)
+
+    ### LOAD CORPUS IF ALREADY EMBEDDED AND CALCULATE SIMILARITIES IF ASKED
+    elif options.get("corpus_embedded") != None:
+        #print("cargando corpus embebidos:")
+        embedded_corpus_filenames = glob.glob(options["corpus_embedded"])
+        for embedded_corpus_filename in embedded_corpus_filenames:
+            corpus_basename = os.path.splitext(os.path.basename(embedded_corpus_filename))[0]
+            #print(f"cargando corpus embebido de {os.path.basename(corpus_basename)}")
+            with open(embedded_corpus_filename, "rb") as fIn:
+                corpus_info = pickle.load(fIn)
+            if options.get("output_file"):
+                #print("calculando similitudes:")
+                for query_basename, query_info in queries_content.items():
+                    #print(f"calculando similitudes de corpus {corpus_basename} y query {query_basename}")                    
+                    best_matches = calculate_similarities(query_info, corpus_info, options["top_k"])
+                    output_filename = os.path.join(options["output_file"],query_basename)
+                    #print(f"guardando similitudes en {output_filename}")
+                    save_similarities(output_filename, best_matches)
+            
+
 
 def main_semtools(opts):
     options = vars(opts)
@@ -714,3 +829,65 @@ def custom_mean(values, target_terms_subset):
 def custom_mean_and_filter(items, target_terms_subset):
    values_to_calc = [values for keys, values in items if keys in target_terms_subset]
    return custom_mean(values_to_calc, target_terms_subset)
+
+
+######################## FUNCTIONS FOR ST ENGINE ########################
+
+def load_keyword_index(file):
+    keywords = {}
+    with open(file) as f:
+        for line in f:
+            fields = line.rstrip().split("\t")
+            if len(fields) == 2:
+                id, keyword = fields
+                keywords[id] = [keyword.lower()]
+            else:
+                id, keyword, alternatives = fields
+                alternatives = alternatives.split(',')
+                alternatives.append(keyword)
+                alternatives = [ a.lower() for a in alternatives ]
+                kwrds = list(set(alternatives))
+                keywords[id] = kwrds
+    return keywords
+
+def load_pubmed_index(file):
+	pubmed_index = {}
+	with gzip.open(file, "rt") as f:
+		for line in f:
+			id, text = line.rstrip().split("\t")
+			pubmed_index[int(id)] = text
+	return pubmed_index
+
+def calculate_similarities(query_info, corpus_info, top_k):
+  corpus_ids = corpus_info["textIDs"]
+  corpus_embeddings = corpus_info["embeddings"]
+
+  query_ids = query_info['query_ids']
+  query_embeddings = query_info["embeddings"]
+  search = util.semantic_search(query_embeddings, corpus_embeddings, top_k=top_k)
+
+  return find_best_matches(corpus_ids, query_ids, search)
+
+def find_best_matches(corpus_ids, query_ids, search):
+    best_matches = {}
+    for i,query in enumerate(search):
+      kwdID = query_ids[i]
+      kwd = best_matches.get(kwdID)
+      if kwd == None:
+        kwd = {}
+        best_matches[kwdID] = kwd
+
+      for hit in query:
+        textID = corpus_ids[hit['corpus_id']]
+        score = hit['score']
+        text_score = kwd.get(textID)
+        if text_score == None or text_score < score :
+          kwd[textID] = score
+      #sentence = corpus_sentences[hit['corpus_id']]
+    return best_matches
+
+def save_similarities(filepath, best_matches):
+    with open(filepath, 'a') as f:
+      for kwdID, matches in best_matches.items():
+        for textID, score in matches.items():
+          f.write(f"{kwdID}\t{textID}\t{score}\n")
