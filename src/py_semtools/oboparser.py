@@ -115,13 +115,12 @@ class OboParser(FileParser):
             header = info
         else:
             entity_id = info['id']
-            match infoType:
-                case 'Term':
-                    stanzas['terms'][entity_id] = info
-                case 'Typedef':
-                    stanzas['typedefs'][entity_id] = info
-                case 'Instance':
-                    stanzas['instances'][entity_id] = info
+            if infoType == 'Term':
+                stanzas['terms'][entity_id] = info
+            elif infoType == 'Typedef':
+                stanzas['typedefs'][entity_id] = info
+            elif infoType == 'Instance':
+                stanzas['instances'][entity_id] = info
         return header
 
     # Class method to transform string with <tag : info> into hash structure

@@ -185,13 +185,12 @@ class Ontology:
     # Direct ancestors/descendants of given term or nil if any error occurs
     def get_direct_related(self, term, relation):
         target = None
-        match relation:
-            case 'ancestor':
-                target = 'byTerm'
-            case 'descendant':
-                target = 'byValue'
-            case _:
-                warnings.warn('Relation type not allowed. Returning None')
+        if relation == 'ancestor':
+            target = 'byTerm'
+        elif relation ==  'descendant':
+            target = 'byValue'
+        else:
+            warnings.warn('Relation type not allowed. Returning None')
         query = self.dicts['is_a'][target].get(term)
         return copy.deepcopy(query)
 
@@ -378,49 +377,49 @@ class Ontology:
         # Calculate
         ic = - 1
         term_meta = self.meta[term]
-        match ic_type: # https://arxiv.org/ftp/arxiv/papers/1310/1310.8059.pdf  |||  https://sci-hub.st/https://doi.org/10.1016/j.eswa.2012.01.082
-            ###########################################
-            #### STRUCTURE BASED METRICS
-            ###########################################
-            # Shortest path
-            # Weighted Link
-            # Hirst and St-Onge Measure
-            # Wu and Palmer
-            # Slimani
-            # Li
-            # Leacock and Chodorow
-            ###########################################
-            #### INFORMATION CONTENT METRICS
-            ###########################################
-            case 'resnik': # Resnik P: Using Information Content to Evaluate Semantic Similarity in a Taxonomy
-                # -log(Freq(x) / Max_Freq)
-                ic = -math.log10(term_meta['struct_freq'] / self.max_freqs['struct_freq'])
-            case 'resnik_observed':
-                # -log(Freq(x) / Max_Freq)
-                ic = -math.log10(term_meta['observed_freq'] / self.max_freqs['observed_freq'])
-            # Lin
-            # Jiang & Conrath
+        # https://arxiv.org/ftp/arxiv/papers/1310/1310.8059.pdf  |||  https://sci-hub.st/https://doi.org/10.1016/j.eswa.2012.01.082
+        ###########################################
+        #### STRUCTURE BASED METRICS
+        ###########################################
+        # Shortest path
+        # Weighted Link
+        # Hirst and St-Onge Measure
+        # Wu and Palmer
+        # Slimani
+        # Li
+        # Leacock and Chodorow
+        ###########################################
+        #### INFORMATION CONTENT METRICS
+        ###########################################
+        if ic_type == 'resnik': # Resnik P: Using Information Content to Evaluate Semantic Similarity in a Taxonomy
+            # -log(Freq(x) / Max_Freq)
+            ic = -math.log10(term_meta['struct_freq'] / self.max_freqs['struct_freq'])
+        elif ic_type == 'resnik_observed':
+            # -log(Freq(x) / Max_Freq)
+            ic = -math.log10(term_meta['observed_freq'] / self.max_freqs['observed_freq'])
+        # Lin
+        # Jiang & Conrath
 
-            ###########################################
-            #### FEATURE-BASED METRICS
-            ###########################################
-            # Tversky
-            # x-similarity
-            # Rodirguez
+        ###########################################
+        #### FEATURE-BASED METRICS
+        ###########################################
+        # Tversky
+        # x-similarity
+        # Rodirguez
 
-            ###########################################
-            #### HYBRID METRICS
-            ###########################################
-            case 'seco' | 'zhou': # SECO:: An intrinsic information content metric for semantic similarity in WordNet
-                #  1 - ( log(hypo(x) + 1) / log(max_nodes) )
-                ic = 1 - math.log10(term_meta['struct_freq']) / math.log10(len(self.terms))
-                if 'zhou': # New Model of Semantic Similarity Measuring in Wordnet                
-                    # k*(IC_Seco(x)) + (1-k)*(log(depth(x))/log(max_depth))
-                    self.ics['seco'][term] = ic # Special store
-                    ic = zhou_k * ic + (1.0 - zhou_k) * (math.log10(term_meta['descendants']) / math.log10(self.max_freqs['max_depth']))
-            case 'sanchez': # Semantic similarity estimation in the biomedical domain: An ontology-basedinformation-theoretic perspective
-                ic = -math.log10((term_meta['descendants'] / term_meta['ancestors'] + 1.0) / (self.max_freqs['max_depth'] + 1.0))
-            # Knappe
+        ###########################################
+        #### HYBRID METRICS
+        ###########################################
+        elif ic_type == 'seco' or ic_type == 'zhou': # SECO:: An intrinsic information content metric for semantic similarity in WordNet
+            #  1 - ( log(hypo(x) + 1) / log(max_nodes) )
+            ic = 1 - math.log10(term_meta['struct_freq']) / math.log10(len(self.terms))
+            if 'zhou': # New Model of Semantic Similarity Measuring in Wordnet                
+                # k*(IC_Seco(x)) + (1-k)*(log(depth(x))/log(max_depth))
+                self.ics['seco'][term] = ic # Special store
+                ic = zhou_k * ic + (1.0 - zhou_k) * (math.log10(term_meta['descendants']) / math.log10(self.max_freqs['max_depth']))
+        elif ic_type == 'sanchez': # Semantic similarity estimation in the biomedical domain: An ontology-basedinformation-theoretic perspective
+            ic = -math.log10((term_meta['descendants'] / term_meta['ancestors'] + 1.0) / (self.max_freqs['max_depth'] + 1.0))
+        # Knappe
         curr_ics[term] = ic
         return ic
 
@@ -501,16 +500,15 @@ class Ontology:
         sim = None
         mica, sim_res = self.get_MICA(termA, termB, ic_type, mica_index)
         if mica != None:
-            match sim_type:
-                case 'resnik':
-                    sim = sim_res
-                case 'lin':
-                    if termA == termB:
-                        sim = 1.0
-                    else:
-                        sim = (2.0 * sim_res) / (self.get_IC(termA, ic_type=ic_type) + self.get_IC(termB, ic_type=ic_type))
-                case 'jiang_conrath': # This is not a similarity, this is a disimilarity (distance)
-                    sim = (self.get_IC(termA, ic_type=ic_type) + self.get_IC(termB, ic_type=ic_type)) - (2.0 * sim_res)
+            if sim_type == 'resnik':
+                sim = sim_res
+            elif sim_type == 'lin':
+                if termA == termB:
+                    sim = 1.0
+                else:
+                    sim = (2.0 * sim_res) / (self.get_IC(termA, ic_type=ic_type) + self.get_IC(termB, ic_type=ic_type))
+            elif sim_type == 'jiang_conrath': # This is not a similarity, this is a disimilarity (distance)
+                sim = (self.get_IC(termA, ic_type=ic_type) + self.get_IC(termB, ic_type=ic_type)) - (2.0 * sim_res)
         return sim
 
     # Checking valid terms

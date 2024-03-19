@@ -20,8 +20,13 @@ from py_cmdtabs import CmdTabs
 from py_exp_calc.exp_calc import invert_nested_hash, flatten
 
 #For stENGINE
+import torch
 from sentence_transformers import SentenceTransformer, util
 import gzip, pickle
+import xml.etree.ElementTree as ET
+
+#For get_pubmed_index
+from concurrent.futures import ProcessPoolExecutor
 
 ONTOLOGY_INDEX = str(files('py_semtools.external_data').joinpath('ontologies.txt'))
 #https://pypi.org/project/platformdirs/
@@ -199,11 +204,11 @@ def get_sorted_suggestions(args = None):
     opts =  parser.parse_args(args)
     main_get_sorted_suggestions(opts)
 
-def launch_stEngine(args = None):
+def stEngine(args = None):
     if args is None:
         args = sys.argv[1:]
 
-    parser = argparse.ArgumentParser(description='Perform Ontology driven analysis ')
+    parser = argparse.ArgumentParser(description='Perform Ontology driven analysis with Sentence Transformer')
 
     parser.add_argument('-m', "--model_name", dest="model_name", default= None,
             help="Name of the model to be used")
@@ -222,98 +227,84 @@ def launch_stEngine(args = None):
     parser.add_argument('-k', "--top_k", dest="top_k", default= 20, type = int,
             help="Get top scores per keyword")
     parser.add_argument('-v', "--verbose", dest="verbose", default= False, action='store_true',
-            help="Toogle on to get verbose output")    
+            help="Toogle on to get verbose output")
+    parser.add_argument('-g', "--gpu_device", dest="gpu_device", default= None,
+            help="Use to specify the GPU device to be used for speed-up (if available). The format is like: 'cuda:0'")    
     
     opts =  parser.parse_args(args)
-    main_launch_stEngine(opts)
+    main_stEngine(opts)
 
+def get_pubmed_index(args = None):
+    if args is None:
+        args = sys.argv[1:]
+
+    parser = argparse.ArgumentParser(description='Extract abstracts from pubmed xml files')
+
+    parser.add_argument('-i', "--input", dest="input", default= None,
+            help="Path to the pubmed input file in xml format (gzip compressed) to extract. Wildcards are accepted to process multiple files")
+    parser.add_argument('-o', "--output", dest="output", default= None,
+            help="Output path to save the extracted data (gzip compressed).")
+    parser.add_argument('-k', "--chunk_size", dest="chunk_size", default= 0, type = int,
+            help="Number of abstracts to be accumulated and saved in a file. If not used, the same input-output files will be used")
+    parser.add_argument('-t', "--tag", dest="tag", default= "file_",
+            help="If a chunk size is used, this tag will be used to name the output files")
+    parser.add_argument('-c', "--n_cpus", dest="n_cpus", default= 1, type = int,
+            help="Number of cpus to be used for parallel processing")
+    opts =  parser.parse_args(args)
+    main_get_pubmed_index(opts)
 
 #########################################################################
 # MAIN FUNCTIONS 
 #########################################################################
 
-def main_launch_stEngine(opts):
+def main_get_pubmed_index(opts):
+  options = vars(opts)
+  filenames = glob.glob(options["input"])
+
+  if options["chunk_size"] == 0:
+    process_several_abstracts(options, filenames)
+  else:
+    process_several_custom_chunksize_abstracts(options, filenames)
+
+
+def main_stEngine(opts):
     options = vars(opts)
+    queries_content = []
+    embedder = None
+
+    if options.get("gpu_device"): show_gpu_information(options)
 
     ### LOAD OR DOWNLOAD MODEL
     if options.get("model_name") != None and options.get("model_path") != None:
-        #print(f"descargando o cargando modelo {options['model_name']} en {options['model_path']}")
+        if options["verbose"]: print(f"\n-Downloading or loading model {options['model_name']} inside path {options['model_path']}")
         embedder = SentenceTransformer(options["model_name"], cache_folder = options["model_path"])
 
     ### LOAD AND EMBED QUERIES
     if options.get("query") != None:
-        #print("cargando y embebiendo queries:")
+        if options["verbose"]: print("\n-Loading and embedding queries:")
         queries_filenames = glob.glob(options["query"])
-        queries_content = {}
-        for query_filename in queries_filenames:
-            keyword_index = load_keyword_index(query_filename) # keywords used in queries
-            queries = []
-            query_ids = []
-            for kwdID, kwds in keyword_index.items():
-                queries.extend(kwds)
-                query_ids.extend([kwdID for i in range(0, len(kwds))])
-            query_embeddings = embedder.encode(queries, show_progress_bar = options["verbose"], convert_to_numpy=True) #convert_to_tensor=True
-            query_basename = os.path.splitext(os.path.basename(query_filename))[0]
-            queries_content[query_basename] = {'query_ids': query_ids, "queries": queries, "embeddings": query_embeddings}
-            if options.get("query_embedded") != None:
-                #print(f"guardando query embebida de {query_basename}")
-                with open(os.path.join(options["query_embedded"], query_basename) + '.pkl', "wb") as fOut:
-                    pickle.dump(queries_content[query_basename], fOut)
+        queries_content = embedd_several_queries(options, embedder, queries_filenames)
 
     ### LOAD QUERIES IF ALREADY EMBEDDED
     elif options.get("query_embedded") != None:
-        #print("cargando queries embebidas:")
+        if options["verbose"]: print("\n-Loading embedded queries:")
         embedded_queries_filenames = glob.glob(options["query_embedded"])
-        queries_content = {}
-        for embedded_query_filename in embedded_queries_filenames:
-            embedded_query_basename = os.path.splitext(os.path.basename(embedded_query_filename))[0]
-            with open(embedded_query_filename, "rb") as fIn:
-                #print(f"cargando query embebida de {embedded_query_basename}")
-                queries_content[embedded_query_basename] = pickle.load(fIn)
+        queries_content = load_several_queries(options, embedded_queries_filenames)
     
     ### LOAD AND EMBED CORPUS AND CALCULATE SIMILARITIES IF ASKED
     if options.get("corpus") != None:
-        #print("cargando y embebiendo corpus:")
+        if options["verbose"]: print("\n-Loading and embedding corpus (and calculating similarities if asked):")
         corpus_filenames = glob.glob(options["corpus"])
-        for corpus_filename in corpus_filenames:
-            corpus_basename = os.path.splitext(os.path.basename(corpus_filename))[0]
-            pubmed_index = load_pubmed_index(corpus_filename) # abstracts
-            textIDs = list(pubmed_index.keys())
-            corpus = list(pubmed_index.values())
-            corpus_embeddings = embedder.encode(corpus, convert_to_numpy=True, show_progress_bar = options["verbose"]) #convert_to_tensor=True
-            corpus_info = {'textIDs': textIDs, "corpus": corpus, "embeddings": corpus_embeddings}        
-            if options.get("corpus_embedded") != None:
-                #print(f"guardando corpus embebido de {corpus_basename}")
-                with open(os.path.join(options["corpus_embedded"], corpus_basename) + '.pkl', "wb") as fOut:
-                    pickle.dump(corpus_info, fOut)
-            if options.get("output_file"):
-                for query_basename, query_info in queries_content.items():
-                    #print(f"calculando similitudes de corpus {corpus_basename} y query {query_basename}")
-                    best_matches = calculate_similarities(query_info, corpus_info, options["top_k"])
-                    output_filename = os.path.join(options["output_file"],query_basename)
-                    #print(f"guardando similitudes en {output_filename}")
-                    save_similarities(output_filename, best_matches)
+        embedd_or_load_several_corpus(options, embedder, queries_content, corpus_filenames)
 
     ### LOAD CORPUS IF ALREADY EMBEDDED AND CALCULATE SIMILARITIES IF ASKED
     elif options.get("corpus_embedded") != None:
-        #print("cargando corpus embebidos:")
+        if options["verbose"]: print("\n-Loading embedded corpus (and calculating similarities if asked):")
         embedded_corpus_filenames = glob.glob(options["corpus_embedded"])
-        for embedded_corpus_filename in embedded_corpus_filenames:
-            corpus_basename = os.path.splitext(os.path.basename(embedded_corpus_filename))[0]
-            #print(f"cargando corpus embebido de {os.path.basename(corpus_basename)}")
-            with open(embedded_corpus_filename, "rb") as fIn:
-                corpus_info = pickle.load(fIn)
-            if options.get("output_file"):
-                #print("calculando similitudes:")
-                for query_basename, query_info in queries_content.items():
-                    #print(f"calculando similitudes de corpus {corpus_basename} y query {query_basename}")                    
-                    best_matches = calculate_similarities(query_info, corpus_info, options["top_k"])
-                    output_filename = os.path.join(options["output_file"],query_basename)
-                    #print(f"guardando similitudes en {output_filename}")
-                    save_similarities(output_filename, best_matches)
+        embedd_or_load_several_corpus(options, embedder, queries_content, embedded_corpus_filenames)
+
+
             
-
-
 def main_semtools(opts):
     options = vars(opts)
     if options["external_separator"] is None: options["external_separator"] = options["separator"]
@@ -832,6 +823,95 @@ def custom_mean_and_filter(items, target_terms_subset):
 
 
 ######################## FUNCTIONS FOR ST ENGINE ########################
+def show_gpu_information(options):
+    if options["verbose"]:
+      print("Information about the available GPUs:")
+      print("GPU available: ", torch.cuda.is_available())
+      print("Number of GPUs: ", torch.cuda.device_count())
+      print("CUDA version: ", torch.version.cuda)
+      print("Current CUDA device: ", torch.cuda.current_device())
+      print("CUDA device object: ", torch.cuda.device(0))
+      print("CUDA device name: ", torch.cuda.get_device_name(0), "\n")
+
+
+def load_several_queries(options, embedded_queries_filenames):
+    queries_content = {}
+    for embedded_query_filename in embedded_queries_filenames:
+        embedded_query_basename = os.path.splitext(os.path.basename(embedded_query_filename))[0]
+        with open(embedded_query_filename, "rb") as fIn:
+            if options["verbose"]: print(f"---Loading embedded query from {embedded_query_basename}")
+            queries_content[embedded_query_basename] = pickle.load(fIn)
+    return queries_content
+
+def embedd_several_queries(options, embedder, queries_filenames):
+    queries_content = {}
+    for query_filename in queries_filenames:
+        query_basename, query_ids, queries, query_embeddings = embedd_single_query(query_filename, embedder, options)
+        queries_content[query_basename] = {'query_ids': query_ids, "queries": queries, "embeddings": query_embeddings}
+        if options.get("query_embedded") != None:
+            if options["verbose"]: print(f"---Saving embedded query in {query_basename}")
+            with open(os.path.join(options["query_embedded"], query_basename) + '.pkl', "wb") as fOut:
+                pickle.dump(queries_content[query_basename], fOut)
+    return queries_content
+
+def embedd_single_query(query_filename, embedder, options):
+    query_basename = os.path.splitext(os.path.basename(query_filename))[0]
+    if options["verbose"]: print(f"---Loading query from {query_basename}")
+    keyword_index = load_keyword_index(query_filename) # keywords used in queries
+    queries = []
+    query_ids = []
+    for kwdID, kwds in keyword_index.items():
+        queries.extend(kwds)
+        query_ids.extend([kwdID for i in range(0, len(kwds))])
+    query_embeddings = embedd_text(queries, embedder, options)
+    return [query_basename, query_ids, queries, query_embeddings]
+
+def embedd_or_load_several_corpus(options, embedder, queries_content, corpus_filenames):
+    for corpus_filename in corpus_filenames:
+         ### LOAD AND EMBED CORPUS (AND SAVE IT options["corpus_embedded"] != None)
+        if options.get("corpus") != None:
+            corpus_basename, textIDs, corpus, corpus_embeddings = embedd_single_corpus(corpus_filename, embedder, options)
+            corpus_info = {'textIDs': textIDs, "corpus": corpus, "embeddings": corpus_embeddings}        
+            if options.get("corpus_embedded") != None:
+                if options["verbose"]: print(f"---Saving embedded corpus in {corpus_basename}")
+                with open(os.path.join(options["corpus_embedded"], corpus_basename) + '.pkl', "wb") as fOut:
+                    pickle.dump(corpus_info, fOut)
+        
+        ### LOAD EMBEDDED CORPUS IF ALREADY EMBEDDED PREVIOUSLY
+        elif options.get("corpus") == None and options.get("corpus_embedded") != None:
+            embedded_corpus_filename = corpus_filename
+            corpus_basename = os.path.splitext(os.path.basename(embedded_corpus_filename))[0]
+            if options["verbose"]: print(f"---Loading embedded corpus from {os.path.basename(corpus_basename)}")
+            with open(embedded_corpus_filename, "rb") as fIn:
+                corpus_info = pickle.load(fIn)
+        
+        ### CALCULATE SIMILARITIES
+        if options.get("output_file"):
+            if options["verbose"]: print("-Calculating similarities:")
+            for query_basename, query_info in queries_content.items():
+                if options["verbose"]: print(f"---Calculating similarities between corpus {corpus_basename} and query {query_basename}")
+                best_matches = calculate_similarities(query_info, corpus_info, options["top_k"])
+                output_filename = os.path.join(options["output_file"],query_basename)
+                if options["verbose"]: print(f"---Saving similarities in file {output_filename}\n")
+                save_similarities(output_filename, best_matches)
+  
+def embedd_single_corpus(corpus_filename, embedder, options):
+    corpus_basename = os.path.splitext(os.path.basename(corpus_filename))[0]
+    if options["verbose"]: print(f"---Loading corpus of {corpus_basename}")
+    pubmed_index = load_pubmed_index(corpus_filename) # abstracts
+    textIDs = list(pubmed_index.keys())
+    corpus = list(pubmed_index.values())
+    corpus_embeddings = embedd_text(corpus, embedder, options)
+    return [corpus_basename, textIDs, corpus, corpus_embeddings]
+
+def embedd_text(text, embedder, options):
+    #pool = embedder.start_multi_process_pool(["cuda:0", "cuda:1", "cuda:2", "cuda:3"])
+    #text_embedding = embedder.encode_multi_process(text, pool = pool)
+    if options["gpu_device"] != None:
+        text_embedding = embedder.encode(text, convert_to_numpy=True, show_progress_bar = options["verbose"], device= options["gpu_device"]) #convert_to_tensor=True
+    else:
+        text_embedding = embedder.encode(text, convert_to_numpy=True, show_progress_bar = options["verbose"]) #convert_to_tensor=True
+    return text_embedding
 
 def load_keyword_index(file):
     keywords = {}
@@ -851,12 +931,15 @@ def load_keyword_index(file):
     return keywords
 
 def load_pubmed_index(file):
-	pubmed_index = {}
-	with gzip.open(file, "rt") as f:
-		for line in f:
-			id, text = line.rstrip().split("\t")
-			pubmed_index[int(id)] = text
-	return pubmed_index
+  pubmed_index = {}
+  with gzip.open(file, "rt") as f:
+    for line in f:
+        try:
+            id, text = line.rstrip().split("\t")
+            pubmed_index[int(id)] = text
+        except:
+            warnings.warn(f"Error reading line in file {os.path.basename(file)}: {line}")
+  return pubmed_index
 
 def calculate_similarities(query_info, corpus_info, top_k):
   corpus_ids = corpus_info["textIDs"]
@@ -891,3 +974,75 @@ def save_similarities(filepath, best_matches):
       for kwdID, matches in best_matches.items():
         for textID, score in matches.items():
           f.write(f"{kwdID}\t{textID}\t{score}\n")
+
+
+######################## FUNCTIONS FOR GET PUBMED INDEX ########################
+
+def process_several_abstracts(options, filenames):
+    if options["n_cpus"] == 1:
+      for filename in filenames:
+        process_single_abstract([options, filename])
+    else:
+      with ProcessPoolExecutor(max_workers=options["n_cpus"]) as executor:
+        executor.map(process_single_abstract, [[options, filename] for filename in filenames])
+
+def process_single_abstract(options_filename_pair):
+    options, filename = options_filename_pair
+    basename = os.path.basename(filename).replace(".xml.gz", "")
+    abstract_index = get_abstract_index(filename)
+    out_filename = os.path.join(options["output"], basename+".gz")
+    with gzip.open(out_filename, 'wt') as f:
+      for pmid, text in abstract_index:
+        f.write(f"{pmid}\t{text}\n")
+
+def process_several_custom_chunksize_abstracts(options, filenames):
+    if options["n_cpus"] == 1:
+      process_a_pack_of_custom_chunksize_abstracts([options, filenames, 0])
+    else:
+      filenames_lots = []
+      lot_size = (len(filenames)+(len(filenames) % options["n_cpus"])) // options["n_cpus"]
+      for index in range(0, options["n_cpus"]):
+        filenames_lots.append(filenames[index*lot_size:(index+1)*lot_size])
+
+      with ProcessPoolExecutor(max_workers=options["n_cpus"]) as executor:
+        executor.map(process_a_pack_of_custom_chunksize_abstracts, [[options, filename_lot, idx] for idx,filename_lot in enumerate(filenames_lots)])
+
+def process_a_pack_of_custom_chunksize_abstracts(options_filenames_counter_trio):
+    options, filenames, sup_counter = options_filenames_counter_trio
+    acummulative_abstracts = []
+    counter = 0
+    for filename in filenames:    
+      abstract_index = get_abstract_index(filename)
+      acummulative_abstracts.extend(abstract_index)
+      while len(acummulative_abstracts) >= options["chunk_size"]:
+        out_filename = os.path.join(options["output"], options["tag"]+f"{sup_counter}_{counter}.gz" )
+        counter += 1
+        with gzip.open(out_filename, 'wt') as f:
+          for times in range(options["chunk_size"]):
+            pmid, text = acummulative_abstracts.pop()
+            f.write(f"{pmid}\t{text}\n")
+    
+    out_filename = os.path.join(options["output"], options["tag"]+f"{sup_counter}_{counter}.gz" )
+    with gzip.open(out_filename, 'wt') as f:
+      for pmid, text in acummulative_abstracts:
+        f.write(f"{pmid}\t{text}\n")
+
+
+def get_abstract_index(file): 
+	texts = [] # aggregate all abstracts in XML file
+	with gzip.open(file) as gz:
+		mytree = ET.parse(gz)
+		pubmed_article_set = mytree.getroot()
+		for article in pubmed_article_set:
+			pmid = None
+			for data in article.find('MedlineCitation'):
+				if data.tag == 'PMID':
+					pmid = data.text
+				abstract = data.find('Abstract')
+				if abstract != None:
+					for i in abstract:
+						abstractText = abstract.find('AbstractText')
+						if abstractText != None:
+							txt = abstractText.text
+							texts.append([pmid, txt])
+	return texts
