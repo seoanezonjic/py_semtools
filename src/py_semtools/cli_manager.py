@@ -228,8 +228,8 @@ def stEngine(args = None):
             help="Get top scores per keyword")
     parser.add_argument('-v', "--verbose", dest="verbose", default= False, action='store_true',
             help="Toogle on to get verbose output")
-    parser.add_argument('-g', "--gpu_device", dest="gpu_device", default= None,
-            help="Use to specify the GPU device to be used for speed-up (if available). The format is like: 'cuda:0'")    
+    parser.add_argument('-g', "--gpu_device", dest="gpu_device", default= None, type=text_list,
+            help="Use to specify the GPU device to be used for speed-up (if available). The format is like: 'cuda:0' or 'cuda:0,cuda:1' to use multiple GPUs or cpu,cpu to use multiple CPUs")    
     
     opts =  parser.parse_args(args)
     main_stEngine(opts)
@@ -905,12 +905,17 @@ def embedd_single_corpus(corpus_filename, embedder, options):
     return [corpus_basename, textIDs, corpus, corpus_embeddings]
 
 def embedd_text(text, embedder, options):
-    #pool = embedder.start_multi_process_pool(["cuda:0", "cuda:1", "cuda:2", "cuda:3"])
-    #text_embedding = embedder.encode_multi_process(text, pool = pool)
+    start = time.time()
     if options["gpu_device"] != None:
-        text_embedding = embedder.encode(text, convert_to_numpy=True, show_progress_bar = options["verbose"], device= options["gpu_device"]) #convert_to_tensor=True
+        if len(options["gpu_device"]) > 1:
+            pool = embedder.start_multi_process_pool(options["gpu_device"])
+            text_embedding = embedder.encode_multi_process(text, pool = pool)
+        elif len(options["gpu_device"]) == 1:
+            text_embedding = embedder.encode(text, convert_to_numpy=True, show_progress_bar = options["verbose"], device= options["gpu_device"][0]) #convert_to_tensor=True
     else:
         text_embedding = embedder.encode(text, convert_to_numpy=True, show_progress_bar = options["verbose"]) #convert_to_tensor=True
+    
+    if options["verbose"]: print(f"---Embedding time with {0 if options.get('gpu_device') == None else len(options['gpu_device'])} GPUs: {time.time() - start} seconds")
     return text_embedding
 
 def load_keyword_index(file):
