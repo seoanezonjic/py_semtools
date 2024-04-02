@@ -910,6 +910,7 @@ def embedd_text(text, embedder, options):
         if len(options["gpu_device"]) > 1:
             pool = embedder.start_multi_process_pool(options["gpu_device"])
             text_embedding = embedder.encode_multi_process(text, pool = pool)
+            embedder.stop_multi_process_pool(pool)
         elif len(options["gpu_device"]) == 1:
             text_embedding = embedder.encode(text, convert_to_numpy=True, show_progress_bar = options["verbose"], device= options["gpu_device"][0]) #convert_to_tensor=True
     else:
