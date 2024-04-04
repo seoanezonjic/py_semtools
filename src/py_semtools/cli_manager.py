@@ -38,6 +38,14 @@ ONTOLOGIES=os.path.join(site.USER_BASE, "semtools", 'ontologies')
 
 def text_list(string): return string.split(',')
 
+def filter_regex(string):
+    filters = []
+    pattern = re.compile(r"([pn])\(([A-Za-z:0-9,]*)\)")
+    for match in pattern.finditer(string):
+        operation, string_ids = match.groups()
+        filters.append([operation, string_ids.split(',')])
+    return filters
+
 def childs(string):
     if '/' in string:
         modifiers, terms = string.split('/')
@@ -135,6 +143,8 @@ def semtools(args = None):
               help="To obtain main statistical descriptors of the profiles file.")
     parser.add_argument('-l', "--list_translate", dest="list_translate", default= None, 
               help="Translate to 'names' or to 'codes' input list.")
+    parser.add_argument('-F', "--filter_list", dest="filter_list", default= None, type=filter_regex,
+              help="Take a term list and filter given a expresion that indicates which terms keep based on the defined parentals. Expresion: p(id:1,id:2)n(id:3,id:4), p for white list and n for blacklist")    
     parser.add_argument('-q', "--query_ncbi", dest="query_ncbi", default= None, 
               help="Get specified item for each term in loaded ontology.")
     parser.add_argument('-f', "--subject_column", dest="subject_column", default= 0, type=int,
@@ -154,7 +164,7 @@ def semtools(args = None):
     parser.add_argument("--translate_keyword_search", dest="translate_keyword_search", default= False, action='store_true', 
               help="Print the matches from --keyword_seach as terms names instead of codes")
     parser.add_argument("--list", dest="simple_list", default= False, action='store_true', 
-              help="Input file is a simple list with one term/word/code per line, Only use to get a dictionaire with -k.")
+              help="Input file is a simple list with one term/word/code per line. Use to get a dictionaire with -k of filtered list with -F.")
     parser.add_argument("--2cols", dest="2cols", default= False, action='store_true', 
               help="Input file is a two column table, first is an id and the second is a simgle ontology term.")
     parser.add_argument("--out2cols", dest="out2cols", default= False, action='store_true', 
@@ -335,9 +345,9 @@ def main_semtools(opts):
 
     if options['input_file'] != None:
         data = CmdTabs.load_input_data(options['input_file'])
-        if options.get('list_translate') == None or options['keyword'] != None:
+        if options.get('list_translate') == None or options.get('filter_list') == None or options['keyword'] != None:
             data = format_data(data, options)
-            if options.get('translate') != 'codes' and options.get('keyword') == None:
+            if options.get('translate') != None and options.get('translate') != 'codes' and options.get('keyword') == None:
                 store_profiles(data, ontology, load_hard_cleaned_profiles = options['load_hard_cleaned_profiles'], options = options) 
     if options.get('list_translate') != None:
         for term in data:
@@ -347,6 +357,16 @@ def main_semtools(opts):
                 translation, untranslated = ontology.translate_names(term)
             print(f"{term[0]}\t{ '-' if len(translation) == 0 else translation[0]}")
         sys.exit(0)
+    if options.get('filter_list') != None:
+        negated_parentals = []
+        afirmed_parentals = []
+        for operation, ids in options.get('filter_list'):
+            if operation == 'p': afirmed_parentals.extend(ids)
+            if operation == 'n': negated_parentals.extend(ids)
+        data = [ t[0] for t in data]
+        filt_data = ontology.filter_list(data, whitelist=afirmed_parentals, blacklist=negated_parentals)
+        for term in filt_data: print(term)
+        sys.exit(0)        
 
     if options.get('translate') == 'codes':
         profiles = {}

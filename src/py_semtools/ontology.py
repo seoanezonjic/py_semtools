@@ -331,6 +331,23 @@ class Ontology:
         if syns == None: syns = []
         return syns
 
+
+    def filter_list(self, term_list, whitelist=[], blacklist=[]):
+        filt_list = []
+        for term_id in term_list:
+            keep = True
+            parentals = self.get_ancestors(term_id)
+            if len(whitelist) > 0:
+                wkeep = False
+                for wparental in whitelist:
+                    if wparental in parentals: wkeep = True; break
+                if not wkeep: keep = False # If there is white list but any parental is in the white list, remove the current term
+            for bparental in blacklist:
+                if bparental in parentals: keep = False; break
+            if keep: filt_list.append(term_id)
+        return filt_list
+
+
     # Get term frequency and information
     ####################################
 
