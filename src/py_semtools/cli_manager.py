@@ -236,6 +236,8 @@ def stEngine(args = None):
             help="Path to save the output file with semantic scores")
     parser.add_argument('-k', "--top_k", dest="top_k", default= 20, type = int,
             help="Get top scores per keyword")
+    parser.add_argument('-t', "--threshold", dest="threshold", default= 0, type = float,
+            help="Similarity threshold to filter results to write")    
     parser.add_argument('-v', "--verbose", dest="verbose", default= False, action='store_true',
             help="Toogle on to get verbose output")
     parser.add_argument('-g', "--gpu_device", dest="gpu_device", default= None, type=text_list,
@@ -913,7 +915,7 @@ def embedd_or_load_several_corpus(options, embedder, queries_content, corpus_fil
                 best_matches = calculate_similarities(query_info, corpus_info, options["top_k"])
                 output_filename = os.path.join(options["output_file"],query_basename)
                 if options["verbose"]: print(f"---Saving similarities in file {output_filename}\n")
-                save_similarities(output_filename, best_matches)
+                save_similarities(output_filename, best_matches, options)
   
 def embedd_single_corpus(corpus_filename, embedder, options):
     corpus_basename = os.path.splitext(os.path.basename(corpus_filename))[0]
@@ -921,6 +923,7 @@ def embedd_single_corpus(corpus_filename, embedder, options):
     pubmed_index = load_pubmed_index(corpus_filename) # abstracts
     textIDs = list(pubmed_index.keys())
     corpus = list(pubmed_index.values())
+    if options["verbose"]: print(f"---Embedding corpus of {corpus_basename}")
     corpus_embeddings = embedd_text(corpus, embedder, options)
     return [corpus_basename, textIDs, corpus, corpus_embeddings]
 
@@ -958,10 +961,12 @@ def load_keyword_index(file):
 
 def load_pubmed_index(file):
   pubmed_index = {}
+  expected_extra_fields = 1
   with gzip.open(file, "rt") as f:
     for line in f:
         try:
-            id, text = line.rstrip().split("\t")
+            id, text, *_rest = line.rstrip().split("\t")
+            if len(_rest) > expected_extra_fields: raise ValueError
             pubmed_index[int(id)] = text
         except:
             warnings.warn(f"Error reading line in file {os.path.basename(file)}: {line}")
@@ -995,11 +1000,12 @@ def find_best_matches(corpus_ids, query_ids, search):
       #sentence = corpus_sentences[hit['corpus_id']]
     return best_matches
 
-def save_similarities(filepath, best_matches):
+def save_similarities(filepath, best_matches, options):
     with open(filepath, 'a') as f:
       for kwdID, matches in best_matches.items():
         for textID, score in matches.items():
-          f.write(f"{kwdID}\t{textID}\t{score}\n")
+          if score >= options["threshold"]: 
+            f.write(f"{kwdID}\t{textID}\t{score}\n")
 
 
 ######################## FUNCTIONS FOR GET PUBMED INDEX ########################
@@ -1015,11 +1021,9 @@ def process_several_abstracts(options, filenames):
 def process_single_abstract(options_filename_pair):
     options, filename = options_filename_pair
     basename = os.path.basename(filename).replace(".xml.gz", "")
-    abstract_index = get_abstract_index(filename)
+    abstract_index = get_abstract_index(filename, options)
     out_filename = os.path.join(options["output"], basename+".gz")
-    with gzip.open(out_filename, 'wt') as f:
-      for pmid, text in abstract_index:
-        f.write(f"{pmid}\t{text}\n")
+    save_abstracts(out_filename, abstract_index)
 
 def process_several_custom_chunksize_abstracts(options, filenames):
     if options["n_cpus"] == 1:
@@ -1038,37 +1042,55 @@ def process_a_pack_of_custom_chunksize_abstracts(options_filenames_counter_trio)
     acummulative_abstracts = []
     counter = 0
     for filename in filenames:    
-      abstract_index = get_abstract_index(filename)
+      abstract_index = get_abstract_index(filename, options)
       acummulative_abstracts.extend(abstract_index)
       while len(acummulative_abstracts) >= options["chunk_size"]:
         out_filename = os.path.join(options["output"], options["tag"]+f"{sup_counter}_{counter}.gz" )
         counter += 1
-        with gzip.open(out_filename, 'wt') as f:
-          for times in range(options["chunk_size"]):
-            pmid, text = acummulative_abstracts.pop()
-            f.write(f"{pmid}\t{text}\n")
+        abstracts_to_save = [acummulative_abstracts.pop() for _times in range(options["chunk_size"])]
+        save_abstracts(out_filename, abstracts_to_save)
     
     out_filename = os.path.join(options["output"], options["tag"]+f"{sup_counter}_{counter}.gz" )
-    with gzip.open(out_filename, 'wt') as f:
-      for pmid, text in acummulative_abstracts:
-        f.write(f"{pmid}\t{text}\n")
+    save_abstracts(out_filename, acummulative_abstracts)
 
 
-def get_abstract_index(file): 
+def get_abstract_index(file, options): 
 	texts = [] # aggregate all abstracts in XML file
+	stats = {"no_abstract": 0, "no_pmid": 0}
+	total = 0
 	with gzip.open(file) as gz:
 		mytree = ET.parse(gz)
 		pubmed_article_set = mytree.getroot()
 		for article in pubmed_article_set:
+			total += 1
 			pmid = None
+			abstract_content = ""
 			for data in article.find('MedlineCitation'):
 				if data.tag == 'PMID':
 					pmid = data.text
 				abstract = data.find('Abstract')
 				if abstract != None:
-					for i in abstract:
-						abstractText = abstract.find('AbstractText')
-						if abstractText != None:
-							txt = abstractText.text
-							texts.append([pmid, txt])
+					for fields in abstract:		
+						if fields.tag == 'AbstractText':
+							abstractText = fields.text
+							if abstractText != None:
+								#print(f"Text of abstract {pmid} in file {file}:")
+								#print(repr(abstractText), "\n\n")
+								abstract_content += abstractText.strip().replace("\n", " ").replace("\t", " ").replace("\r", " ")
+			if pmid == None:
+				stats["no_pmid"] += 1
+				if options["debugging_mode"]: warnings.warn(f"Warning: Article without PMID found in file {file}")
+			elif abstract_content == "":
+				stats["no_abstract"] += 1
+				if options["debugging_mode"]: warnings.warn(f"Warning: Article PDMID:{pmid} without abstract found in file {file}")
+			else:
+				texts.append([pmid, abstract_content.strip().replace("\n", " ").replace("\t", " ").replace("\r", " "), file])
+	
+	if options["debugging_mode"]: warnings.warn(f"stats:file={file},total={total},no_abstract={stats['no_abstract']},no_pmid={stats['no_pmid']}")
 	return texts
+
+
+def save_abstracts(out_filename, abstracts):
+    with gzip.open(out_filename, 'wt') as f:
+      for pmid, text, original_filename in abstracts:
+        f.write(f"{pmid}\t{text}\t{original_filename}\n")
