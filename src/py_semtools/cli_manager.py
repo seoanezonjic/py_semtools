@@ -347,9 +347,9 @@ def main_semtools(opts):
 
     if options['input_file'] != None:
         data = CmdTabs.load_input_data(options['input_file'])
-        if options.get('list_translate') == None or options.get('filter_list') == None or options['keyword'] != None:
+        if options.get('list_translate') == None and options.get('filter_list') == None or options['keyword'] != None:
             data = format_data(data, options)
-            if options.get('translate') != None and options.get('translate') != 'codes' and options.get('keyword') == None:
+            if options.get('translate') != 'codes' and options.get('keyword') == None:
                 store_profiles(data, ontology, load_hard_cleaned_profiles = options['load_hard_cleaned_profiles'], options = options) 
     if options.get('list_translate') != None:
         for term in data:
@@ -365,10 +365,11 @@ def main_semtools(opts):
         for operation, ids in options.get('filter_list'):
             if operation == 'p': afirmed_parentals.extend(ids)
             if operation == 'n': negated_parentals.extend(ids)
-        data = [ t[0] for t in data]
+        data = [ t[0] for t in data]        
         filt_data = ontology.filter_list(data, whitelist=afirmed_parentals, blacklist=negated_parentals)
         for term in filt_data: print(term)
-        sys.exit(0)        
+        #sys.exit(0)
+        #return 0        
 
     if options.get('translate') == 'codes':
         profiles = {}

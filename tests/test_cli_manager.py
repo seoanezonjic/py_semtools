@@ -21,6 +21,10 @@ def enrichment_ontology():
     return os.path.join(ONTOLOGY_PATH, 'enrichment_ontology.obo')
 
 @pytest.fixture
+def enrichment_ontology_3():
+    return os.path.join(ONTOLOGY_PATH, 'enrichment_ontology3.obo')
+
+@pytest.fixture
 def profiles():
     return os.path.join(DATA_TEST_PATH, 'profiles')
 
@@ -81,6 +85,29 @@ def test_get_ancestors_descendants(enrichment_ontology):
 
 ## Profile operations
 ### Modification
+@pytest.mark.parametrize("filter_type, filename", [
+    (
+        "'p(branchA)'", 
+        "whitelisted.txt"
+    ),
+    (
+        "'n(branchA)'", 
+        "blacklisted.txt" 
+    ),
+    (
+        "'p(branchA)n(branchAChild2)'", 
+        "white_and_blacklisted.txt"
+    )
+])
+def test_filter_profiles(tmp_dir, enrichment_ontology_3, filter_type, filename): # --list -F
+    input_file_terms = os.path.join(DATA_TEST_PATH, 'terms_list')
+    expected_file = CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, filename))
+    
+    args = f"-i {input_file_terms} --list -O {enrichment_ontology_3} -F {filter_type}".split(" ")
+    _, printed = pysemtools(args)
+    returned = [[item] for item in printed.strip().split("\n")]
+    assert expected_file == returned
+
 def test_clean_profiles(tmp_dir,enrichment_ontology,profiles): # -c -T
     removed_profile = os.path.join(tmp_dir, 'removed_profiles')
     output_file = os.path.join(tmp_dir, 'cleaned_profiles')
