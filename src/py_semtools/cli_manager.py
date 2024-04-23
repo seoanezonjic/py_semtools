@@ -262,6 +262,8 @@ def get_pubmed_index(args = None):
             help="If a chunk size is used, this tag will be used to name the output files")
     parser.add_argument('-c', "--n_cpus", dest="n_cpus", default= 1, type = int,
             help="Number of cpus to be used for parallel processing")
+    parser.add_argument('-d', '--debugging_mode', dest="debugging_mode", default=False, action='store_true',
+            help="Activate to output stats about the content of the xml as warnings")
     opts =  parser.parse_args(args)
     main_get_pubmed_index(opts)
 
@@ -913,7 +915,7 @@ def embedd_or_load_several_corpus(options, embedder, queries_content, corpus_fil
             if options["verbose"]: print("-Calculating similarities:")
             for query_basename, query_info in queries_content.items():
                 if options["verbose"]: print(f"---Calculating similarities between corpus {corpus_basename} and query {query_basename}")
-                best_matches = calculate_similarities(query_info, corpus_info, options["top_k"])
+                best_matches = calculate_similarities(query_info, corpus_info, options["top_k"], options["gpu_device"], options["verbose"])
                 output_filename = os.path.join(options["output_file"],query_basename)
                 if options["verbose"]: print(f"---Saving similarities in file {output_filename}\n")
                 save_similarities(output_filename, best_matches, options)
@@ -962,26 +964,47 @@ def load_keyword_index(file):
 
 def load_pubmed_index(file):
   pubmed_index = {}
-  expected_extra_fields = 1
   with gzip.open(file, "rt") as f:
     for line in f:
         try:
             id, text, *_rest = line.rstrip().split("\t")
-            if len(_rest) > expected_extra_fields: raise ValueError
             pubmed_index[int(id)] = text
         except:
             warnings.warn(f"Error reading line in file {os.path.basename(file)}: {line}")
   return pubmed_index
 
-def calculate_similarities(query_info, corpus_info, top_k):
+def calculate_similarities(query_info, corpus_info, top_k, gpu_device, verbose):
   corpus_ids = corpus_info["textIDs"]
   corpus_embeddings = corpus_info["embeddings"]
 
   query_ids = query_info['query_ids']
   query_embeddings = query_info["embeddings"]
-  search = util.semantic_search(query_embeddings, corpus_embeddings, top_k=top_k)
+
+  if gpu_device != None:
+    search = calculate_similarities_gpu(query_embeddings, corpus_embeddings, top_k, verbose)
+  else:
+    search = calculate_similarities_cpu(query_embeddings, corpus_embeddings, top_k, verbose)
 
   return find_best_matches(corpus_ids, query_ids, search)
+
+def calculate_similarities_cpu(query_embeddings, corpus_embeddings, top_k, verbose=False):
+  if verbose: print("----Calculating similarities with CPU")
+  start = time.time()
+  results = util.semantic_search(query_embeddings, corpus_embeddings, top_k=top_k)
+  if verbose: print(f"----Time to calculate similarities with CPU: {time.time() - start} seconds")
+  return results
+
+def calculate_similarities_gpu(query_embeddings, corpus_embeddings, top_k, verbose=False):
+  if verbose: print("----Calculating similarities with GPU")
+  start = time.time()
+  corpus_embeddings = corpus_embeddings.to("cuda")
+  corpus_embeddings = util.normalize_embeddings(corpus_embeddings)
+  query_embeddings = query_embeddings.to("cuda")
+  query_embeddings = util.normalize_embeddings(query_embeddings)
+  results = util.semantic_search(query_embeddings, corpus_embeddings, top_k=top_k, score_function=util.dot_score)
+  if verbose: print(f"----Time to calculate similarities with GPU: {time.time() - start} seconds")
+  return results
+
 
 def find_best_matches(corpus_ids, query_ids, search):
     best_matches = {}
@@ -1059,6 +1082,7 @@ def get_abstract_index(file, options):
 	texts = [] # aggregate all abstracts in XML file
 	stats = {"no_abstract": 0, "no_pmid": 0}
 	total = 0
+	year = 0
 	with gzip.open(file) as gz:
 		mytree = ET.parse(gz)
 		pubmed_article_set = mytree.getroot()
@@ -1069,6 +1093,9 @@ def get_abstract_index(file, options):
 			for data in article.find('MedlineCitation'):
 				if data.tag == 'PMID':
 					pmid = data.text
+				if data.tag == 'DateCompleted':
+					for fields in data:
+						if fields.tag == "Year": year = int(fields.text)  					
 				abstract = data.find('Abstract')
 				if abstract != None:
 					for fields in abstract:		
@@ -1085,7 +1112,7 @@ def get_abstract_index(file, options):
 				stats["no_abstract"] += 1
 				if options["debugging_mode"]: warnings.warn(f"Warning: Article PDMID:{pmid} without abstract found in file {file}")
 			else:
-				texts.append([pmid, abstract_content.strip().replace("\n", " ").replace("\t", " ").replace("\r", " "), file])
+				texts.append([pmid, abstract_content.strip().replace("\n", " ").replace("\t", " ").replace("\r", " "), file, year])
 	
 	if options["debugging_mode"]: warnings.warn(f"stats:file={file},total={total},no_abstract={stats['no_abstract']},no_pmid={stats['no_pmid']}")
 	return texts
@@ -1093,5 +1120,5 @@ def get_abstract_index(file, options):
 
 def save_abstracts(out_filename, abstracts):
     with gzip.open(out_filename, 'wt') as f:
-      for pmid, text, original_filename in abstracts:
-        f.write(f"{pmid}\t{text}\t{original_filename}\n")
+      for pmid, text, original_filename, year in abstracts:
+        f.write(f"{pmid}\t{text}\t{original_filename}\t{year}\n")
