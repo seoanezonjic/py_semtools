@@ -1,4 +1,5 @@
 import sys
+import gzip
 import os
 import re
 import warnings
@@ -53,10 +54,10 @@ class OboParser(FileParser):
                 yield(t_id)
 
     @classmethod
-    def load(cls, ontology, file, build = True, black_list = [], extra_dicts = []):
+    def load(cls, ontology, file, build = True, black_list = [], extra_dicts = [], zipped=False):
         cls.reset() # Clean class variables to avoid the mix of several obo loads
         cls.removable_terms = black_list
-        _, header, stanzas = cls.load_obo(file)
+        _, header, stanzas = cls.load_obo(file, zipped)
         cls.header = header
         cls.stanzas = stanzas
         if len(cls.removable_terms) > 0 : cls.remove_black_list_terms() 
@@ -69,7 +70,7 @@ class OboParser(FileParser):
     # ===== Returns 
     # Hash with FILE, HEADER and STANZAS info
     @classmethod
-    def load_obo(cls, file):
+    def load_obo(cls, file, zipped=False):
         if file == None: raise Exception("File is not defined") 
         # Data variables
         header = ''
@@ -79,7 +80,8 @@ class OboParser(FileParser):
         currInfo = []
         stanzas_flags = ['[Term]', '[Typedef]', '[Instance]']
         # Read file
-        with open(file, 'r') as f:
+        opener = gzip.open(file, 'rt') if zipped else open(file, 'r')
+        with opener as f:
             for line in f:
                 line = line.rstrip()
                 if len(line) == 0: continue

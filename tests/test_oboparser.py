@@ -4,6 +4,7 @@
 # Load necessary packages and folder paths
 #########################################################
 
+import copy
 import unittest
 import os
 from py_semtools import OboParser, Ontology
@@ -24,6 +25,7 @@ class OBOParserTestCase(unittest.TestCase):
         # Files
         self.file_Header = {"file": os.path.join(DATA_TEST_PATH, "only_header_sample.obo"), "name": "only_header_sample"}
         self.file_Hierarchical = {"file": os.path.join(DATA_TEST_PATH, "hierarchical_sample.obo"), "name": "hierarchical_sample"}
+        self.file_Hierarchical_Compressed = {"file": os.path.join(DATA_TEST_PATH, "hierarchical_compressed.obo.gz"), "name": "hierarchical_compressed.obo"} #TODO: Discuss with PSZ wether to change the method that extract file extension that currently gives this name
         self.file_Circular = {"file": os.path.join(DATA_TEST_PATH, "circular_sample.obo"), "name": "circular_sample"}
         self.file_Atomic = {"file": os.path.join(DATA_TEST_PATH, "sparse_sample.obo"), "name": "sparse_sample"}
         self.file_Sparse = {"file": os.path.join(DATA_TEST_PATH, "sparse2_sample.obo"), "name": "sparse2_sample"}
@@ -38,6 +40,17 @@ class OBOParserTestCase(unittest.TestCase):
 
         self.load_Hierarchical_WithoutIndex = (
             {"file": os.path.join(DATA_TEST_PATH, "hierarchical_sample.obo"), "name": "hierarchical_sample"}, 
+            {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
+            {"terms": {
+                "Parental": {"id": "Parental", "name": "All", "comment": "none"}, 
+                "Child1": {"id": "Child1", "name": "Child1", "is_obsolete": "true", "is_a": ["Parental"], "replaced_by": ["Child2"]}, 
+                "Child2": {"id": "Child2", "name": "Child2", "synonym": ["\"1,6-alpha-mannosyltransferase activity\" EXACT []"], "alt_id": ["Child3", "Child4"], "is_a": ["Parental"]}, 
+                "Child5": {"id": "Child5", "name": "Child5", "synonym": ["\"activity related to example\" EXACT []"], "is_obsolete": "true", "is_a": ["Parental"]}
+            }, 
+            "typedefs": {}, "instances": {}})
+
+        self.load_Hierarchical_Compressed = (
+            {"file": os.path.join(DATA_TEST_PATH, "hierarchical_compressed.obo.gz"), "name": "hierarchical_compressed.obo"}, 
             {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
             {"terms": {
                 "Parental": {"id": "Parental", "name": "All", "comment": "none"}, 
@@ -145,6 +158,9 @@ class OBOParserTestCase(unittest.TestCase):
         self.assertEqual(self.load_Circular, OboParser.load_obo(self.file_Circular["file"])) # Circular
         self.assertEqual(self.load_Atomic, OboParser.load_obo(self.file_Atomic["file"])) # Sparsed
         self.assertEqual(self.load_Sparse, OboParser.load_obo(self.file_Sparse["file"])) # Sparsed 2
+
+    def test_load_file_compressed(self):
+        self.assertEqual(self.load_Hierarchical_Compressed, OboParser.load_obo(self.file_Hierarchical_Compressed["file"], zipped=True)) # Hierarchical
     
     def test_expand(self):
         # self.assertIsNone(Ontology.get_related_ids_by_tag(terms= nil,target_tag= "")) # Nil terms
@@ -185,6 +201,11 @@ class OBOParserTestCase(unittest.TestCase):
         _, header, stanzas = OboParser.load_obo(self.file_Sparse["file"])
         self.assertEqual(self.load_Sparse[1], header)		
         self.assertEqual(self.load_Sparse[2], stanzas)
+
+    def test_load_compressed(self):
+        _, header, stanzas = OboParser.load_obo(self.file_Hierarchical_Compressed["file"], zipped=True)
+        self.assertEqual(self.load_Hierarchical_Compressed[1], header)
+        self.assertEqual(self.load_Hierarchical_Compressed[2], stanzas)                
 
     def test_dictionaries(self):
         OboParser.load(Ontology(), self.file_Hierarchical["file"], build= True)

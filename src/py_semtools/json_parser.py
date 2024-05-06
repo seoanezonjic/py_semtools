@@ -1,11 +1,11 @@
-import json
+import json, gzip
 from py_semtools import FileParser
 
 class JsonParser(FileParser):
 
     @classmethod
-    def load(cls, ontology, file, build = True):
-        cls.read(ontology, file, build = build) 
+    def load(cls, ontology, file, build = True, zipped=False):
+        cls.read(ontology, file, build = build, zipped=zipped) 
 
    # Read a JSON file with an OBO_Handler object stored
     # ===== Parameters
@@ -14,9 +14,10 @@ class JsonParser(FileParser):
     # ===== Return
     # OBO_Handler internal fields 
     @classmethod
-    def read(cls, ontology, file, build = True):
+    def read(cls, ontology, file, build = True, zipped=False):
         # Read file
-        with open(file) as f: jsonInfo = json.load(f)
+        opener = gzip.open(file, 'rt') if zipped else open(file, 'r')
+        with opener as f: jsonInfo = json.load(f)
         
         # Store info
         ontology.terms = jsonInfo['terms']

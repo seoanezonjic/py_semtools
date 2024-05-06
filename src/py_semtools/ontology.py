@@ -45,11 +45,19 @@ class Ontology:
         if file != None: load_file = True
         if load_file:
             fformat = file_format
-            if fformat == None and file != None: fformat = os.path.splitext(file)[1]
+            zipped = False
+            if fformat == None and file != None: 
+                restFile, fformat = os.path.splitext(file)
+                if fformat == "gz":
+                    zipped = True
+                    fformat = os.path.splitext(restFile)[1]
+            if fformat == ".obo.gz" or fformat == ".json.gz" or fformat == "obo.gz" or fformat == "json.gz":
+                zipped = True
+                fformat = fformat.split(".")[-2]
             if fformat == 'obo' or fformat == ".obo":
-                OboParser.load(self, file, build = True, black_list = removable_terms, extra_dicts = extra_dicts)
+                OboParser.load(self, file, build = True, black_list = removable_terms, extra_dicts = extra_dicts, zipped = zipped)
             elif fformat == 'json' or fformat == ".json":
-                JsonParser.load(self, file, build = False)
+                JsonParser.load(self, file, build = False, zipped = zipped)
             elif fformat != None:
                 warnings.warn('Format not allowed. Loading process will not be performed')
             if build: self.precompute()
