@@ -24,9 +24,11 @@ import torch
 from sentence_transformers import SentenceTransformer, util
 import gzip, pickle
 import xml.etree.ElementTree as ET
+import json
 
 #For get_pubmed_index
 from concurrent.futures import ProcessPoolExecutor
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 ONTOLOGY_INDEX = str(files('py_semtools.external_data').joinpath('ontologies.txt'))
 #https://pypi.org/project/platformdirs/
@@ -242,7 +244,9 @@ def stEngine(args = None):
             help="Toogle on to get verbose output")
     parser.add_argument('-g', "--gpu_device", dest="gpu_device", default= None, type=text_list,
             help="Use to specify the GPU device to be used for speed-up (if available). The format is like: 'cuda:0' or 'cuda:0,cuda:1' to use multiple GPUs or cpu,cpu to use multiple CPUs")    
-    
+    parser.add_argument('-s', "--split", dest="split", default= False, action='store_true',
+            help="Use it if your corpus comes splitted in smaller parts as list of lists (embedded in a json)")
+
     opts =  parser.parse_args(args)
     main_stEngine(opts)
 
@@ -264,6 +268,8 @@ def get_pubmed_index(args = None):
             help="Number of cpus to be used for parallel processing")
     parser.add_argument('-d', '--debugging_mode', dest="debugging_mode", default=False, action='store_true',
             help="Activate to output stats about the content of the xml as warnings")
+    parser.add_argument('-s', "--split", dest="split", default= False, action='store_true',
+            help="Use it to split your text into smaller text units (then returned as a json)")		
     opts =  parser.parse_args(args)
     main_get_pubmed_index(opts)
 
@@ -923,7 +929,7 @@ def embedd_or_load_several_corpus(options, embedder, queries_content, corpus_fil
 def embedd_single_corpus(corpus_filename, embedder, options):
     corpus_basename = os.path.splitext(os.path.basename(corpus_filename))[0]
     if options["verbose"]: print(f"---Loading corpus of {corpus_basename}")
-    pubmed_index = load_pubmed_index(corpus_filename) # abstracts
+    pubmed_index = load_pubmed_index(corpus_filename, options["split"]) # abstracts
     textIDs = list(pubmed_index.keys())
     corpus = list(pubmed_index.values())
     if options["verbose"]: print(f"---Embedding corpus of {corpus_basename}")
@@ -962,13 +968,30 @@ def load_keyword_index(file):
                 keywords[id] = kwrds
     return keywords
 
-def load_pubmed_index(file):
+def get_splitted_abstract(id, text):
+    pubmed_index = {}
+    abstract_parts = json.loads(text)
+    paragraph_number = 0
+    for paragraph in abstract_parts:
+        sentence_number = 0
+        for sentence in paragraph:
+            id_tag = f"{id}_{paragraph_number}_{sentence_number}"
+            pubmed_index[id_tag] = sentence
+            sentence_number += 1
+        paragraph_number += 1
+    return pubmed_index
+
+def load_pubmed_index(file, is_splitted):
   pubmed_index = {}
   with gzip.open(file, "rt") as f:
     for line in f:
         try:
             id, text, *_rest = line.rstrip().split("\t")
-            pubmed_index[int(id)] = text
+            if is_splitted:
+              pubmed_index_iter = get_splitted_abstract(id, text)
+              pubmed_index.update(pubmed_index_iter)
+            else:
+              pubmed_index[f"{id}_0_0"] = text
         except:
             warnings.warn(f"Error reading line in file {os.path.basename(file)}: {line}")
   return pubmed_index
@@ -997,9 +1020,9 @@ def calculate_similarities_cpu(query_embeddings, corpus_embeddings, top_k, verbo
 def calculate_similarities_gpu(query_embeddings, corpus_embeddings, top_k, verbose=False):
   if verbose: print("----Calculating similarities with GPU")
   start = time.time()
-  corpus_embeddings = corpus_embeddings.to("cuda")
+  corpus_embeddings = torch.from_numpy(corpus_embeddings).to("cuda")
   corpus_embeddings = util.normalize_embeddings(corpus_embeddings)
-  query_embeddings = query_embeddings.to("cuda")
+  query_embeddings = torch.from_numpy(query_embeddings).to("cuda")
   query_embeddings = util.normalize_embeddings(query_embeddings)
   results = util.semantic_search(query_embeddings, corpus_embeddings, top_k=top_k, score_function=util.dot_score)
   if verbose: print(f"----Time to calculate similarities with GPU: {time.time() - start} seconds")
@@ -1104,7 +1127,9 @@ def get_abstract_index(file, options):
 							if abstractText != None:
 								#print(f"Text of abstract {pmid} in file {file}:")
 								#print(repr(abstractText), "\n\n")
-								abstract_content += abstractText.strip().replace("\n", " ").replace("\t", " ").replace("\r", " ")
+								raw_abstract = perform_soft_cleaning(abstractText)                                                 
+								abstract_content += raw_abstract + "\n\n"
+
 			if pmid == None:
 				stats["no_pmid"] += 1
 				if options["debugging_mode"]: warnings.warn(f"Warning: Article without PMID found in file {file}")
@@ -1112,13 +1137,55 @@ def get_abstract_index(file, options):
 				stats["no_abstract"] += 1
 				if options["debugging_mode"]: warnings.warn(f"Warning: Article PDMID:{pmid} without abstract found in file {file}")
 			else:
-				texts.append([pmid, abstract_content.strip().replace("\n", " ").replace("\t", " ").replace("\r", " "), file, year])
+				abstract_length = str(len(abstract_content))
+				if options["split"]:
+					abstract_parts = split_abstract(abstract_content)
+					flattened_abstract = flatten(abstract_parts)
+					number_of_sentences = str(len(flattened_abstract))
+					length_of_sentences = ",".join([str(len(sentence)) for sentence in flattened_abstract])
+					abstract_parts_json = json.dumps(abstract_parts)
+					print(abstract_parts_json)
+					texts.append([pmid, abstract_parts_json, file, year, abstract_length, number_of_sentences, length_of_sentences])
+				else:
+					cleaned_abstract = abstract_content.strip().strip().replace("\r", "\n").replace("&#13", "\n").replace("\t", " ").replace("\n", " ")
+					texts.append([pmid, cleaned_abstract, file, year, abstract_length, 1, abstract_length])
 	
 	if options["debugging_mode"]: warnings.warn(f"stats:file={file},total={total},no_abstract={stats['no_abstract']},no_pmid={stats['no_pmid']}")
 	return texts
 
+def perform_soft_cleaning(abstract):
+		raw_abstract = abstract.strip().replace("\r", "\n").replace("&#13", "\n").replace("\t", " ")
+		raw_abstract = re.sub(r"([A-Za-z\(\)]+[ ]*)\n([ ]*[A-Z-a-z\(\)]+)", r"\1 \2", raw_abstract) #Removing nonsense newlines
+		raw_abstract = re.sub(r"([0-9])\.([0-9])", r"\1'\2", raw_abstract) #Changing floating point numbers from 4.5 to 4'5
+		raw_abstract = re.sub(r"i\.?e\.?", "ie", raw_abstract).replace("al.", "al ") #Changing i.e to ie and et al. to et al
+		return raw_abstract
+
+def split_abstract(abstract):
+    #paragraph_splitter = RecursiveCharacterTextSplitter(chunk_size = 100, chunk_overlap  = 20, length_function = len, separators=[r"\n\n", r"\.\n?"], keep_separator=False, is_separator_regex=True)
+		paragraph_splitter = RecursiveCharacterTextSplitter(chunk_size = 5, chunk_overlap  = 0, length_function = len, separators=["\n\n"], keep_separator=False)
+		sentences_splitter = RecursiveCharacterTextSplitter(chunk_size = 5, chunk_overlap  = 0, length_function = len, separators=["\n", ".", ","], keep_separator=False, is_separator_regex=False)
+		long_quotes_splitter = RecursiveCharacterTextSplitter(chunk_size = 100, chunk_overlap  = 30, length_function = len, separators=[" "], keep_separator=False, is_separator_regex=False)
+		hierarchical_splitted_sentences = []
+        
+		paragraphs = paragraph_splitter.split_text(abstract)
+		for paragraph in paragraphs:
+			nested_sentences = []
+			sentences = sentences_splitter.split_text(paragraph)
+			for sentence in sentences:
+				short_quotes = long_quotes_splitter.split_text(sentence)
+				nested_sentences += short_quotes
+			hierarchical_splitted_sentences.append(nested_sentences)
+		return hierarchical_splitted_sentences
+
+#def split_abstract(abstract):
+#    #paragraph_splitter = RecursiveCharacterTextSplitter(chunk_size = 100, chunk_overlap  = 20, length_function = len, separators=[r"\n\n", r"\.\n?"], keep_separator=False, is_separator_regex=True)
+#		paragraph_splitter = RecursiveCharacterTextSplitter(chunk_size = 100, chunk_overlap  = 20, length_function = len, separators=["\n\n"], keep_separator=False)
+#		sentences_splitter = RecursiveCharacterTextSplitter(chunk_size = 100, chunk_overlap  = 20, length_function = len, separators=["."], keep_separator=False, is_separator_regex=False)
+#		paragraphs = paragraph_splitter.split_text(abstract)
+#		sentences = [ sentences_splitter.split_text(paragraph.replace("\n", "")) for paragraph in paragraphs] #TODO:FIX in the future
+#		return sentences
 
 def save_abstracts(out_filename, abstracts):
     with gzip.open(out_filename, 'wt') as f:
-      for pmid, text, original_filename, year in abstracts:
-        f.write(f"{pmid}\t{text}\t{original_filename}\t{year}\n")
+      for pmid, text, original_filename, year, abstract_length, number_of_sentences, length_of_sentences in abstracts:
+        f.write(f"{pmid}\t{text}\t{original_filename}\t{year}\t{abstract_length}\t{number_of_sentences}\t{length_of_sentences}\n")
