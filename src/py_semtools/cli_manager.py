@@ -96,13 +96,14 @@ def remote_retriever(args = None):
               help="Output matches by keyword file.")
     opts =  parser.parse_args(args)
     main_remote_retriever(opts)
-
+ 
 def semtools(args = None):
     if args is None:
         args = sys.argv[1:]
 
     parser = argparse.ArgumentParser(description='Perform Ontology driven analysis ')
-
+    parser.add_argument("--return_all_terms_with_user_defined_attributes", dest="return_all_terms_with_user_defined_attributes", default=None,
+                        help="Returns a table with all the terms in the ontology with the desired fields given by user in CSV style, like: 'id,name,xref'", type=text_list)
     parser.add_argument('-p', "--processes", dest="processes", default=2, type=int,
                         help="Number of processes to parallelize calculations. Applied to: semantic similarity.")
     parser.add_argument("-d", "--download", dest="download", default=None,
@@ -491,6 +492,15 @@ def main_semtools(opts):
       with open(options["profiles_self_similarities_output"], "w") as f:
         for profile, similarity in self_similarities.items():
           f.write(f"{profile}\t{similarity}\n")
+
+    if options["return_all_terms_with_user_defined_attributes"] != None:
+        print("\t".join(options["return_all_terms_with_user_defined_attributes"]))
+        for termID, attrs in ontology.each(att = True):
+            text_to_print = ""
+            for user_field in options["return_all_terms_with_user_defined_attributes"]:
+                field_content = attrs.get(user_field)
+                text_to_print += "None\t" if field_content == None else f"{field_content}\t"
+            print(text_to_print)
 
 def main_strsimnet(options):
     texts2compare = load_table_file(input_file = options.input_file,
