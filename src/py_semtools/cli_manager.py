@@ -106,7 +106,7 @@ def semtools(args = None):
     parser.add_argument('-p', "--processes", dest="processes", default=2, type=int,
                         help="Number of processes to parallelize calculations. Applied to: semantic similarity.")
     parser.add_argument("-d", "--download", dest="download", default=None,
-                        help="Download obo file from an official resource. MONDO, GO and HPO are possible values.")
+                        help="Download obo file from an official resource. MONDO, GO, HPO, EFO and DO are possible values.")
     parser.add_argument("-i", "--input_file", dest="input_file", default=None,
                         help="Filepath of profile data")
     parser.add_argument("--load_hard_cleaned_profiles", dest="load_hard_cleaned_profiles", default=False, action='store_true',
@@ -1156,7 +1156,7 @@ def get_abstract_index(file, options):
 def perform_soft_cleaning(abstract):
 		raw_abstract = abstract.strip().replace("\r", "\n").replace("&#13", "\n").replace("\t", " ")
 		raw_abstract = re.sub(r"([A-Za-z\(\)]+[ ]*)\n([ ]*[A-Z-a-z\(\)]+)", r"\1 \2", raw_abstract) #Removing nonsense newlines
-		raw_abstract = re.sub(r"([0-9])\.([0-9])", r"\1'\2", raw_abstract) #Changing floating point numbers from 4.5 to 4'5
+		raw_abstract = re.sub(r"([0-9]+)[\.\,]([0-9]+)", r"\1'\2", raw_abstract) #Changing floating point numbers from 4.5 or 4,5 to 4'5
 		raw_abstract = re.sub(r"i\.?e\.?", "ie", raw_abstract).replace("al.", "al ") #Changing i.e to ie and et al. to et al
 		return raw_abstract
 
@@ -1164,7 +1164,7 @@ def split_abstract(abstract):
     #paragraph_splitter = RecursiveCharacterTextSplitter(chunk_size = 100, chunk_overlap  = 20, length_function = len, separators=[r"\n\n", r"\.\n?"], keep_separator=False, is_separator_regex=True)
 		paragraph_splitter = RecursiveCharacterTextSplitter(chunk_size = 5, chunk_overlap  = 0, length_function = len, separators=["\n\n"], keep_separator=False)
 		sentences_splitter = RecursiveCharacterTextSplitter(chunk_size = 5, chunk_overlap  = 0, length_function = len, separators=["\n", ".", ","], keep_separator=False, is_separator_regex=False)
-		long_quotes_splitter = RecursiveCharacterTextSplitter(chunk_size = 100, chunk_overlap  = 30, length_function = len, separators=[" "], keep_separator=False, is_separator_regex=False)
+		long_quotes_splitter = RecursiveCharacterTextSplitter(chunk_size = 150, chunk_overlap  = 20, length_function = len, separators=[" "], keep_separator=False, is_separator_regex=False)
 		hierarchical_splitted_sentences = []
         
 		paragraphs = paragraph_splitter.split_text(abstract)
