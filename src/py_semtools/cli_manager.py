@@ -25,6 +25,8 @@ from sentence_transformers import SentenceTransformer, util
 import gzip, pickle
 import xml.etree.ElementTree as ET
 import json
+import tarfile
+import numpy as np
 
 #For get_pubmed_index
 from concurrent.futures import ProcessPoolExecutor
@@ -237,7 +239,7 @@ def stEngine(args = None):
             help="Path to save/load the embedded corpus file. Wildcards are accepted to LOAD multiple files")
     parser.add_argument('-o', "--output_file", dest="output_file", default= None,
             help="Path to save the output file with semantic scores")
-    parser.add_argument('-k', "--top_k", dest="top_k", default= 20, type = int,
+    parser.add_argument('-k', "--top_k", dest="top_k", default= 20, type = lambda num: int(num) if num != "0" else np.inf,
             help="Get top scores per keyword")
     parser.add_argument('-t', "--threshold", dest="threshold", default= 0, type = float,
             help="Similarity threshold to filter results to write")    
@@ -245,9 +247,12 @@ def stEngine(args = None):
             help="Toogle on to get verbose output")
     parser.add_argument('-g', "--gpu_device", dest="gpu_device", default= None, type=text_list,
             help="Use to specify the GPU device to be used for speed-up (if available). The format is like: 'cuda:0' or 'cuda:0,cuda:1' to use multiple GPUs or cpu,cpu to use multiple CPUs")    
+    parser.add_argument("--use_gpu_for_sim_calculation", dest="use_gpu_for_sim_calculation", default= False, action='store_true',
+            help="Toogle on if you want to use GPU not only for the embedding process, but also for calculating query-corpus similarities (then dot score if used instead of cosine similarity)")
     parser.add_argument('-s', "--split", dest="split", default= False, action='store_true',
             help="Use it if your corpus comes splitted in smaller parts as list of lists (embedded in a json)")
-
+    parser.add_argument("--order", dest="order", default= "corpus-query",
+            help="Order of the semantic search. Options: 'corpus-query' or 'query-corpus'")
     opts =  parser.parse_args(args)
     main_stEngine(opts)
 
@@ -270,7 +275,11 @@ def get_pubmed_index(args = None):
     parser.add_argument('-d', '--debugging_mode', dest="debugging_mode", default=False, action='store_true',
             help="Activate to output stats about the content of the xml as warnings")
     parser.add_argument('-s', "--split", dest="split", default= False, action='store_true',
-            help="Use it to split your text into smaller text units (then returned as a json)")		
+            help="Use it to split your text into smaller text units (then returned as a json)")
+    parser.add_argument('-p', "--parse_paper", dest="parse_paper", default= False, action='store_true',
+            help="Use it to parse whole papers from PMC XMLs intead of PBMID abstracts")	
+    parser.add_argument('-e', "--equivalences_file", dest="equivalences_file", default= None,
+            help="Path to a 2 columns file with PMC-PMID equivalences to use when a parsed papers only finds the PMC ID inside its content.")
     opts =  parser.parse_args(args)
     main_get_pubmed_index(opts)
 
@@ -911,8 +920,8 @@ def embedd_or_load_several_corpus(options, embedder, queries_content, corpus_fil
     for corpus_filename in corpus_filenames:
          ### LOAD AND EMBED CORPUS (AND SAVE IT options["corpus_embedded"] != None)
         if options.get("corpus") != None:
-            corpus_basename, textIDs, corpus, corpus_embeddings = embedd_single_corpus(corpus_filename, embedder, options)
-            corpus_info = {'textIDs': textIDs, "corpus": corpus, "embeddings": corpus_embeddings}        
+            corpus_basename, textIDs, corpus_embeddings = embedd_single_corpus(corpus_filename, embedder, options)
+            corpus_info = {'textIDs': textIDs, "embeddings": corpus_embeddings}        
             if options.get("corpus_embedded") != None:
                 if options["verbose"]: print(f"---Saving embedded corpus in {corpus_basename}")
                 with open(os.path.join(options["corpus_embedded"], corpus_basename) + '.pkl', "wb") as fOut:
@@ -931,7 +940,7 @@ def embedd_or_load_several_corpus(options, embedder, queries_content, corpus_fil
             if options["verbose"]: print("-Calculating similarities:")
             for query_basename, query_info in queries_content.items():
                 if options["verbose"]: print(f"---Calculating similarities between corpus {corpus_basename} and query {query_basename}")
-                best_matches = calculate_similarities(query_info, corpus_info, options["top_k"], options["gpu_device"], options["verbose"])
+                best_matches = calculate_similarities(query_info, corpus_info, options)
                 output_filename = os.path.join(options["output_file"],query_basename)
                 if options["verbose"]: print(f"---Saving similarities in file {output_filename}\n")
                 save_similarities(output_filename, best_matches, options)
@@ -942,24 +951,33 @@ def embedd_single_corpus(corpus_filename, embedder, options):
     pubmed_index = load_pubmed_index(corpus_filename, options["split"]) # abstracts
     textIDs = list(pubmed_index.keys())
     corpus = list(pubmed_index.values())
-    if options["verbose"]: print(f"---Embedding corpus of {corpus_basename}")
+    if options["verbose"]: print(f"---Embedding corpus of {corpus_basename} with {'GPU' if options.get('gpu_device') else 'CPU'}")
     corpus_embeddings = embedd_text(corpus, embedder, options)
-    return [corpus_basename, textIDs, corpus, corpus_embeddings]
+    return [corpus_basename, textIDs, corpus_embeddings]
 
 def embedd_text(text, embedder, options):
-    start = time.time()
-    if options["gpu_device"] != None:
-        if len(options["gpu_device"]) > 1:
-            pool = embedder.start_multi_process_pool(options["gpu_device"])
-            text_embedding = embedder.encode_multi_process(text, pool = pool)
-            embedder.stop_multi_process_pool(pool)
-        elif len(options["gpu_device"]) == 1:
-            text_embedding = embedder.encode(text, convert_to_numpy=True, show_progress_bar = options["verbose"], device= options["gpu_device"][0]) #convert_to_tensor=True
-    else:
-        text_embedding = embedder.encode(text, convert_to_numpy=True, show_progress_bar = options["verbose"]) #convert_to_tensor=True
-    
-    if options["verbose"]: print(f"---Embedding time with {0 if options.get('gpu_device') == None else len(options['gpu_device'])} GPUs: {time.time() - start} seconds")
-    return text_embedding
+		if options["gpu_device"] != None:
+				text_embedding = embedd_text_gpu(text, embedder, options)
+		else:
+				text_embedding = embedd_text_cpu(text, embedder, options)
+		return text_embedding
+
+def embedd_text_cpu(text, embedder, options):
+		start = time.time()
+		text_embedding = embedder.encode(text, convert_to_numpy=True, show_progress_bar = options["verbose"]) #convert_to_tensor=True
+		if options["verbose"]: print(f"---Embedding time with {os.environ.get('MKL_NUM_THREADS') or os.environ.get('OMP_NUM_THREADS') or 1} CPUs: {time.time() - start} seconds")
+		return text_embedding
+
+def embedd_text_gpu(text, embedder, options):
+		start = time.time()
+		if len(options["gpu_device"]) > 1:
+				pool = embedder.start_multi_process_pool(options["gpu_device"])
+				text_embedding = embedder.encode_multi_process(text, pool = pool)
+				embedder.stop_multi_process_pool(pool)
+		elif len(options["gpu_device"]) == 1:
+				text_embedding = embedder.encode(text, convert_to_numpy=True, show_progress_bar = options["verbose"], device= options["gpu_device"][0]) #convert_to_tensor=True	
+		if options["verbose"]: print(f"---Embedding time with {0 if options.get('gpu_device') == None else len(options['gpu_device'])} GPUs: {time.time() - start} seconds")
+		return text_embedding
 
 def load_keyword_index(file):
     keywords = {}
@@ -1006,40 +1024,54 @@ def load_pubmed_index(file, is_splitted):
             warnings.warn(f"Error reading line in file {os.path.basename(file)}: {line}")
   return pubmed_index
 
-def calculate_similarities(query_info, corpus_info, top_k, gpu_device, verbose):
-  corpus_ids = corpus_info["textIDs"]
-  corpus_embeddings = corpus_info["embeddings"]
+def calculate_similarities(query_info, corpus_info, options):
+	corpus_ids = corpus_info["textIDs"]
+	corpus_embeddings = corpus_info["embeddings"]
 
-  query_ids = query_info['query_ids']
-  query_embeddings = query_info["embeddings"]
+	query_ids = query_info['query_ids']
+	query_embeddings = query_info["embeddings"]
 
-  if gpu_device != None:
-    search = calculate_similarities_gpu(query_embeddings, corpus_embeddings, top_k, verbose)
-  else:
-    search = calculate_similarities_cpu(query_embeddings, corpus_embeddings, top_k, verbose)
+	if options["gpu_device"] != None and options["use_gpu_for_sim_calculation"]:
+		search = calculate_similarities_gpu(query_embeddings, corpus_embeddings, options["top_k"], options["verbose"], options["order"])
+	else:
+		search = calculate_similarities_cpu(query_embeddings, corpus_embeddings, options["top_k"], options["verbose"], options["order"])
 
-  return find_best_matches(corpus_ids, query_ids, search)
+	if options["order"] == "corpus-query":
+		matches = find_best_matches(corpus_ids, query_ids, search)
+	else:
+		matches = find_best_matches(query_ids, corpus_ids, search)
+	return matches
 
-def calculate_similarities_cpu(query_embeddings, corpus_embeddings, top_k, verbose=False):
-  if verbose: print("----Calculating similarities with CPU")
+def calculate_similarities_cpu(query_embeddings, corpus_embeddings, top_k, verbose=False, order="corpus-query"):
+  if verbose: print(f"----Calculating similarities using {os.environ.get('MKL_NUM_THREADS') or os.environ.get('OMP_NUM_THREADS') or 1} CPUs")
   start = time.time()
-  results = util.semantic_search(query_embeddings, corpus_embeddings, top_k=top_k)
+  results = make_single_similarity_calculation(corpus_embeddings, query_embeddings, top_k=top_k, gpu_calc=False, order=order)
   if verbose: print(f"----Time to calculate similarities with CPU: {time.time() - start} seconds")
   return results
 
-def calculate_similarities_gpu(query_embeddings, corpus_embeddings, top_k, verbose=False):
+def calculate_similarities_gpu(query_embeddings, corpus_embeddings, top_k, verbose=False, order="corpus-query"):
   if verbose: print("----Calculating similarities with GPU")
   start = time.time()
   corpus_embeddings = torch.from_numpy(corpus_embeddings).to("cuda")
   corpus_embeddings = util.normalize_embeddings(corpus_embeddings)
   query_embeddings = torch.from_numpy(query_embeddings).to("cuda")
   query_embeddings = util.normalize_embeddings(query_embeddings)
-  results = util.semantic_search(query_embeddings, corpus_embeddings, top_k=top_k, score_function=util.dot_score)
+  results = make_single_similarity_calculation(corpus_embeddings, query_embeddings, top_k=top_k, gpu_calc=True, order=order)
   if verbose: print(f"----Time to calculate similarities with GPU: {time.time() - start} seconds")
   return results
 
+def make_single_similarity_calculation(corpus_embeddings, query_embeddings, top_k, gpu_calc=False, order="corpus-query"):
+  sim_function = util.dot_score if gpu_calc else util.cos_sim
 
-def find_best_matches(corpus_ids, query_ids, search):
+  if order == "query-corpus":
+    result = util.semantic_search(query_embeddings, corpus_embeddings, top_k=top_k, score_function=sim_function)
+  elif order == "corpus-query":
+    result = util.semantic_search(corpus_embeddings, query_embeddings, top_k=top_k, score_function=sim_function)
+  else:
+    raise Exception("Invalid order parameter value. Valid values are: query-corpus or corpus-query")
+  return result
+
+def find_best_matches(query_ids, corpus_ids, search):
     best_matches = {}
     for i,query in enumerate(search):
       kwdID = query_ids[i]
@@ -1058,11 +1090,15 @@ def find_best_matches(corpus_ids, query_ids, search):
     return best_matches
 
 def save_similarities(filepath, best_matches, options):
+    #with gzip.open(filepath, "a") as f: #TODO: add it later
     with open(filepath, 'a') as f:
       for kwdID, matches in best_matches.items():
         for textID, score in matches.items():
           if score >= options["threshold"]: 
-            f.write(f"{kwdID}\t{textID}\t{score}\n")
+            if options["order"] == "corpus-query":
+              f.write(f"{textID}\t{kwdID}\t{score}\n")
+            else:
+              f.write(f"{kwdID}\t{textID}\t{score}\n")
 
 
 ######################## FUNCTIONS FOR GET PUBMED INDEX ########################
@@ -1078,7 +1114,7 @@ def process_several_abstracts(options, filenames):
 def process_single_abstract(options_filename_pair):
     options, filename = options_filename_pair
     basename = os.path.basename(filename).replace(".xml.gz", "")
-    abstract_index = get_abstract_index(filename, options)
+    abstract_index = get_index(filename, options)
     out_filename = os.path.join(options["output"], basename+".gz")
     save_abstracts(out_filename, abstract_index)
 
@@ -1090,7 +1126,6 @@ def process_several_custom_chunksize_abstracts(options, filenames):
       lot_size = (len(filenames)+(len(filenames) % options["n_cpus"])) // options["n_cpus"]
       for index in range(0, options["n_cpus"]):
         filenames_lots.append(filenames[index*lot_size:(index+1)*lot_size])
-
       with ProcessPoolExecutor(max_workers=options["n_cpus"]) as executor:
         executor.map(process_a_pack_of_custom_chunksize_abstracts, [[options, filename_lot, idx] for idx,filename_lot in enumerate(filenames_lots)])
 
@@ -1099,7 +1134,7 @@ def process_a_pack_of_custom_chunksize_abstracts(options_filenames_counter_trio)
     acummulative_abstracts = []
     counter = 0
     for filename in filenames:    
-      abstract_index = get_abstract_index(filename, options)
+      abstract_index = get_index(filename, options)
       acummulative_abstracts.extend(abstract_index)
       while len(acummulative_abstracts) >= options["chunk_size"]:
         out_filename = os.path.join(options["output"], options["tag"]+f"{sup_counter}_{counter}.gz" )
@@ -1110,35 +1145,31 @@ def process_a_pack_of_custom_chunksize_abstracts(options_filenames_counter_trio)
     out_filename = os.path.join(options["output"], options["tag"]+f"{sup_counter}_{counter}.gz" )
     save_abstracts(out_filename, acummulative_abstracts)
 
+def save_abstracts(out_filename, abstracts):
+    if len(abstracts) > 0:
+      with gzip.open(out_filename, 'wt') as f:
+        for pmid, text, original_filename, year, abstract_length, number_of_sentences, length_of_sentences in abstracts:
+          f.write(f"{pmid}\t{text}\t{original_filename}\t{year}\t{abstract_length}\t{number_of_sentences}\t{length_of_sentences}\n")
+
+def get_index(file, options):
+	if options["parse_paper"] == True:
+		return get_paper_index(file, options)
+	else:
+		return get_abstract_index(file, options)
+
+
+##### Abstracts part functions
 
 def get_abstract_index(file, options): 
 	texts = [] # aggregate all abstracts in XML file
 	stats = {"no_abstract": 0, "no_pmid": 0}
 	total = 0
-	year = 0
 	with gzip.open(file) as gz:
 		mytree = ET.parse(gz)
 		pubmed_article_set = mytree.getroot()
 		for article in pubmed_article_set:
 			total += 1
-			pmid = None
-			abstract_content = ""
-			for data in article.find('MedlineCitation'):
-				if data.tag == 'PMID':
-					pmid = data.text
-				if data.tag == 'DateCompleted':
-					for fields in data:
-						if fields.tag == "Year": year = int(fields.text)  					
-				abstract = data.find('Abstract')
-				if abstract != None:
-					for fields in abstract:		
-						if fields.tag == 'AbstractText':
-							abstractText = fields.text
-							if abstractText != None:
-								#print(f"Text of abstract {pmid} in file {file}:")
-								#print(repr(abstractText), "\n\n")
-								raw_abstract = perform_soft_cleaning(abstractText)                                                 
-								abstract_content += raw_abstract + "\n\n"
+			pmid, abstract_content, year = parse_abstract(article)
 
 			if pmid == None:
 				stats["no_pmid"] += 1
@@ -1147,24 +1178,144 @@ def get_abstract_index(file, options):
 				stats["no_abstract"] += 1
 				if options["debugging_mode"]: warnings.warn(f"Warning: Article PDMID:{pmid} without abstract found in file {file}")
 			else:
-				abstract_length = str(len(abstract_content))
-				if options["split"]:
-					abstract_parts = split_abstract(abstract_content)
-					flattened_abstract = flatten(abstract_parts)
-					number_of_sentences = str(len(flattened_abstract))
-					length_of_sentences = ",".join([str(len(sentence)) for sentence in flattened_abstract])
-					abstract_parts_json = json.dumps(abstract_parts)
-					print(abstract_parts_json)
-					texts.append([pmid, abstract_parts_json, file, year, abstract_length, number_of_sentences, length_of_sentences])
-				else:
-					cleaned_abstract = abstract_content.strip().strip().replace("\r", "\n").replace("&#13", "\n").replace("\t", " ").replace("\n", " ")
-					texts.append([pmid, cleaned_abstract, file, year, abstract_length, 1, abstract_length])
+				pmid_content_and_stats = prepare_indexes(abstract_content, pmid, file, year, options)
+				texts.append(pmid_content_and_stats)
 	
 	if options["debugging_mode"]: warnings.warn(f"stats:file={file},total={total},no_abstract={stats['no_abstract']},no_pmid={stats['no_pmid']}")
 	return texts
 
+def parse_abstract(article):
+	pmid = None
+	abstract_content = ""
+	year = 0
+	for data in article.find('MedlineCitation'):
+		if data.tag == 'PMID':
+			pmid = data.text
+		if data.tag == 'DateCompleted':
+			for fields in data:
+				if fields.tag == "Year": year = int(fields.text)  					
+		abstract = data.find('Abstract')
+		if abstract != None:
+			for fields in abstract:		
+				if fields.tag == 'AbstractText':
+					abstractText = get_paper_body_content(fields)
+					if abstractText != None and abstractText != "":
+						#print(f"Text of abstract {pmid} in file {file}:")
+						#print(repr(abstractText), "\n\n")
+						raw_abstract = perform_soft_cleaning(abstractText)                                                 
+						abstract_content += raw_abstract + "\n\n"
+	return pmid, abstract_content, year
+    
+
+##### New functions to parse papers
+
+def get_paper_index(file_path, options):
+	PMC_PMID_dict = None
+	if options["equivalences_file"] != None: PMC_PMID_dict = dict(CmdTabs.load_input_data(options["equivalences_file"]))
+	texts = [] # aggregate all papers in XML file (Technically it is just one for each xml file, but it is emulating the original abstract part logic)
+	stats = {"no_abstract": 0, "no_pmid": 0}
+	total = 0
+    
+	tar = tarfile.open(file_path, 'r:gz')
+	for member in tar.getmembers():
+		total += 1
+		f=tar.extractfile(member)
+		filename = os.path.join(file_path, member.path)
+		
+		paper_xml_string=f.read()
+		pmid, pmc, year, whole_content = parse_paper(paper_xml_string)
+
+		if pmid == None and PMC_PMID_dict != None: pmid = PMC_PMID_dict.get(pmc)
+
+		if pmid == None:
+			stats["no_pmid"] += 1
+			if options["debugging_mode"]: warnings.warn(f"Warning: Article without PMID found in file {filename}")
+		elif whole_content == "":
+			stats["no_abstract"] += 1
+			if options["debugging_mode"]: warnings.warn(f"Warning: Article PDMID:{pmid} without abstract found in file {filename}")
+		else:				
+			#pmid_content_and_stats = prepare_indexes(whole_content, pmc+"-"+pmid, filename, year, options)
+			pmid_content_and_stats = prepare_indexes(whole_content, pmid, filename, year, options)
+			texts.append(pmid_content_and_stats)
+	tar.close()
+
+	if options["debugging_mode"]: warnings.warn(f"stats:file={file_path},total={total},no_abstract={stats['no_abstract']},no_pmid={stats['no_pmid']}")
+	return texts
+
+
+def parse_paper(paper_xml_string):
+	whole_content = ""
+	year = 0
+	pmc = None
+	pmid = None
+	article_root = ET.fromstring(paper_xml_string)
+
+	#GETTING PMC ID, PMID AND YEAR
+	for id_tags in article_root.iter('article-id'):
+		if id_tags.get('pub-id-type') == "pmid":
+			pmid = id_tags.text 
+		if id_tags.get('pub-id-type') == "pmc":
+			pmc = id_tags.text
+
+	for date_fields in article_root.iter("date"):
+		if date_fields.get("date-type") == "accepted":
+			year = date_fields.find("year").text
+	if year == 0: #In case date-type is not available, we try getting year by using pmc-release field
+		for date_fields in article_root.iter("pub-date"):
+			if date_fields.get("pub-type") == "pmc-release":
+				year = date_fields.find("year").text
+			if date_fields.get("pub-type") != "pmc-release" and year == 0:
+				year = date_fields.find("year").text
+
+	#GETTING PAPER WHOLE CONTENT
+	paper_root = article_root.find("body")
+	if paper_root != None:
+		whole_content = perform_soft_cleaning(  get_paper_body_content(paper_root)  )
+
+	return pmid, pmc, year, whole_content
+
+def get_paper_body_content(element):
+	whole_content = ""
+	if element.tag in ["table-wrap", "table", "fig", "fig-group"]: return whole_content
+	if element.tag == "sec": whole_content += "\n\n"
+	if element.tag == "p": whole_content += "\n\n"	
+	# Content before nested element
+	if element.tag not in ["xref", "sup"]:
+		content = element.text
+		if content != None: whole_content += f" {content.strip()} "
+	# Content of nested element
+	for child in element: 
+		whole_content += get_paper_body_content(child)
+	# Content after nested element
+	tail = element.tail
+	if tail != None: whole_content += f" {tail.strip()} "
+	return whole_content
+
+
+
+### Common functions for both (Parser Papers and Parser Abstracts)
+
+def prepare_indexes(abstract_content, pmid, file, year, options):
+    pmid = pmid.replace("\n", "")
+    file = file.replace("\n", "")
+    year = str(year).replace("\n", "")
+
+    abstract_length = str(len(abstract_content))
+    if options["split"]:
+      abstract_parts = split_abstract(abstract_content)
+      flattened_abstract = flatten(abstract_parts)
+      number_of_sentences = str(len(flattened_abstract))
+      length_of_sentences = ",".join([str(len(sentence)) for sentence in flattened_abstract])
+      abstract_parts_json = json.dumps(abstract_parts)
+      return [pmid, abstract_parts_json, file, year, abstract_length, number_of_sentences, length_of_sentences]
+    else:
+      cleaned_abstract = abstract_content.strip().strip().replace("\r", "\n").replace("&#13", "\n").replace("\t", " ").replace("\n", " ")
+      return [pmid, cleaned_abstract, file, year, abstract_length, 1, abstract_length]
+
 def perform_soft_cleaning(abstract):
 		raw_abstract = abstract.strip().replace("\r", "\n").replace("&#13", "\n").replace("\t", " ")
+		raw_abstract = re.sub(r"\\[a-z]+(\[.+\])?(\{.+\})", r" ", raw_abstract) #Removing latex commands
+		raw_abstract = re.sub(r"[ ]+", r" ", raw_abstract) #Removing additional whitespaces between words
 		raw_abstract = re.sub(r"([A-Za-z\(\)]+[ ]*)\n([ ]*[A-Z-a-z\(\)]+)", r"\1 \2", raw_abstract) #Removing nonsense newlines
 		raw_abstract = re.sub(r"([0-9]+)[\.\,]([0-9]+)", r"\1'\2", raw_abstract) #Changing floating point numbers from 4.5 or 4,5 to 4'5
 		raw_abstract = re.sub(r"i\.?e\.?", "ie", raw_abstract).replace("al.", "al ") #Changing i.e to ie and et al. to et al
@@ -1172,30 +1323,33 @@ def perform_soft_cleaning(abstract):
 
 def split_abstract(abstract):
     #paragraph_splitter = RecursiveCharacterTextSplitter(chunk_size = 100, chunk_overlap  = 20, length_function = len, separators=[r"\n\n", r"\.\n?"], keep_separator=False, is_separator_regex=True)
-		paragraph_splitter = RecursiveCharacterTextSplitter(chunk_size = 5, chunk_overlap  = 0, length_function = len, separators=["\n\n"], keep_separator=False)
-		sentences_splitter = RecursiveCharacterTextSplitter(chunk_size = 5, chunk_overlap  = 0, length_function = len, separators=["\n", ".", ","], keep_separator=False, is_separator_regex=False)
-		long_quotes_splitter = RecursiveCharacterTextSplitter(chunk_size = 150, chunk_overlap  = 20, length_function = len, separators=[" "], keep_separator=False, is_separator_regex=False)
-		hierarchical_splitted_sentences = []
-        
+		paragraph_splitter = RecursiveCharacterTextSplitter(chunk_size = 10, chunk_overlap  = 0, length_function = len, separators=["\n\n"], keep_separator=False)
+		sentences_splitter = RecursiveCharacterTextSplitter(chunk_size = 10, chunk_overlap  = 0, length_function = len, separators=["\n",".", ";", ","], keep_separator=False, is_separator_regex=False)
+		#sentences_splitter = RecursiveCharacterTextSplitter(chunk_size = 120, chunk_overlap  = 20, length_function = len, separators=["\n", " ", ""], keep_separator=False, is_separator_regex=False)
 		paragraphs = paragraph_splitter.split_text(abstract)
-		for paragraph in paragraphs:
-			nested_sentences = []
-			sentences = sentences_splitter.split_text(paragraph)
-			for sentence in sentences:
-				short_quotes = long_quotes_splitter.split_text(sentence)
-				nested_sentences += short_quotes
-			hierarchical_splitted_sentences.append(nested_sentences)
-		return hierarchical_splitted_sentences
+		sentences = [ sentences_splitter.split_text(paragraph.replace("\n", "")) for paragraph in paragraphs ]
+		
+		formated = []		
+		for paragraph in sentences: 
+			formated_paragraph = [sentence for sentence in paragraph if len(sentence) > 2]
+			if len(formated_paragraph) > 0: formated.append(formated_paragraph)
+		
+		return formated
+
 
 #def split_abstract(abstract):
 #    #paragraph_splitter = RecursiveCharacterTextSplitter(chunk_size = 100, chunk_overlap  = 20, length_function = len, separators=[r"\n\n", r"\.\n?"], keep_separator=False, is_separator_regex=True)
-#		paragraph_splitter = RecursiveCharacterTextSplitter(chunk_size = 100, chunk_overlap  = 20, length_function = len, separators=["\n\n"], keep_separator=False)
-#		sentences_splitter = RecursiveCharacterTextSplitter(chunk_size = 100, chunk_overlap  = 20, length_function = len, separators=["."], keep_separator=False, is_separator_regex=False)
+#		paragraph_splitter = RecursiveCharacterTextSplitter(chunk_size = 5, chunk_overlap  = 0, length_function = len, separators=["\n\n"], keep_separator=False)
+#		sentences_splitter = RecursiveCharacterTextSplitter(chunk_size = 5, chunk_overlap  = 0, length_function = len, separators=["\n", ".", ","], keep_separator=False, is_separator_regex=False)
+#		long_quotes_splitter = RecursiveCharacterTextSplitter(chunk_size = 300, chunk_overlap  = 10, length_function = len, separators=[" "], keep_separator=False, is_separator_regex=False)
+#		hierarchical_splitted_sentences = []
+#        
 #		paragraphs = paragraph_splitter.split_text(abstract)
-#		sentences = [ sentences_splitter.split_text(paragraph.replace("\n", "")) for paragraph in paragraphs] #TODO:FIX in the future
-#		return sentences
-
-def save_abstracts(out_filename, abstracts):
-    with gzip.open(out_filename, 'wt') as f:
-      for pmid, text, original_filename, year, abstract_length, number_of_sentences, length_of_sentences in abstracts:
-        f.write(f"{pmid}\t{text}\t{original_filename}\t{year}\t{abstract_length}\t{number_of_sentences}\t{length_of_sentences}\n")
+#		for paragraph in paragraphs:
+#			nested_sentences = []
+#			sentences = sentences_splitter.split_text(paragraph)
+#			for sentence in sentences:
+#				short_quotes = long_quotes_splitter.split_text(sentence)
+#				nested_sentences += short_quotes
+#			hierarchical_splitted_sentences.append(nested_sentences)
+#		return hierarchical_splitted_sentences
