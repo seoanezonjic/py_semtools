@@ -7,6 +7,7 @@ import warnings
 import json
 import numpy as np
 from collections import defaultdict
+from importlib.resources import files
 import networkx as nx
 import entrezpy.esearch.esearcher
 from concurrent.futures import ProcessPoolExecutor as PoolExecutor
@@ -16,6 +17,7 @@ import time
 import itertools
 import re
 import py_exp_calc.exp_calc as pxc
+from py_report_html import Py_report_html
 
 from py_semtools import OboParser
 from py_semtools import JsonParser
@@ -23,6 +25,7 @@ from py_semtools import JsonParser
 from py_exp_calc.exp_calc import intersection, union, diff
 
 class Ontology:
+    TEMPLATES = "py_semtools.templates"
     allowed_calcs = {'ics': ['resnik', 'resnik_observed', 'seco', 'zhou', 'sanchez'], 'sims': ['resnik', 'lin', 'jiang_conrath']}
     
     def __init__(self, file= None, load_file= False, removable_terms= [], build= True, file_format= None, extra_dicts= []):
@@ -1510,3 +1513,14 @@ class Ontology:
         elif type(itemB) is not dict:
             concatenated = list(set([itemA, itemB]))
         return concatenated
+
+Py_report_html.additional_templates.append(str(files(Ontology.TEMPLATES).joinpath('')))
+
+def plot_onto(self, **user_options):
+    id = user_options['id']
+    ont = self.hash_vars[id]
+    levels, percentage = ont.get_profile_ontology_distribution_tables()
+    self.hash_vars[id + '_trans'] = levels
+    return self.table(id=id + '_trans')
+
+Py_report_html.plot_onto = plot_onto
