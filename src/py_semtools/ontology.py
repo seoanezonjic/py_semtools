@@ -1514,13 +1514,76 @@ class Ontology:
             concatenated = list(set([itemA, itemB]))
         return concatenated
 
+########################################
+## Monkey Patching Methods
+########################################
+
 Py_report_html.additional_templates.append(str(files(Ontology.TEMPLATES).joinpath('')))
 
-def plot_onto(self, **user_options):
-    id = user_options['id']
-    ont = self.hash_vars[id]
-    levels, percentage = ont.get_profile_ontology_distribution_tables()
-    self.hash_vars[id + '_trans'] = levels
-    return self.table(id=id + '_trans')
+def append_values_to_arrays(self, arrays, values):
+    for idx, value in enumerate(values):
+        arrays[idx].append(value)
 
-Py_report_html.plot_onto = plot_onto
+def get_arc_degree_and_radius_values(self, ontology, term, level_linspace, level_current_index):
+    term_level = ontology.get_term_level(term) - 2
+    current_level_idx = level_current_index[term_level]
+    current_level_arc_array = level_linspace[term_level]
+    arc_term_ont = float(current_level_arc_array[current_level_idx])
+    
+    level_current_index[term_level] += 1
+    return arc_term_ont, term_level
+
+def prepare_ontoplot_data(self, ontology, hpo_stats_dict, root_node, reference_node):
+    level_terms = ontology.get_ontology_levels()
+    hps_to_filter_out = set()
+    del level_terms[1] 
+    for term in level_terms[2]:
+        if term != root_node: hps_to_filter_out.update(ontology.get_descendants(term)+[term])
+
+    cleaned_level_terms = {(level - 2): [term for term in terms if term not in hps_to_filter_out] for level, terms in level_terms.items()}
+    level_linspace = {level: np.linspace(0, 2*np.pi, len(terms)) for level, terms in cleaned_level_terms.items()}
+    level_current_index = {level: 0 for level in level_linspace.keys()}
+    visited_terms = set(root_node)
+    terms_to_visit = [term for term in ontology.get_direct_descendants(root_node) if term not in hps_to_filter_out]
+
+    grey = (128.0/256, 128.0/256 , 128.0/256, 1.0)
+    color_palette = Py_report_html.get_color_palette(len([ term for term in ontology.get_direct_descendants(reference_node) if term not in hps_to_filter_out]))
+    top_parental_colors = {term: color_palette.pop() for term in ontology.get_direct_descendants(reference_node) if term not in hps_to_filter_out}
+    color_legend = {value: ontology.translate_id(key) for key, value in top_parental_colors.items()}
+    color_legend.update({grey: "Ontology"})
+
+    colors, sizes, radius_values, arc_values = [grey], [1], [0], [0]
+    while len(terms_to_visit) > 0:
+        term = terms_to_visit.pop(0)
+        if term in visited_terms: continue
+        visited_terms.add(term)    
+        childs = ontology.get_direct_descendants(term)
+        if childs != None and len(childs) > 0: terms_to_visit = [term for term in childs if term not in hps_to_filter_out] + terms_to_visit
+
+        arc_hp_ont, hp_level = self.get_arc_degree_and_radius_values(ontology, term, level_linspace, level_current_index)
+        if term in top_parental_colors.keys(): current_color = top_parental_colors[term]
+        self.append_values_to_arrays([colors, sizes, radius_values, arc_values], [grey, 1, hp_level, arc_hp_ont])
+        if hpo_stats_dict.get(term) != None: self.append_values_to_arrays([colors, sizes, radius_values, arc_values], [current_color, 1 + hpo_stats_dict[term], hp_level + 0.3, arc_hp_ont])
+    return [[colors, sizes, radius_values, arc_values], color_legend]
+
+def ontoplot(self, **user_options):
+  print(self.hash_vars[user_options['id']])
+  term_frequencies = {term: proportion*100 for term, proportion in self.hash_vars[user_options['id']].items()}
+  ontology = self.hash_vars[user_options['ontology']]
+  root_node = user_options['root_node']
+  reference_node = user_options['reference_node']
+  prepared_data, color_legend = self.prepare_ontoplot_data(ontology, term_frequencies, root_node, reference_node)
+  colors, sizes, radius_values, arc_values = prepared_data
+
+  rontoplot_table_format = [["colors", "sizes", "radius_values", "arc_values"]]
+  rontoplot_table_format = rontoplot_table_format + [[colors[i], sizes[i], radius_values[i], arc_values[i]] for i in range(len(colors))]
+  
+  ponto_id= f"{user_options['id']}_trans"
+  self.hash_vars[ponto_id] = rontoplot_table_format
+  user_options["id"] = ponto_id
+  return self.renderize_child_template(self.get_internal_template('ontoplot.txt'), color_legend=color_legend, **user_options)
+
+Py_report_html.append_values_to_arrays = append_values_to_arrays
+Py_report_html.get_arc_degree_and_radius_values = get_arc_degree_and_radius_values
+Py_report_html.prepare_ontoplot_data = prepare_ontoplot_data
+Py_report_html.ontoplot = ontoplot

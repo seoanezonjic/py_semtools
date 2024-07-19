@@ -1,1 +1,37 @@
-demo
+<% 	
+	import os
+	import pylab
+	import pandas as pd
+	import matplotlib.pyplot as plt
+	import warnings
+	
+
+	plotter.hash_vars[f"{id}_df"] = pd.DataFrame(plotter.hash_vars[id][1:], columns=plotter.hash_vars[id][0])
+	def draw_rontoplot(data, plotter_list):
+		fig = plotter_list['plt'].figure(figsize=(12,12))
+		ax = fig.add_subplot(projection='polar')
+		#color_legend = {"grey": "ontology", "blue": "cohort"}
+		#labels = [color_legend[value] for value in data["colors"]]
+
+		for color in data["colors"].unique():
+			d = data[data["colors"] == color]
+			scatter = ax.scatter(d["arc_values"], d["radius_values"], s=d["sizes"], color=color, label=color_legend[color])
+		#scatter = ax.scatter(data["arc_values"], data["radius_values"], s=data["sizes"], c=data["colors"], alpha=0.75, label=labels)
+		
+		# Legend for colors
+		legend1 = ax.legend(loc="upper right", fontsize="7")
+		ax.add_artist(legend1)
+		handles, labels = scatter.legend_elements(prop="sizes", alpha=0.6)
+		legend2 = ax.legend(handles, labels, loc="lower right", title="Frequency", fontsize="7")
+		
+		# Other customizations
+		ax.set_facecolor("white")
+		ax.set_theta_zero_location('N')
+		ax.set_theta_direction(-1)
+		ax.tick_params(axis='y', colors='white')
+		ax.grid(False)
+		ax.set_xticklabels([])
+		ax.set_yticklabels([])
+%>
+
+${plotter.static_plot_main(id=f"{id}_df", raw=True, header=True, row_names=False, var_attr=[0],  plotting_function = draw_rontoplot)}
