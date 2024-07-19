@@ -807,7 +807,7 @@ def get_childs(ontology, terms, modifiers):
 
 def format_data(data, options):
     if options.get('2cols') == True:
-        data = CmdTabs.aggregate_column(data, options.get('subject_column'), options.get('annotations_column'), sep=options.get('separator'))
+        data = CmdTabs.aggregate_column(data, options.get('subject_column'), options.get('annotations_column'), sep=options.get('separator'), agg_mode="concatenate")
     if not options.get('simple_list'): format_tabular_data(data, options.get('separator'), options.get('subject_column'), options.get('annotations_column'))
     return data
 
