@@ -1524,8 +1524,8 @@ def append_values_to_arrays(self, arrays, values):
     for idx, value in enumerate(values):
         arrays[idx].append(value)
 
-def get_arc_degree_and_radius_values(self, ontology, term, level_linspace, level_current_index):
-    term_level = ontology.get_term_level(term) - 2
+def get_arc_degree_and_radius_values(self, ontology, term, level_linspace, level_current_index, root_level):
+    term_level = ontology.get_term_level(term) - root_level
     current_level_idx = level_current_index[term_level]
     current_level_arc_array = level_linspace[term_level]
     arc_term_ont = float(current_level_arc_array[current_level_idx])
@@ -1535,22 +1535,41 @@ def get_arc_degree_and_radius_values(self, ontology, term, level_linspace, level
 
 def prepare_ontoplot_data(self, ontology, hpo_stats_dict, root_node, reference_node):
     level_terms = ontology.get_ontology_levels()
-    hps_to_filter_out = set()
-    del level_terms[1] 
-    for term in level_terms[2]:
-        if term != root_node: hps_to_filter_out.update(ontology.get_descendants(term)+[term])
+    hps_to_filter_in = set()
+    root_level = 0
+    root_found = False
+    levels_to_remove = []
 
-    cleaned_level_terms = {(level - 2): [term for term in terms if term not in hps_to_filter_out] for level, terms in level_terms.items()}
+    for level in sorted(level_terms.keys()): 
+        for term in level_terms[level]:
+            if term == root_node: 
+                hps_to_filter_in.update(ontology.get_descendants(term)+[term])
+                root_found = True
+                root_level = level
+
+        if root_found: break
+        levels_to_remove.append(level)
+    for level in levels_to_remove: del level_terms[level]
+
+
+    cleaned_level_terms = {(level - root_level): [term for term in terms if term in hps_to_filter_in] for level, terms in level_terms.items()}
     level_linspace = {level: np.linspace(0, 2*np.pi, len(terms)) for level, terms in cleaned_level_terms.items()}
     level_current_index = {level: 0 for level in level_linspace.keys()}
     visited_terms = set(root_node)
-    terms_to_visit = [term for term in ontology.get_direct_descendants(root_node) if term not in hps_to_filter_out]
+    terms_to_visit = [term for term in ontology.get_direct_descendants(root_node) if term in hps_to_filter_in]
 
+    black = (0.0, 0.0, 0.0, 1.0)
     grey = (128.0/256, 128.0/256 , 128.0/256, 1.0)
-    color_palette = Py_report_html.get_color_palette(len([ term for term in ontology.get_direct_descendants(reference_node) if term not in hps_to_filter_out]))
-    top_parental_colors = {term: color_palette.pop() for term in ontology.get_direct_descendants(reference_node) if term not in hps_to_filter_out}
+    color_palette = Py_report_html.get_color_palette(len([ term for term in ontology.get_direct_descendants(reference_node) if term  in hps_to_filter_in]))
+    top_parental_colors = {term: color_palette.pop() for term in ontology.get_direct_descendants(reference_node) if term  in hps_to_filter_in}
+    all_term_colors = defaultdict(lambda: black)
+    all_term_colors.update(top_parental_colors)
+    for parental in top_parental_colors.keys():
+        for child in ontology.get_descendants(parental):
+            if all_term_colors[child] == black: all_term_colors[child] = top_parental_colors[parental]
+
     color_legend = {value: ontology.translate_id(key) for key, value in top_parental_colors.items()}
-    color_legend.update({grey: "Ontology"})
+    color_legend.update({grey: "Ontology", black: "Others"})
 
     colors, sizes, radius_values, arc_values = [grey], [1], [0], [0]
     while len(terms_to_visit) > 0:
@@ -1558,18 +1577,18 @@ def prepare_ontoplot_data(self, ontology, hpo_stats_dict, root_node, reference_n
         if term in visited_terms: continue
         visited_terms.add(term)    
         childs = ontology.get_direct_descendants(term)
-        if childs != None and len(childs) > 0: terms_to_visit = [term for term in childs if term not in hps_to_filter_out] + terms_to_visit
+        if childs != None and len(childs) > 0: terms_to_visit = [term for term in childs if term  in hps_to_filter_in] + terms_to_visit
 
-        arc_hp_ont, hp_level = self.get_arc_degree_and_radius_values(ontology, term, level_linspace, level_current_index)
-        if term in top_parental_colors.keys(): current_color = top_parental_colors[term]
+        arc_hp_ont, hp_level = self.get_arc_degree_and_radius_values(ontology, term, level_linspace, level_current_index, root_level)
+        current_color = all_term_colors[term]
         self.append_values_to_arrays([colors, sizes, radius_values, arc_values], [grey, 1, hp_level, arc_hp_ont])
         if hpo_stats_dict.get(term) != None: self.append_values_to_arrays([colors, sizes, radius_values, arc_values], [current_color, 1 + hpo_stats_dict[term], hp_level + 0.3, arc_hp_ont])
     return [[colors, sizes, radius_values, arc_values], color_legend]
 
 def ontoplot(self, **user_options):
-  print(self.hash_vars[user_options['id']])
   term_frequencies = {term: proportion*100 for term, proportion in self.hash_vars[user_options['id']].items()}
   ontology = self.hash_vars[user_options['ontology']]
+  print({ontology.translate_id(term): proportion*100 for term, proportion in self.hash_vars[user_options['id']].items()})
   root_node = user_options['root_node']
   reference_node = user_options['reference_node']
   prepared_data, color_legend = self.prepare_ontoplot_data(ontology, term_frequencies, root_node, reference_node)
