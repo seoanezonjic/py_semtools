@@ -1588,7 +1588,6 @@ def prepare_ontoplot_data(self, ontology, hpo_stats_dict, root_node, reference_n
 def ontoplot(self, **user_options):
   term_frequencies = {term: proportion*100 for term, proportion in self.hash_vars[user_options['id']].items()}
   ontology = self.hash_vars[user_options['ontology']]
-  print({ontology.translate_id(term): proportion*100 for term, proportion in self.hash_vars[user_options['id']].items()})
   root_node = user_options['root_node']
   reference_node = user_options['reference_node']
   prepared_data, color_legend = self.prepare_ontoplot_data(ontology, term_frequencies, root_node, reference_node)
