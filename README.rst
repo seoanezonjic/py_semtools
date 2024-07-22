@@ -37,9 +37,12 @@ py_semtools
     Library to handle ontologies that allows queries and calculations (information coefficients, semantic similarity, ontology representations, etc) in a easy way. It can load any ontology that complies the obo format supported by OBO Foundry.
 
 
-This library has the following capabilities:
-* Ontology queries: It can perform term id or name translations, search the last stable id of a given term, infer term parents, etc.
-* Associate items to terms: You can load term profiles associated to items such as genes, patients, etc and obtain the more specific terms, get information coefficient based on the item frequency, calculate semantic similarity against other items, etc.
-* Ontology representations: There are methods to represent the specificity and frequency of the used terms in a set of items to visualize the ontology distribution in a given dataset.
-* Text similarity analysis with SentenceTransformers (SBERT)
+This library facilitates easy querying and calculations (information coefficients, semantic similarity, ontology representations, etc.) for ontologies. It supports any ontology that complies with the OBO format as endorsed by the OBO Foundry.
+
+Key features of this library include:
+
+*Ontology Queries: Perform term ID or name translations, search for the latest stable ID of a given term, infer term parents, and more.
+*Association of Items to Terms: Load term profiles associated with items such as genes, patients, etc., and retrieve the most specific terms. Calculate information coefficients based on item frequency and determine semantic similarity against other items.
+*Ontology Representations: Methods to represent the specificity and frequency of terms within a set of items, enabling visualization of the ontology distribution in a given dataset.
+*Text Similarity Analysis: Utilize Sentence Transformers (SBERT) for text similarity analysis.
 
