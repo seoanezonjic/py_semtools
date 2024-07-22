@@ -34,16 +34,12 @@ py_semtools
 ===========
 
 
-    Add a short description here!
+    Library to handle ontologies that allows queries and calculations (information coefficients, semantic similarity, ontology representations, etc) in a easy way. It can load any ontology that complies the obo format supported by OBO Foundry.
 
 
-A longer description of your project goes here...
+This library has the following capabilities:
+* Ontology queries: It can perform term id or name translations, search the last stable id of a given term, infer term parents, etc.
+* Associate items to terms: You can load term profiles associated to items such as genes, patients, etc and obtain the more specific terms, get information coefficient based on the item frequency, calculate semantic similarity against other items, etc.
+* Ontology representations: There are methods to represent the specificity and frequency of the used terms in a set of items to visualize the ontology distribution in a given dataset.
+* Text similarity analysis with SentenceTransformers (SBERT)
 
-
-.. _pyscaffold-notes:
-
-Note
-====
-
-This project has been set up using PyScaffold 4.5. For details and usage
-information on PyScaffold see https://pyscaffold.org/.
