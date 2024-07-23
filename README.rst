@@ -41,8 +41,8 @@ This library facilitates easy querying and calculations (information coefficient
 
 Key features of this library include:
 
-*Ontology Queries: Perform term ID or name translations, search for the latest stable ID of a given term, infer term parents, and more.
-*Association of Items to Terms: Load term profiles associated with items such as genes, patients, etc., and retrieve the most specific terms. Calculate information coefficients based on item frequency and determine semantic similarity against other items.
-*Ontology Representations: Methods to represent the specificity and frequency of terms within a set of items, enabling visualization of the ontology distribution in a given dataset.
-*Text Similarity Analysis: Utilize Sentence Transformers (SBERT) for text similarity analysis.
+* Ontology Queries: Perform term ID or name translations, search for the latest stable ID of a given term, infer term parents, and more.
+* Association of Items to Terms: Load term profiles associated with items such as genes, patients, etc., and retrieve the most specific terms. Calculate information coefficients based on item frequency and determine semantic similarity against other items.
+* Ontology Representations: Methods to represent the specificity and frequency of terms within a set of items, enabling visualization of the ontology distribution in a given dataset.
+* Text Similarity Analysis: Utilize Sentence Transformers (SBERT) for text similarity analysis.
 
