@@ -4,19 +4,15 @@
 	import pandas as pd
 	import matplotlib.pyplot as plt
 	import warnings
-	
+	import math
 
-	plotter.hash_vars[f"{id}_df"] = pd.DataFrame(plotter.hash_vars[id][1:], columns=plotter.hash_vars[id][0])
-	def draw_rontoplot(data, plotter_list):
+	def draw_static_rontoplot(data, plotter_list):
 		fig = plotter_list['plt'].figure(figsize=(12,12))
 		ax = fig.add_subplot(projection='polar')
-		#color_legend = {"grey": "ontology", "blue": "cohort"}
-		#labels = [color_legend[value] for value in data["colors"]]
 
 		for color in data["colors"].unique():
 			d = data[data["colors"] == color]
 			scatter = ax.scatter(d["arc_values"], d["radius_values"], s=d["sizes"], color=color, label=color_legend[color])
-		#scatter = ax.scatter(data["arc_values"], data["radius_values"], s=data["sizes"], c=data["colors"], alpha=0.75, label=labels)
 		
 		# Legend for colors
 		legend1 = ax.legend(loc="upper right", fontsize="7")
@@ -32,6 +28,17 @@
 		ax.grid(False)
 		ax.set_xticklabels([])
 		ax.set_yticklabels([])
+
+	def draw_dynamic_rontoplot(data, plotter_list):
+		fig = plotter_list['px'].scatter_polar(data, r="radius_values", theta="arc_values", color="colors", size="sizes", hover_name="hp_names", title=title, width=width, height=height)
+		return fig
+
+	plotter.hash_vars[f"{id}_df"] = pd.DataFrame(plotter.hash_vars[id][1:], columns=plotter.hash_vars[id][0])
+	if dynamic:
+		plotter.hash_vars[f"{id}_df"]["arc_values"] = plotter.hash_vars[f"{id}_df"]["arc_values"] / (2*math.pi) * 360
+		plotter.hash_vars[f"{id}_df"]["colors"] = plotter.hash_vars[f"{id}_df"]["colors"].apply(lambda color: color_legend[color])
+	
+	plotter_to_use = draw_dynamic_rontoplot if dynamic else draw_static_rontoplot
 %>
 
-${plotter.static_plot_main(id=f"{id}_df", raw=True, header=True, row_names=False, var_attr=[0],  plotting_function = draw_rontoplot)}
+${plotter.static_plot_main(id=f"{id}_df", dynamic=dynamic, raw=True, header=True, row_names=False, var_attr=[0],  plotting_function = plotter_to_use, height=height, width=width, title=title)}

@@ -1079,10 +1079,16 @@ class Ontology:
     # +translate+:: if true, term IDs will be translated to 
     # ===== Returns 
     # stored profiles terms frequencies
-    def get_profiles_terms_frequency(self, ratio = True, asArray = True, translate = True):
+    def get_profiles_terms_frequency(self, ratio = True, asArray = True, translate = True, count_parentals = False, min_freq = 0):
         freqs = defaultdict(lambda: 0)
-        for t_id, terms in self.profiles.items(): 
-            for term in terms: freqs[term] += 1 
+        for t_id, terms in self.profiles.items():
+            unique_terms = set() 
+            for term in terms: 
+                freqs[term] += 1 
+                if count_parentals:
+                    for parent in self.get_ancestors(term): unique_terms.add(parent)
+            if count_parentals:
+                for uniq_parent in unique_terms: freqs[uniq_parent] += 1
 
         if translate:
             translated_freqs = {}
@@ -1092,8 +1098,14 @@ class Ontology:
             freqs = translated_freqs
 
         if ratio:
+            terms_to_filter_out = []
             n_profiles = len(self.profiles)
-            for term, freq in freqs.items(): freqs[term] = freq / n_profiles
+            for term, freq in freqs.items(): 
+                frequency = freq / n_profiles
+                freqs[term] = frequency
+                if frequency < min_freq:
+                    terms_to_filter_out.append(term)
+            for term in terms_to_filter_out: del freqs[term]
 
         if asArray:
             freqs = [ [k, v] for k,v in freqs.items() ]
@@ -1559,7 +1571,7 @@ def prepare_ontoplot_data(self, ontology, hpo_stats_dict, root_node, reference_n
     terms_to_visit = [term for term in ontology.get_direct_descendants(root_node) if term in hps_to_filter_in]
 
     black = (0.0, 0.0, 0.0, 1.0)
-    grey = (128.0/256, 128.0/256 , 128.0/256, 1.0)
+    grey =  (0.5, 0.5, 0.5, 1.0)
     color_palette = Py_report_html.get_color_palette(len([ term for term in ontology.get_direct_descendants(reference_node) if term  in hps_to_filter_in]))
     top_parental_colors = {term: color_palette.pop() for term in ontology.get_direct_descendants(reference_node) if term  in hps_to_filter_in}
     all_term_colors = defaultdict(lambda: black)
@@ -1571,7 +1583,7 @@ def prepare_ontoplot_data(self, ontology, hpo_stats_dict, root_node, reference_n
     color_legend = {value: ontology.translate_id(key) for key, value in top_parental_colors.items()}
     color_legend.update({grey: "Ontology", black: "Others"})
 
-    colors, sizes, radius_values, arc_values = [grey], [1], [0], [0]
+    colors, sizes, radius_values, arc_values, hp_names = [grey], [1], [0], [0], [ontology.translate_id(root_node)]
     while len(terms_to_visit) > 0:
         term = terms_to_visit.pop(0)
         if term in visited_terms: continue
@@ -1581,24 +1593,26 @@ def prepare_ontoplot_data(self, ontology, hpo_stats_dict, root_node, reference_n
 
         arc_hp_ont, hp_level = self.get_arc_degree_and_radius_values(ontology, term, level_linspace, level_current_index, root_level)
         current_color = all_term_colors[term]
-        self.append_values_to_arrays([colors, sizes, radius_values, arc_values], [grey, 1, hp_level, arc_hp_ont])
-        if hpo_stats_dict.get(term) != None: self.append_values_to_arrays([colors, sizes, radius_values, arc_values], [current_color, 1 + hpo_stats_dict[term], hp_level + 0.3, arc_hp_ont])
-    return [[colors, sizes, radius_values, arc_values], color_legend]
+        self.append_values_to_arrays([colors, sizes, radius_values, arc_values, hp_names], [grey, 1, hp_level, arc_hp_ont, ontology.translate_id(term)])
+        if hpo_stats_dict.get(term) != None: self.append_values_to_arrays([colors, sizes, radius_values, arc_values, hp_names], [current_color, 1 + hpo_stats_dict[term], hp_level + 0.3, arc_hp_ont, ontology.translate_id(term)])
+    return [[colors, sizes, radius_values, arc_values, hp_names], color_legend]
 
 def ontoplot(self, **user_options):
+  dynamic = user_options.get('dynamic', False)
   term_frequencies = {term: proportion*100 for term, proportion in self.hash_vars[user_options['id']].items()}
   ontology = self.hash_vars[user_options['ontology']]
   root_node = user_options['root_node']
   reference_node = user_options['reference_node']
   prepared_data, color_legend = self.prepare_ontoplot_data(ontology, term_frequencies, root_node, reference_node)
-  colors, sizes, radius_values, arc_values = prepared_data
+  colors, sizes, radius_values, arc_values, hp_names = prepared_data
 
-  rontoplot_table_format = [["colors", "sizes", "radius_values", "arc_values"]]
-  rontoplot_table_format = rontoplot_table_format + [[colors[i], sizes[i], radius_values[i], arc_values[i]] for i in range(len(colors))]
+  rontoplot_table_format = [["colors", "sizes", "radius_values", "arc_values", "hp_names"]]
+  rontoplot_table_format = rontoplot_table_format + [[colors[i], sizes[i], radius_values[i], arc_values[i], hp_names[i]] for i in range(len(colors))]
   
   ponto_id= f"{user_options['id']}_trans"
   self.hash_vars[ponto_id] = rontoplot_table_format
   user_options["id"] = ponto_id
+  user_options["dynamic"] = dynamic
   return self.renderize_child_template(self.get_internal_template('ontoplot.txt'), color_legend=color_legend, **user_options)
 
 Py_report_html.append_values_to_arrays = append_values_to_arrays
