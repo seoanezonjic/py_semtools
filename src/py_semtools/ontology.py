@@ -228,7 +228,7 @@ class Ontology:
     # +return_ancestors+:: return ancestors if true or descendants if false
     # ===== Returns 
     # an array with all ancestors/descendants of given term or nil if parents are not available yet
-    def get_familiar(self, term, return_ancestors = True, sorted_by_level = False):
+    def get_familiar(self, term, return_ancestors = True, sorted_by_level = False, docopy = True):
         if sorted_by_level:
             familiars = []
             stack = deque(copy.deepcopy(self.get_direct_ancentors(term) if return_ancestors else self.get_direct_descendants(term)))
@@ -241,7 +241,7 @@ class Ontology:
         else:
             familiars = self.ancestors_index.get(term) if return_ancestors else self.descendants_index.get(term)
             if familiars != None:
-                familiars = copy.copy(familiars)
+                if docopy: familiars = copy.copy(familiars)
             else:
                 familiars = []
         return familiars
@@ -251,16 +251,16 @@ class Ontology:
     # +term+:: to be checked
     # ===== Returns 
     # an array with all ancestors of given term or false if parents are not available yet
-    def get_ancestors(self, term, sorted_by_level = False):
-        return self.get_familiar(term, True, sorted_by_level)
+    def get_ancestors(self, term, sorted_by_level = False, docopy = True):
+        return self.get_familiar(term, True, sorted_by_level, docopy=docopy)
 
     # Find descendants of a given term
     # ===== Parameters
     # +term+:: to be checked
     # ===== Returns 
     # an array with all descendants of given term or false if parents are not available yet
-    def get_descendants(self, term, sorted_by_level = False):
-        return self.get_familiar(term, False, sorted_by_level)        
+    def get_descendants(self, term, sorted_by_level = False, docopy = True):
+        return self.get_familiar(term, False, sorted_by_level, docopy=docopy)        
 
     # Gets ontology level of a specific term
     # ===== Returns 
@@ -462,19 +462,16 @@ class Ontology:
             lca = self.compute_LCA(termA, termB)
         return lca
 
-    def compute_LCA(self, termA, termB):
+    def compute_LCA(self, termA, termB, docopy = True):
         lca = []
-        anc_A = self.get_ancestors(termA) 
-        anc_B = self.get_ancestors(termB)
-        if not (len(anc_A) == 0 and len(anc_B) == 0):
-            anc_A.append(termA)
-            anc_B.append(termB)
-            lca = intersection(anc_A,  anc_B)
+        anc_A = self.get_ancestors(termA, docopy=docopy)
+        if termA == termB:
+            lca = anc_A
+        else:
+            anc_B = self.get_ancestors(termB, docopy=docopy)
+            if not (len(anc_A) == 0 and len(anc_B) == 0):
+                lca = intersection(anc_A,  anc_B)
         return lca
-
-    def compute_LCA_pair(self, pair):
-        res = self.compute_LCA(pair[0], pair[1])
-        return res
 
     # Find the Most Index Content shared Ancestor (MICA) of two given terms
     # ===== Parameters
@@ -501,7 +498,7 @@ class Ontology:
         return mica
 
     def get_MICA_from_pair(self, pair, ic_type = 'resnik'):
-        mica = self.compute_MICA(self.compute_LCA_pair(pair), ic_type = ic_type)
+        mica = self.compute_MICA(self.compute_LCA(*pair, docopy = False), ic_type = ic_type)
         return mica
 
     # Find the IC of the Most Index Content shared Ancestor (MICA) of two given terms
