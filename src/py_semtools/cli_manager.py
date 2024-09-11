@@ -412,7 +412,7 @@ def main_semtools(opts):
             format_tabular_data(refs, options['separator'], 0, 1)
             refs = dict(refs)
             if options['clean_profiles']:
-                refs = clean_profiles(ontology.profiles, ontology, options) 
+                refs_removed_profiles = clean_profiles(refs, ontology, options) 
             if refs == None or len(refs) == 0:
                 raise Exception('Reference profiles are empty after cleaning ')
         write_similarity_profile_list(options['output_file'], ontology, options['similarity'], refs)
