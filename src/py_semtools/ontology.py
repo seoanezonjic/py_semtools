@@ -471,6 +471,8 @@ class Ontology:
             anc_B = self.get_ancestors(termB, docopy=docopy)
             if not (len(anc_A) == 0 and len(anc_B) == 0):
                 lca = intersection(anc_A,  anc_B)
+            if termA in anc_B: lca.append(termA)
+            if termB in anc_A: lca.append(termB)
         return lca
 
     # Find the Most Index Content shared Ancestor (MICA) of two given terms
