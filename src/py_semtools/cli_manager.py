@@ -112,8 +112,6 @@ def semtools(args = None):
                         help="Download obo file from an official resource. MONDO, GO, HPO, EFO and DO are possible values.")
     parser.add_argument("-i", "--input_file", dest="input_file", default=None,
                         help="Filepath of profile data")
-    parser.add_argument("--load_hard_cleaned_profiles", dest="load_hard_cleaned_profiles", default=False, action='store_true',
-                        help="When loading profiles for similarities calculation or other purposes, set if you want to perform a hard cleaning of the profiles or not (default: False)")
     parser.add_argument("-o", "--output_file", dest="output_file", default=None,
                     help="Output filepath")
     parser.add_argument("-I", "--IC", dest="ic", default=None,
@@ -368,7 +366,7 @@ def main_semtools(opts):
         if options.get('list_translate') == None and options.get('filter_list') == None or options['keyword'] != None:
             data = format_data(data, options)
             if options.get('translate') != 'codes' and options.get('keyword') == None:
-                store_profiles(data, ontology, load_hard_cleaned_profiles = options['load_hard_cleaned_profiles'], options = options) 
+                store_profiles(data, ontology, clean_profiles = options['clean_profiles'], options = options) 
     if options.get('list_translate') != None:
         for term in data:
             if options['list_translate'] == 'names':
@@ -395,7 +393,7 @@ def main_semtools(opts):
             pr_id, terms = info
             profiles[pr_id] = terms
         translate(ontology, 'codes', options, profiles)
-        store_profiles(list(profiles.items()), ontology, load_hard_cleaned_profiles = options['load_hard_cleaned_profiles'], options = options)
+        store_profiles(list(profiles.items()), ontology, clean_profiles = options['clean_profiles'], options = options)
            
     if options.get('clean_profiles'):
         removed_profiles = clean_profiles(ontology.profiles, ontology, options)    
@@ -677,8 +675,8 @@ def main_get_sorted_suggestions(opts):
 def format_tabular_data(data, separator, id_col, terms_col):
   for i, row in enumerate(data): data[i] = [row[id_col], row[terms_col].split(separator)]
 
-def store_profiles(file, ontology, load_hard_cleaned_profiles = False, options = {}):
-  for t_id, terms in file: ontology.add_profile(t_id, terms, clean_hard = load_hard_cleaned_profiles, options = options)
+def store_profiles(file, ontology, clean_profiles = False, options = {}):
+  for t_id, terms in file: ontology.add_profile(t_id, terms, clean_hard = clean_profiles, options = options)
 
 def translate(ontology, mode, options, profiles = None):
   not_translated = {}
