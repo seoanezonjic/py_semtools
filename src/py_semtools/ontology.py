@@ -298,13 +298,13 @@ class Ontology:
     # ===== Return
     # main ID related to a given ID. Returns nil if given ID is not an allowed ID
     def get_main_id(self, t_id):
-        mainID = self.alternatives_index.get(t_id)
-        if not self.term_exist(t_id) and mainID == None: return None
-        if mainID != None: # Recursive code to get the definitive final term id if there are several alt_id in chain
-            new_id = self.get_main_id(mainID)
-            if new_id != mainID: new_id = self.get_main_id(new_id)
-            t_id = new_id    
-        return t_id
+        def_id = None
+        if not self.term_exist(t_id):
+            mainID = self.alternatives_index.get(t_id)
+            if mainID != None: def_id = mainID
+        else:
+            def_id = t_id
+        return def_id
 
     # Translate a given value using an already calcualted dictionary
     # ===== Parameters
