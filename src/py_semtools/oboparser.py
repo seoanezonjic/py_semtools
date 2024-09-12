@@ -3,6 +3,7 @@ import gzip
 import os
 import re
 import warnings
+import copy
 from py_semtools import FileParser
 class OboParser(FileParser):
 
@@ -172,7 +173,7 @@ class OboParser(FileParser):
     @classmethod
     def build_index(cls, ontology, extra_dicts: []):
         cls.get_index_obsoletes(obs_tag = cls.basic_tags['obsolete'], alt_tags = cls.basic_tags['alternative'])
-        cls.get_index_alternatives(alt_tag = cls.basic_tags['alternative'][-1])
+        cls.get_index_alternatives(alt_tag = cls.basic_tags['alternative'][-1]) # BEWARE!!: [-1] is for get the last element of the alternative list that is "alt_id" and must be this string, not other
         cls.remove_obsoletes_in_terms()
         cls.get_index_child_parent_relations(tag = cls.basic_tags['ancestors'][0])
         cls.calc_dictionary('name')
@@ -203,11 +204,13 @@ class OboParser(FileParser):
     # true if process ends without errors and false in other cases
     @classmethod
     def get_index_obsoletes(cls, obs_tag = None, alt_tags = None):
+        alt_tags = copy.copy(alt_tags)
+        alt_tags.remove('alt_id') # Remove alt_id from alt_tags because we want to add "replace_by" and "consider" relations only to alternative index that have opposite sense to "alt_id" field
         for term_id, term_tags in cls.each(att = True):
             obs_value = term_tags.get(obs_tag)
             if obs_value == 'true': # Obsolete tag presence, must be checked as string
                 alt_ids = []
-                for alt in alt_tags: # Check if alternative value is available
+                for alt in alt_tags: # Check if alternative ("replace_by" and "consider" attributes) value is available
                     t = term_tags.get(alt)
                     if t != None: alt_ids.append(t)
                 if len(alt_ids) > 0:
@@ -233,6 +236,26 @@ class OboParser(FileParser):
                 alt_ids = alt_ids - removable_terms
                 for alt_term in alt_ids:
                     cls.alternatives_index[alt_term] = term_id
+
+        # Update index taking into account that alternative ids could be nested as D -> C -> B -> A using several different ontology terms
+        infered_alternatives = {}
+        for alt_term, term_id in cls.alternatives_index.items():
+            nested_alt_ids = [term_id]
+            cls.get_nested_alternatives(term_id, nested_alt_ids)
+            if len(nested_alt_ids) > 1: # List has al least two terms so the realation al least is A -> B -> C 
+                final_term = nested_alt_ids[-1]
+                infered_alternatives[alt_term] = final_term
+                for middle_term in nested_alt_ids: # Add intermediate terms from alt_term to final_term
+                    if middle_term != final_term:
+                        infered_alternatives[middle_term] = final_term
+        cls.alternatives_index.update(infered_alternatives)
+    
+    @classmethod
+    def get_nested_alternatives(cls, term_id, nested_alt_ids):
+        query = cls.alternatives_index.get(term_id)
+        if query != None:
+            nested_alt_ids.append(query)
+            query = cls.get_nested_alternatives(query, nested_alt_ids)
 
     # Expand parentals set. Also launch frequencies process
     # ===== Parameters
