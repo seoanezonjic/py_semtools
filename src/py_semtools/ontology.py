@@ -702,7 +702,7 @@ class Ontology:
     # two arrays, first is the cleaned profile and second is the removed elements array
     def remove_ancestors_from_profile(self, prof):
         ancestors = []
-        for term in prof: ancestors.extend(self.get_ancestors(term))
+        for term in prof: ancestors.extend(self.get_ancestors(term, docopy = False))
         redundant = intersection(prof, set(ancestors))
         return diff(prof, redundant), redundant
 
