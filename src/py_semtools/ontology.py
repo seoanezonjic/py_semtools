@@ -728,11 +728,10 @@ class Ontology:
         if remove_alternatives: terms_without_ancestors, _ = self.remove_alternatives_from_profile(terms_without_ancestors) 
         return terms_without_ancestors
 
-    def clean_profile_hard(self, profile, options = {}, remove_alternatives = True):
+    def clean_profile_hard(self, profile, options = {}):
         profile, _ = self.check_ids(profile)
-        profile = [ t for t in profile if not self.is_obsolete(t)] 
         if options.get('term_filter') != None: profile = [ term for term in profile if options['term_filter'] in self.get_ancestors(term) ] # keep terms with parents in term filter
-        profile = self.clean_profile(pxc.uniq(profile), remove_alternatives)
+        profile, _ = self.remove_ancestors_from_profile(pxc.uniq(profile))
         return profile
 
     # Remove terms from a given profile using hierarchical info and scores set given  
@@ -1002,10 +1001,10 @@ class Ontology:
     # +store+:: if true, clenaed profiles will replace already stored profiles
     # ===== Returns 
     # a hash with cleaned profiles
-    def clean_profiles(self, store = False, options={}, remove_alternatives = True):
+    def clean_profiles(self, store = False, options={}):
         cleaned_profiles = {}
         for pr_id, terms in self.profiles.items():  
-            cleaned_profile = self.clean_profile_hard(terms, options, remove_alternatives)
+            cleaned_profile = self.clean_profile_hard(terms, options)
             if cleaned_profile != []:
                 cleaned_profiles[pr_id] = cleaned_profile
         if store: self.profiles = cleaned_profiles 
@@ -1117,7 +1116,7 @@ class Ontology:
     # ===== Returns 
     # array of parentals for each profile
     def parentals_per_profile(self):
-        cleaned_profiles = self.clean_profiles(store = False, options={}, remove_alternatives = False)
+        cleaned_profiles = self.clean_profiles(store = False, options={})
         parentals = [len(terms) - len(cleaned_profiles[id]) for id, terms in self.profiles.items()]
         return parentals
 
