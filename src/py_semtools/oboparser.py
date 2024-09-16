@@ -214,7 +214,9 @@ class OboParser(FileParser):
                     t = term_tags.get(alt)
                     if t != None: alt_ids.append(t)
                 if len(alt_ids) > 0:
-                    alt_id = alt_ids[0][0] #FIRST tag, FIRST id 
+                    alt_id = alt_ids[0][0] #FIRST tag, FIRST id
+                    alt_id_ontology = alt_id.split(":")[0]
+                    if alt_id_ontology not in term_id: continue #WARNING: This weird condition already happened with MONDO, so don't delete it. Check that the alternative ID suggested to replace is from the same ontology 
                     cls.alternatives_index[term_id] = alt_id
                 cls.obsoletes[term_id] = True
 
@@ -240,6 +242,7 @@ class OboParser(FileParser):
         # Update index taking into account that alternative ids could be nested as D -> C -> B -> A using several different ontology terms
         infered_alternatives = {}
         for alt_term, term_id in cls.alternatives_index.items():
+            if alt_term == term_id: continue #WARNING: THIS LINE IS NEEDED, AS WE HAVE ALREADY OBSERVED AUTOREFERENCES IN MONDO ONTOLOGY, WHICH CAUSE INFINITE RECURSION DEPTH ERROR
             nested_alt_ids = [term_id]
             cls.get_nested_alternatives(term_id, nested_alt_ids)
             if len(nested_alt_ids) > 1: # List has al least two terms so the realation al least is A -> B -> C 
