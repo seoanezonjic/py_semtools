@@ -215,9 +215,8 @@ class OboParser(FileParser):
                     if t != None: alt_ids.append(t)
                 if len(alt_ids) > 0:
                     alt_id = alt_ids[0][0] #FIRST tag, FIRST id
-                    alt_id_ontology = alt_id.split(":")[0]
-                    if alt_id_ontology not in term_id: continue #WARNING: This weird condition already happened with MONDO, so don't delete it. Check that the alternative ID suggested to replace is from the same ontology 
-                    cls.alternatives_index[term_id] = alt_id
+                    alt_id_ontology_prefix = alt_id.split(":")[0] if ":" in alt_id else None
+                    if not alt_id_ontology_prefix or alt_id_ontology_prefix in term_id: cls.alternatives_index[term_id] = alt_id #WARNING: This weird condition already happened with MONDO, so don't delete it. Check that the alternative ID suggested to replace is from the same ontology 
                 cls.obsoletes[term_id] = True
 
     # Expand alternative IDs arround all already stored terms
