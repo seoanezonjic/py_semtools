@@ -1169,7 +1169,7 @@ def get_abstract_index(file, options):
 		pubmed_article_set = mytree.getroot()
 		for article in pubmed_article_set:
 			total += 1
-			pmid, abstract_content, year = parse_abstract(article)
+			pmid, abstract_content, year, title = parse_abstract(article)
 
 			if pmid == None:
 				stats["no_pmid"] += 1
@@ -1178,7 +1178,7 @@ def get_abstract_index(file, options):
 				stats["no_abstract"] += 1
 				if options["debugging_mode"]: warnings.warn(f"Warning: Article PDMID:{pmid} without abstract found in file {file}")
 			else:
-				pmid_content_and_stats = prepare_indexes(abstract_content, pmid, file, year, options)
+				pmid_content_and_stats = prepare_indexes(abstract_content, pmid, file, year, title, options)
 				texts.append(pmid_content_and_stats)
 	
 	if options["debugging_mode"]: warnings.warn(f"stats:file={file},total={total},no_abstract={stats['no_abstract']},no_pmid={stats['no_pmid']}")
@@ -1188,6 +1188,9 @@ def parse_abstract(article):
 	pmid = None
 	abstract_content = ""
 	year = 0
+	title = None
+	title = article.find('MedlineCitation').find('Article').find('ArticleTitle').text
+	if title: title = title.lower()
 	for data in article.find('MedlineCitation'):
 		if data.tag == 'PMID':
 			pmid = data.text
@@ -1204,7 +1207,7 @@ def parse_abstract(article):
 						#print(repr(abstractText), "\n\n")
 						raw_abstract = perform_soft_cleaning(abstractText)                                                 
 						abstract_content += raw_abstract + "\n\n"
-	return pmid, abstract_content, year
+	return pmid, abstract_content, year, title
     
 
 ##### New functions to parse papers
@@ -1223,7 +1226,7 @@ def get_paper_index(file_path, options):
 		filename = os.path.join(file_path, member.path)
 		
 		paper_xml_string=f.read()
-		pmid, pmc, year, whole_content = parse_paper(paper_xml_string)
+		pmid, pmc, year, whole_content, title = parse_paper(paper_xml_string)
 
 		if pmid == None and PMC_PMID_dict != None: pmid = PMC_PMID_dict.get(pmc)
 
@@ -1235,7 +1238,7 @@ def get_paper_index(file_path, options):
 			if options["debugging_mode"]: warnings.warn(f"Warning: Article PDMID:{pmid} without abstract found in file {filename}")
 		else:				
 			#pmid_content_and_stats = prepare_indexes(whole_content, pmc+"-"+pmid, filename, year, options)
-			pmid_content_and_stats = prepare_indexes(whole_content, pmid, filename, year, options)
+			pmid_content_and_stats = prepare_indexes(whole_content, pmid, filename, year, title, options)
 			texts.append(pmid_content_and_stats)
 	tar.close()
 
@@ -1248,8 +1251,12 @@ def parse_paper(paper_xml_string):
 	year = 0
 	pmc = None
 	pmid = None
+	title = "None"
 	article_root = ET.fromstring(paper_xml_string)
 
+	#GETTING ARTICLE TITLE FIELD
+	title = article_root.find('front').find('article-meta').find('title-group').find('article-title').text
+	if title: title = title.lower()
 	#GETTING PMC ID, PMID AND YEAR
 	for id_tags in article_root.iter('article-id'):
 		if id_tags.get('pub-id-type') == "pmid":
@@ -1272,7 +1279,7 @@ def parse_paper(paper_xml_string):
 	if paper_root != None:
 		whole_content = perform_soft_cleaning(  get_paper_body_content(paper_root)  )
 
-	return pmid, pmc, year, whole_content
+	return pmid, pmc, year, whole_content, title
 
 def get_paper_body_content(element):
 	whole_content = ""
@@ -1295,7 +1302,7 @@ def get_paper_body_content(element):
 
 ### Common functions for both (Parser Papers and Parser Abstracts)
 
-def prepare_indexes(abstract_content, pmid, file, year, options):
+def prepare_indexes(abstract_content, pmid, file, year, title, options):
     pmid = pmid.replace("\n", "")
     file = file.replace("\n", "")
     year = str(year).replace("\n", "")
@@ -1307,10 +1314,10 @@ def prepare_indexes(abstract_content, pmid, file, year, options):
       number_of_sentences = str(len(flattened_abstract))
       length_of_sentences = ",".join([str(len(sentence)) for sentence in flattened_abstract])
       abstract_parts_json = json.dumps(abstract_parts)
-      return [pmid, abstract_parts_json, file, year, abstract_length, number_of_sentences, length_of_sentences]
+      return [pmid, abstract_parts_json, file, year, abstract_length, number_of_sentences, length_of_sentences, title]
     else:
       cleaned_abstract = abstract_content.strip().strip().replace("\r", "\n").replace("&#13", "\n").replace("\t", " ").replace("\n", " ")
-      return [pmid, cleaned_abstract, file, year, abstract_length, 1, abstract_length]
+      return [pmid, cleaned_abstract, file, year, abstract_length, 1, abstract_length, title]
 
 def perform_soft_cleaning(abstract):
 		raw_abstract = abstract.strip().replace("\r", "\n").replace("&#13", "\n").replace("\t", " ")
