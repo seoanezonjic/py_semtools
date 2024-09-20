@@ -1148,8 +1148,8 @@ def process_a_pack_of_custom_chunksize_abstracts(options_filenames_counter_trio)
 def save_abstracts(out_filename, abstracts):
     if len(abstracts) > 0:
       with gzip.open(out_filename, 'wt') as f:
-        for pmid, text, original_filename, year, abstract_length, number_of_sentences, length_of_sentences in abstracts:
-          f.write(f"{pmid}\t{text}\t{original_filename}\t{year}\t{abstract_length}\t{number_of_sentences}\t{length_of_sentences}\n")
+        for pmid, text, original_filename, year, abstract_length, number_of_sentences, length_of_sentences, title in abstracts:
+          f.write(f"{pmid}\t{text}\t{original_filename}\t{year}\t{abstract_length}\t{number_of_sentences}\t{length_of_sentences}\t{title}\n")
 
 def get_index(file, options):
 	if options["parse_paper"] == True:
@@ -1188,9 +1188,8 @@ def parse_abstract(article):
 	pmid = None
 	abstract_content = ""
 	year = 0
-	title = None
-	title = article.find('MedlineCitation').find('Article').find('ArticleTitle').text
-	if title: title = title.lower()
+	title = get_paper_body_content(article.find('MedlineCitation').find('Article').find('ArticleTitle')).strip()
+	title = title.lower() if title != None else "none"
 	for data in article.find('MedlineCitation'):
 		if data.tag == 'PMID':
 			pmid = data.text
@@ -1201,7 +1200,7 @@ def parse_abstract(article):
 		if abstract != None:
 			for fields in abstract:		
 				if fields.tag == 'AbstractText':
-					abstractText = get_paper_body_content(fields)
+					abstractText = get_paper_body_content(fields).strip()
 					if abstractText != None and abstractText != "":
 						#print(f"Text of abstract {pmid} in file {file}:")
 						#print(repr(abstractText), "\n\n")
@@ -1251,12 +1250,11 @@ def parse_paper(paper_xml_string):
 	year = 0
 	pmc = None
 	pmid = None
-	title = "None"
 	article_root = ET.fromstring(paper_xml_string)
 
 	#GETTING ARTICLE TITLE FIELD
-	title = article_root.find('front').find('article-meta').find('title-group').find('article-title').text
-	if title: title = title.lower()
+	title = get_paper_body_content(article_root.find('front').find('article-meta').find('title-group').find('article-title')).strip()
+	title = title.lower() if title != None else "none"
 	#GETTING PMC ID, PMID AND YEAR
 	for id_tags in article_root.iter('article-id'):
 		if id_tags.get('pub-id-type') == "pmid":
@@ -1277,7 +1275,7 @@ def parse_paper(paper_xml_string):
 	#GETTING PAPER WHOLE CONTENT
 	paper_root = article_root.find("body")
 	if paper_root != None:
-		whole_content = perform_soft_cleaning(  get_paper_body_content(paper_root)  )
+		whole_content = perform_soft_cleaning(  get_paper_body_content(paper_root).strip()  )
 
 	return pmid, pmc, year, whole_content, title
 
@@ -1289,14 +1287,14 @@ def get_paper_body_content(element):
 	# Content before nested element
 	if element.tag not in ["xref", "sup"]:
 		content = element.text
-		if content != None: whole_content += f" {content.strip()} "
+		if content != None: whole_content += " " + content.replace('\n', ' ') + " " 
 	# Content of nested element
 	for child in element: 
 		whole_content += get_paper_body_content(child)
 	# Content after nested element
 	tail = element.tail
-	if tail != None: whole_content += f" {tail.strip()} "
-	return whole_content
+	if tail != None: whole_content +=  " " + tail.replace('\n', ' ') + " "
+	return re.sub(r'\s+', ' ', whole_content)
 
 
 
