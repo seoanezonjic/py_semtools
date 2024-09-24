@@ -1109,7 +1109,7 @@ def process_several_abstracts(options, filenames):
         process_single_abstract([options, filename])
     else:
       with ProcessPoolExecutor(max_workers=options["n_cpus"]) as executor:
-        executor.map(process_single_abstract, [[options, filename] for filename in filenames])
+        for result in executor.map(process_single_abstract, [[options, filename] for filename in filenames]): return result
 
 def process_single_abstract(options_filename_pair):
     options, filename = options_filename_pair
@@ -1125,9 +1125,14 @@ def process_several_custom_chunksize_abstracts(options, filenames):
       filenames_lots = []
       lot_size = (len(filenames)+(len(filenames) % options["n_cpus"])) // options["n_cpus"]
       for index in range(0, options["n_cpus"]):
-        filenames_lots.append(filenames[index*lot_size:(index+1)*lot_size])
+        if index == options["n_cpus"]-1:
+          filenames_lots.append(filenames[index*lot_size:])
+        else:
+          filenames_lots.append(filenames[index*lot_size:(index+1)*lot_size])
+
+      distributed_work = [[options, filename_lot, idx] for idx,filename_lot in enumerate(filenames_lots) if filename_lot]
       with ProcessPoolExecutor(max_workers=options["n_cpus"]) as executor:
-        executor.map(process_a_pack_of_custom_chunksize_abstracts, [[options, filename_lot, idx] for idx,filename_lot in enumerate(filenames_lots)])
+        for result in executor.map(process_a_pack_of_custom_chunksize_abstracts, distributed_work): return result
 
 def process_a_pack_of_custom_chunksize_abstracts(options_filenames_counter_trio):
     options, filenames, sup_counter = options_filenames_counter_trio
@@ -1148,8 +1153,8 @@ def process_a_pack_of_custom_chunksize_abstracts(options_filenames_counter_trio)
 def save_abstracts(out_filename, abstracts):
     if len(abstracts) > 0:
       with gzip.open(out_filename, 'wt') as f:
-        for pmid, text, original_filename, year, abstract_length, number_of_sentences, length_of_sentences, title in abstracts:
-          f.write(f"{pmid}\t{text}\t{original_filename}\t{year}\t{abstract_length}\t{number_of_sentences}\t{length_of_sentences}\t{title}\n")
+        for pmid, text, original_filename, year, abstract_length, number_of_sentences, length_of_sentences, title, article_type, article_category in abstracts:
+          f.write(f"{pmid}\t{text}\t{original_filename}\t{year}\t{abstract_length}\t{number_of_sentences}\t{length_of_sentences}\t{title}\t{article_type}\t{article_category}\n")
 
 def get_index(file, options):
 	if options["parse_paper"] == True:
@@ -1169,7 +1174,7 @@ def get_abstract_index(file, options):
 		pubmed_article_set = mytree.getroot()
 		for article in pubmed_article_set:
 			total += 1
-			pmid, abstract_content, year, title = parse_abstract(article)
+			pmid, abstract_content, year, title, article_type, article_category = parse_abstract(article)
 
 			if pmid == None:
 				stats["no_pmid"] += 1
@@ -1178,7 +1183,7 @@ def get_abstract_index(file, options):
 				stats["no_abstract"] += 1
 				if options["debugging_mode"]: warnings.warn(f"Warning: Article PDMID:{pmid} without abstract found in file {file}")
 			else:
-				pmid_content_and_stats = prepare_indexes(abstract_content, pmid, file, year, title, options)
+				pmid_content_and_stats = prepare_indexes(abstract_content, pmid, file, year, title, article_type, article_category, options)
 				texts.append(pmid_content_and_stats)
 	
 	if options["debugging_mode"]: warnings.warn(f"stats:file={file},total={total},no_abstract={stats['no_abstract']},no_pmid={stats['no_pmid']}")
@@ -1187,6 +1192,8 @@ def get_abstract_index(file, options):
 def parse_abstract(article):
 	pmid = None
 	abstract_content = ""
+	article_type = "none"
+	article_category = "none"
 	year = 0
 	title = get_paper_body_content(article.find('MedlineCitation').find('Article').find('ArticleTitle')).strip()
 	title = title.lower() if title != None else "none"
@@ -1206,7 +1213,7 @@ def parse_abstract(article):
 						#print(repr(abstractText), "\n\n")
 						raw_abstract = perform_soft_cleaning(abstractText)                                                 
 						abstract_content += raw_abstract + "\n\n"
-	return pmid, abstract_content, year, title
+	return pmid, abstract_content, year, title, article_type, article_category
     
 
 ##### New functions to parse papers
@@ -1225,7 +1232,7 @@ def get_paper_index(file_path, options):
 		filename = os.path.join(file_path, member.path)
 		
 		paper_xml_string=f.read()
-		pmid, pmc, year, whole_content, title = parse_paper(paper_xml_string)
+		pmid, pmc, year, whole_content, title, article_type, article_category = parse_paper(paper_xml_string)
 
 		if pmid == None and PMC_PMID_dict != None: pmid = PMC_PMID_dict.get(pmc)
 
@@ -1237,13 +1244,21 @@ def get_paper_index(file_path, options):
 			if options["debugging_mode"]: warnings.warn(f"Warning: Article PDMID:{pmid} without abstract found in file {filename}")
 		else:				
 			#pmid_content_and_stats = prepare_indexes(whole_content, pmc+"-"+pmid, filename, year, options)
-			pmid_content_and_stats = prepare_indexes(whole_content, pmid, filename, year, title, options)
+			pmid_content_and_stats = prepare_indexes(whole_content, pmid, filename, year, title, article_type, article_category, options)
 			texts.append(pmid_content_and_stats)
 	tar.close()
 
 	if options["debugging_mode"]: warnings.warn(f"stats:file={file_path},total={total},no_abstract={stats['no_abstract']},no_pmid={stats['no_pmid']}")
 	return texts
 
+def do_recursive_find(initial_tag, subtags_list):
+	if len(subtags_list) == 0:
+		return initial_tag.text
+	nested_tag = initial_tag.find(subtags_list[0])
+	if nested_tag != None:
+		return do_recursive_find(nested_tag, subtags_list[1:])
+	else:
+		return None
 
 def parse_paper(paper_xml_string):
 	whole_content = ""
@@ -1255,6 +1270,10 @@ def parse_paper(paper_xml_string):
 	#GETTING ARTICLE TITLE FIELD
 	title = get_paper_body_content(article_root.find('front').find('article-meta').find('title-group').find('article-title')).strip()
 	title = title.lower() if title != None else "none"
+	#GETTING article-type property from article tag and article category from article-categories tag
+	article_type = article_root.get('article-type').lower() if article_root.get('article-type') != None else "none"
+	article_category = do_recursive_find(article_root, ['front','article-meta','article-categories', 'subj-group', 'subject'])
+	article_category = article_category.lower() if article_category not in [None, ""] else "none"
 	#GETTING PMC ID, PMID AND YEAR
 	for id_tags in article_root.iter('article-id'):
 		if id_tags.get('pub-id-type') == "pmid":
@@ -1277,7 +1296,7 @@ def parse_paper(paper_xml_string):
 	if paper_root != None:
 		whole_content = perform_soft_cleaning(  get_paper_body_content(paper_root).strip()  )
 
-	return pmid, pmc, year, whole_content, title
+	return pmid, pmc, year, whole_content, title, article_type, article_category
 
 def get_paper_body_content(element):
 	whole_content = ""
@@ -1300,7 +1319,7 @@ def get_paper_body_content(element):
 
 ### Common functions for both (Parser Papers and Parser Abstracts)
 
-def prepare_indexes(abstract_content, pmid, file, year, title, options):
+def prepare_indexes(abstract_content, pmid, file, year, title, article_type, article_category, options):
     pmid = pmid.replace("\n", "")
     file = file.replace("\n", "")
     year = str(year).replace("\n", "")
@@ -1312,10 +1331,13 @@ def prepare_indexes(abstract_content, pmid, file, year, title, options):
       number_of_sentences = str(len(flattened_abstract))
       length_of_sentences = ",".join([str(len(sentence)) for sentence in flattened_abstract])
       abstract_parts_json = json.dumps(abstract_parts)
-      return [pmid, abstract_parts_json, file, year, abstract_length, number_of_sentences, length_of_sentences, title]
+      prepared_index = [pmid, abstract_parts_json, file, year, abstract_length, number_of_sentences, length_of_sentences, 
+                        title, article_type, article_category] 
     else:
       cleaned_abstract = abstract_content.strip().strip().replace("\r", "\n").replace("&#13", "\n").replace("\t", " ").replace("\n", " ")
-      return [pmid, cleaned_abstract, file, year, abstract_length, 1, abstract_length, title]
+      prepared_index = [pmid, cleaned_abstract, file, year, abstract_length, 1, abstract_length, 
+                        title, article_type, article_category]
+    return prepared_index
 
 def perform_soft_cleaning(abstract):
 		raw_abstract = abstract.strip().replace("\r", "\n").replace("&#13", "\n").replace("\t", " ")
