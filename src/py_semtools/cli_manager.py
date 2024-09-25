@@ -1122,17 +1122,21 @@ def process_several_custom_chunksize_abstracts(options, filenames):
     if options["n_cpus"] == 1:
       process_a_pack_of_custom_chunksize_abstracts([options, filenames, 0])
     else:
-      filenames_lots = []
-      lot_size = (len(filenames)+(len(filenames) % options["n_cpus"])) // options["n_cpus"]
-      for index in range(0, options["n_cpus"]):
-        if index == options["n_cpus"]-1:
-          filenames_lots.append(filenames[index*lot_size:])
-        else:
-          filenames_lots.append(filenames[index*lot_size:(index+1)*lot_size])
-
+      filenames_lots = distribute_files_workload(filenames, options["n_cpus"])
       distributed_work = [[options, filename_lot, idx] for idx,filename_lot in enumerate(filenames_lots) if filename_lot]
       with ProcessPoolExecutor(max_workers=options["n_cpus"]) as executor:
         for result in executor.map(process_a_pack_of_custom_chunksize_abstracts, distributed_work): return result
+
+def distribute_files_workload(filenames, n_cpus):
+    filenames_lots = []
+    lot_size = (len(filenames)+(len(filenames) % n_cpus)) // n_cpus
+    for index in range(0, n_cpus):
+      if index == n_cpus-1:
+        for idx, remaining_filename in enumerate(filenames[index*lot_size:]):
+          filenames_lots[idx].append(remaining_filename)
+      else:
+        filenames_lots.append(filenames[index*lot_size:(index+1)*lot_size])
+    return filenames_lots
 
 def process_a_pack_of_custom_chunksize_abstracts(options_filenames_counter_trio):
     options, filenames, sup_counter = options_filenames_counter_trio
@@ -1195,8 +1199,8 @@ def parse_abstract(article):
 	article_type = "none"
 	article_category = "none"
 	year = 0
-	title = get_paper_body_content(article.find('MedlineCitation').find('Article').find('ArticleTitle')).strip()
-	title = title.lower() if title != None else "none"
+	title = do_recursive_find(article, ['MedlineCitation','Article','ArticleTitle'])
+	title = get_paper_body_content(title).strip().lower() if check_not_none_or_empty(title) else "none"
 	for data in article.find('MedlineCitation'):
 		if data.tag == 'PMID':
 			pmid = data.text
@@ -1251,15 +1255,6 @@ def get_paper_index(file_path, options):
 	if options["debugging_mode"]: warnings.warn(f"stats:file={file_path},total={total},no_abstract={stats['no_abstract']},no_pmid={stats['no_pmid']}")
 	return texts
 
-def do_recursive_find(initial_tag, subtags_list):
-	if len(subtags_list) == 0:
-		return initial_tag.text
-	nested_tag = initial_tag.find(subtags_list[0])
-	if nested_tag != None:
-		return do_recursive_find(nested_tag, subtags_list[1:])
-	else:
-		return None
-
 def parse_paper(paper_xml_string):
 	whole_content = ""
 	year = 0
@@ -1268,12 +1263,12 @@ def parse_paper(paper_xml_string):
 	article_root = ET.fromstring(paper_xml_string)
 
 	#GETTING ARTICLE TITLE FIELD
-	title = get_paper_body_content(article_root.find('front').find('article-meta').find('title-group').find('article-title')).strip()
-	title = title.lower() if title != None else "none"
+	title = do_recursive_find(article_root, ['front','article-meta','title-group','article-title'])
+	title = get_paper_body_content(title).strip().lower() if check_not_none_or_empty(title) else "none"
 	#GETTING article-type property from article tag and article category from article-categories tag
 	article_type = article_root.get('article-type').lower() if article_root.get('article-type') != None else "none"
 	article_category = do_recursive_find(article_root, ['front','article-meta','article-categories', 'subj-group', 'subject'])
-	article_category = article_category.lower() if article_category not in [None, ""] else "none"
+	article_category = article_category.text.strip().lower() if check_not_none_or_empty(article_category) else "none"
 	#GETTING PMC ID, PMID AND YEAR
 	for id_tags in article_root.iter('article-id'):
 		if id_tags.get('pub-id-type') == "pmid":
@@ -1363,6 +1358,23 @@ def split_abstract(abstract):
 		
 		return formated
 
+### AUXILIARY FUNCTIONS
+
+def do_recursive_find(initial_tag, subtags_list):
+	if len(subtags_list) == 0:
+		return initial_tag
+	nested_tag = initial_tag.find(subtags_list[0])
+	if nested_tag != None:
+		return do_recursive_find(nested_tag, subtags_list[1:])
+	else:
+		return None
+
+def check_not_none_or_empty(variable):
+	if type(variable) != str: 
+		condition = variable != None and variable.text != None and variable.text.strip().replace("&#x000a0;", "") != ""
+	else:
+		condition = variable != None and variable.strip().replace("&#x000a0;", "") != ""
+	return condition
 
 #def split_abstract(abstract):
 #    #paragraph_splitter = RecursiveCharacterTextSplitter(chunk_size = 100, chunk_overlap  = 20, length_function = len, separators=[r"\n\n", r"\.\n?"], keep_separator=False, is_separator_regex=True)
