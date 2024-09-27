@@ -22,6 +22,7 @@ class TestOBOFunctionalities(unittest.TestCase):
 
         self.file_Header = {"file": os.path.join(DATA_TEST_PATH, "only_header_sample.obo"), "name": "only_header_sample"}
         self.file_Hierarchical = {"file": os.path.join(DATA_TEST_PATH, "hierarchical_sample.obo"), "name": "hierarchical_sample"}
+        self.file_Branched = {"file": os.path.join(DATA_TEST_PATH, "branched.obo"), "name": "Branched"}        
         #self.file_Circular = {"file": os.path.join(DATA_TEST_PATH, "circular_sample.obo"), "name": "circular_sample"}
         self.file_Atomic = {"file": os.path.join(DATA_TEST_PATH, "sparse_sample.obo"), "name": "sparse_sample"}
         self.file_Sparse = {"file": os.path.join(DATA_TEST_PATH, "sparse2_sample.obo"), "name": "sparse2_sample"}
@@ -51,6 +52,19 @@ class TestOBOFunctionalities(unittest.TestCase):
                 "Child2": {"id": "Child2", "name": "Child2", "synonym": ["\"1,6-alpha-mannosyltransferase activity\" EXACT []"], "alt_id": ["Child3", "Child4"], "is_a": ["Parental"]}, 
                 "Child3": {"id": "Child2", "name": "Child2", "synonym": ["\"1,6-alpha-mannosyltransferase activity\" EXACT []"], "alt_id": ["Child3", "Child4"], "is_a": ["Parental"]}, 
                 "Child4": {"id": "Child2", "name": "Child2", "synonym": ["\"1,6-alpha-mannosyltransferase activity\" EXACT []"], "alt_id": ["Child3", "Child4"], "is_a": ["Parental"]}}, 
+            "typedefs": {}, "instances": {}})
+        self.load_Branched = (
+            {"file": os.path.join(DATA_TEST_PATH, "Branched.obo"), "name": "Branched"}, 
+            {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
+            {"terms": {
+                "Parental": {"id": "Parental", "name": "All", "comment": "none"}, 
+                "ChildA": {"id": "ChildA", "name": "ChildA", "is_a": ["Parental"]}, 
+                "ChildB": {"id": "ChildB", "name": "ChildB", "is_a": ["Parental"]}, 
+                "GrandChildA1": {"id": "GrandChildA1", "name": "GrandChildA1", "is_a": ["ChildA"]},
+                "GrandChildA2": {"id": "GrandChildA2", "name": "GrandChildA2", "is_a": ["ChildA"]},
+                "GrandChildB1": {"id": "GrandChildB1", "name": "GrandChildB1", "is_a": ["ChildB"]},
+                "GrandChildB2": {"id": "GrandChildB2", "name": "GrandChildB2", "is_a": ["ChildB"]}
+                }, 
             "typedefs": {}, "instances": {}})
         #self.load_Circular = (
         #    {"file": os.path.join(DATA_TEST_PATH, "circular_sample.obo"), "name": "circular_sample"}, 
@@ -92,6 +106,7 @@ class TestOBOFunctionalities(unittest.TestCase):
 
         # Create necessary instnaces
         self.hierarchical = Ontology(file= self.file_Hierarchical["file"], load_file= True)
+        self.branched = Ontology(file= self.file_Branched["file"], load_file= True)
         self.short_hierarchical = Ontology(file= self.file_SH["file"],  load_file= True)
         self.enrichment_hierarchical = Ontology(file= self.file_Enr["file"],  load_file= True)
         #self.circular = Ontology(file= self.file_Circular["file"], load_file= True)
@@ -540,6 +555,32 @@ class TestOBOFunctionalities(unittest.TestCase):
                                                  "D": 0.0 }
         self.assertEqual((expected_profiles_IC_resnik, expected_profiles_IC_resnik_observed), self.hierarchical.get_profiles_resnik_dual_ICs())
     
+    # Comparisons and similarity matrix
+    ####################################
+
+    def test_calc_sim_term2term_similarity_matrix(self):
+        reference_profile = ["ChildA1", "ChildA2"]
+        ref_profile_id = "X"
+        ref_profile_dict = {ref_profile_id: reference_profile}
+        external_profiles = {"A": ["ChildA1", "ChildA2"], "B": ["ChildB1", "ChildB2"], "C": ["ChildA1", "Parental"], "D": ["ChildB1","Parental"], "E": ["Parental"], "F": ["ChildA1"]}
+
+        self.branched.precompute()
+        ont = self.branched
+        ont.load_profiles(ref_profile_dict)
+        
+        candidate_sim_matrix, candidates, candidates_ids, similarities = ont.calc_sim_term2term_similarity_matrix(reference_profile, ref_profile_id, external_profiles)
+        self.assertEqual(candidate_sim_matrix, [['Child1A1', 1.0, 1.0, 1.0, 0.0, 0.0, 0.0], ['ChildA2', 1.0, 0, 0.0, 0.0, 0.0, 0]])
+        self.assertEqual(candidates, [['A', 1.0], ['F', 0.8118083219821401], ['C', 0.6088562414866051], ['B', 0.0], ['D', 0.0], ['E', 0.0]])
+        self.assertEqual(candidates_ids, ['A', 'F', 'C', 'B', 'D', 'E'])
+        self.assertEqual(similarities, {'X': {'A': 1.0, 'B': 0.0, 'C': 0.6088562414866051, 'D': 0.0, 'E': 0.0, 'F': 0.8118083219821401}})
+
+    def test_get_term2term_similarity_matrix(self): #Helper function of calc_sim_term2term_similarity_matrix
+        pass
+        #self.assertFalse(True, "Helper function of calc_sim_term2term_similarity_matrix")
+
+    def test_get_detailed_similarity(self): #Helper function of get_term2term_similarity_matrix
+        pass
+        #self.assertFalse(True, "Helper function of get_term2term_similarity_matrix")
 
     # specifity_index related methods
     ####################################

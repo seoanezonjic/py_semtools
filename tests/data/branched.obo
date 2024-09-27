@@ -1,0 +1,37 @@
+format-version: 1.2
+data-version: test/a/b/c/
+
+[Term]
+id: Parental
+name: All
+comment: none
+
+[Term]
+id: ChildA
+name: ChildA
+is_a: Parental ! Parental
+
+[Term]
+id: ChildB
+name: ChildB
+is_a: Parental ! Parental
+
+[Term]
+id: ChildA1
+name: Child1A1
+is_a: ChildA ! ChildA
+
+[Term]
+id: ChildA2
+name: ChildA2
+is_a: ChildA ! ChildA
+
+[Term]
+id: ChildB1
+name: ChildB1
+is_a: ChildB ! ChildB
+
+[Term]
+id: ChildB2
+name: ChildB2
+is_a: ChildB ! ChildB
