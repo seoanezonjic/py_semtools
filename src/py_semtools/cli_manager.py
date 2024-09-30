@@ -1236,7 +1236,7 @@ def get_paper_index(file_path, options):
 		filename = os.path.join(file_path, member.path)
 		
 		paper_xml_string=f.read()
-		pmid, pmc, year, whole_content, title, article_type, article_category = parse_paper(paper_xml_string)
+		pmid, pmc, year, whole_content, title, article_type, article_category = parse_paper(paper_xml_string, filename)
 
 		if pmid == None and PMC_PMID_dict != None: pmid = PMC_PMID_dict.get(pmc)
 
@@ -1255,43 +1255,48 @@ def get_paper_index(file_path, options):
 	if options["debugging_mode"]: warnings.warn(f"stats:file={file_path},total={total},no_abstract={stats['no_abstract']},no_pmid={stats['no_pmid']}")
 	return texts
 
-def parse_paper(paper_xml_string):
-	whole_content = ""
-	year = 0
-	pmc = None
-	pmid = None
-	article_root = ET.fromstring(paper_xml_string)
+def parse_paper(paper_xml_string, filename):
+  try:
+    whole_content = ""
+    year = 0
+    pmc = None
+    pmid = None
+    article_root = ET.fromstring(paper_xml_string)
 
-	#GETTING ARTICLE TITLE FIELD
-	title = do_recursive_find(article_root, ['front','article-meta','title-group','article-title'])
-	title = get_paper_body_content(title).strip().lower() if check_not_none_or_empty(title) else "none"
-	#GETTING article-type property from article tag and article category from article-categories tag
-	article_type = article_root.get('article-type').lower() if article_root.get('article-type') != None else "none"
-	article_category = do_recursive_find(article_root, ['front','article-meta','article-categories', 'subj-group', 'subject'])
-	article_category = article_category.text.strip().lower() if check_not_none_or_empty(article_category) else "none"
-	#GETTING PMC ID, PMID AND YEAR
-	for id_tags in article_root.iter('article-id'):
-		if id_tags.get('pub-id-type') == "pmid":
-			pmid = id_tags.text 
-		if id_tags.get('pub-id-type') == "pmc":
-			pmc = id_tags.text
+    #GETTING ARTICLE TITLE FIELD
+    title = do_recursive_find(article_root, ['front','article-meta','title-group','article-title'])
+    title = get_paper_body_content(title).strip().lower() if check_not_none_or_empty(title) else "none"
+    #GETTING article-type property from article tag and article category from article-categories tag
+    article_type = article_root.get('article-type').lower() if article_root.get('article-type') != None else "none"
+    article_category = do_recursive_find(article_root, ['front','article-meta','article-categories', 'subj-group', 'subject'])
+    article_category = article_category.text.strip().lower() if check_not_none_or_empty(article_category) else "none"
+    #GETTING PMC ID, PMID AND YEAR
+    for id_tags in article_root.iter('article-id'):
+      if id_tags.get('pub-id-type') == "pmid":
+        pmid = id_tags.text 
+      if id_tags.get('pub-id-type') == "pmc":
+        pmc = id_tags.text
 
-	for date_fields in article_root.iter("date"):
-		if date_fields.get("date-type") == "accepted":
-			year = date_fields.find("year").text
-	if year == 0: #In case date-type is not available, we try getting year by using pmc-release field
-		for date_fields in article_root.iter("pub-date"):
-			if date_fields.get("pub-type") == "pmc-release":
-				year = date_fields.find("year").text
-			if date_fields.get("pub-type") != "pmc-release" and year == 0:
-				year = date_fields.find("year").text
+    for date_fields in article_root.iter("date"):
+      if date_fields.get("date-type") == "accepted":
+        year = date_fields.find("year").text
+    if year == 0: #In case date-type is not available, we try getting year by using pmc-release field
+      for date_fields in article_root.iter("pub-date"):
+        if date_fields.get("pub-type") == "pmc-release":
+          year = date_fields.find("year").text
+        if date_fields.get("pub-type") != "pmc-release" and year == 0:
+          year = date_fields.find("year").text
 
-	#GETTING PAPER WHOLE CONTENT
-	paper_root = article_root.find("body")
-	if paper_root != None:
-		whole_content = perform_soft_cleaning(  get_paper_body_content(paper_root).strip()  )
+    #GETTING PAPER WHOLE CONTENT
+    paper_root = article_root.find("body")
+    if paper_root != None:
+      whole_content = perform_soft_cleaning(  get_paper_body_content(paper_root).strip()  )
 
-	return pmid, pmc, year, whole_content, title, article_type, article_category
+  except Exception as e:
+    warnings.warn(f"ERROR: The following error has been found in file {filename}:\n{e}")
+    pmid = pmc = year = whole_content = title = article_type = article_category = None
+  finally:     
+    return pmid, pmc, year, whole_content, title, article_type, article_category
 
 def get_paper_body_content(element):
 	whole_content = ""
