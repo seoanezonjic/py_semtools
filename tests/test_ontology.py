@@ -568,7 +568,8 @@ class TestOBOFunctionalities(unittest.TestCase):
         ont = self.branched
         ont.load_profiles(ref_profile_dict)
         
-        candidate_sim_matrix, candidates, candidates_ids, similarities = ont.calc_sim_term2term_similarity_matrix(reference_profile, ref_profile_id, external_profiles)
+        candidate_sim_matrix, candidates, candidates_ids, similarities = ont.calc_sim_term2term_similarity_matrix(reference_profile, ref_profile_id, external_profiles, string_format=True)
+        candidate_sim_matrix.pop(0)
         self.assertEqual(candidate_sim_matrix, [['Child1A1', 1.0, 1.0, 1.0, 0.0, 0.0, 0.0], ['ChildA2', 1.0, 0, 0.0, 0.0, 0.0, 0]])
         self.assertEqual(candidates, [['A', 1.0], ['F', 0.8118083219821401], ['C', 0.6088562414866051], ['B', 0.0], ['D', 0.0], ['E', 0.0]])
         self.assertEqual(candidates_ids, ['A', 'F', 'C', 'B', 'D', 'E'])

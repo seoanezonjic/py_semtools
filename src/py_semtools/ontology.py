@@ -6,7 +6,7 @@ import copy
 import warnings
 import json
 import numpy as np
-from collections import defaultdict
+from collections import defaultdict, Counter
 from importlib.resources import files
 import networkx as nx
 import entrezpy.esearch.esearcher
@@ -913,12 +913,13 @@ class Ontology:
         return np.mean(sims)
 
 
-    def calc_sim_term2term_similarity_matrix(self, ref_profile, ref_profile_id, external_profiles, term_limit = 100, candidate_limit = 100, sim_type = 'lin', bidirectional = True, other_scores = {}, id2label = {}):
+    def calc_sim_term2term_similarity_matrix(self, ref_profile, ref_profile_id, external_profiles, term_limit = 100, candidate_limit = 100, sim_type = 'lin', bidirectional = True, string_format = False, header_id = "id",other_scores = {}, id2label = {}):
         similarities = self.compare_profiles(external_profiles = external_profiles, sim_type = sim_type, bidirectional = bidirectional)
-        candidate_sim_matrix, candidates, candidates_ids = self.get_term2term_similarity_matrix(ref_profile, similarities[ref_profile_id], external_profiles, term_limit, candidate_limit, other_scores = other_scores, id2label = id2label)
+        candidate_sim_matrix, candidates, candidates_ids = self.get_term2term_similarity_matrix(ref_profile, similarities[ref_profile_id], external_profiles, term_limit, candidate_limit, string_format = string_format, other_scores = other_scores, id2label = id2label)
+        if string_format: candidate_sim_matrix.insert(0, [header_id] + candidates_ids)
         return candidate_sim_matrix, candidates, candidates_ids, similarities
 
-    def get_term2term_similarity_matrix(self, reference_prof, similarities, evidence_profiles, term_limit, candidate_limit, other_scores = {}, id2label = {}):
+    def get_term2term_similarity_matrix(self, reference_prof, similarities, evidence_profiles, term_limit, candidate_limit, string_format=False, other_scores = {}, id2label = {}):
         candidates = [ list(pair) for pair in similarities.items()]
         if len(other_scores) == 0:
             candidates.sort(key=lambda s: s[-1], reverse=True)
@@ -940,8 +941,9 @@ class Ontology:
 
         candidates_ids = [c[0] for c in candidates]
         candidate_similarity_matrix = self.get_detailed_similarity(reference_prof, candidates, evidence_profiles)
-        for i, row in enumerate(candidate_similarity_matrix):
-            row.insert(0,self.translate_id(reference_prof[i]))
+        if string_format:
+            for i, row in enumerate(candidate_similarity_matrix):
+                row.insert(0,self.translate_id(reference_prof[i]))
 
         candidate_similarity_matrix.sort(key=lambda r: sum(r[1:len(r)]), reverse=True)
         candidate_similarity_matrix = candidate_similarity_matrix[:term_limit]
@@ -977,6 +979,28 @@ class Ontology:
             cand_number += 1
         return matrix
 
+    def get_negative_terms_matrix(self, ref_profile, external_profiles, candidate_ids = None, term_limit = 100, candidate_limit = 100, string_format = False, header_id = "id"):
+        if candidate_ids != None and len(candidate_ids) < len(external_profiles): 
+            external_profiles = {prof_id: profile for prof_id, profile in external_profiles.items() if prof_id in candidate_ids}
+        if candidate_ids == None: candidate_ids = external_profiles.keys()
+        
+        external_specific_terms = [term for profile in external_profiles.values() for term in profile if term not in ref_profile]
+        specific_terms_counts = Counter(external_specific_terms)
+        specific_terms_counts_sorted = sorted([ [term, count] for term, count in specific_terms_counts.items()], 
+                                              key= lambda pair: (pair[1],pair[0]), reverse=True)[:term_limit]
+        
+        final_table = []
+        for term, count in specific_terms_counts_sorted:
+            row_to_add = []
+            if string_format: row_to_add.append(self.translate_id(term))
+            for candidate in candidate_ids[:candidate_limit]:
+                profile_term_count = 0
+                if term in external_profiles[candidate]: profile_term_count = count
+                row_to_add.append(profile_term_count)
+            final_table.append(row_to_add)
+
+        if string_format: final_table.insert(0, [header_id] + candidate_ids)
+        return final_table, candidate_ids
 
     #############################################
     # PROFILE INTERNAL METHODS 
@@ -1595,6 +1619,8 @@ class Ontology:
 
 Py_report_html.additional_templates.append(str(files(Ontology.TEMPLATES).joinpath('')))
 
+##### METHODS FOR ONTOPLOT
+
 def append_values_to_arrays(self, arrays, values):
     for idx, value in enumerate(values):
         arrays[idx].append(value)
@@ -1678,7 +1704,14 @@ def ontoplot(self, **user_options):
   user_options["dynamic"] = dynamic
   return self.renderize_child_template(self.get_internal_template('ontoplot.txt'), color_legend=color_legend, **user_options)
 
+#### METHODS FOR SIMILARITY MATRIX HEATMAP
+
+def similarity_matrix_plot(self, **user_options):
+    return self.renderize_child_template(self.get_internal_template('similarity_heatmap.txt'), **user_options)
+
+#### LOADING ALL MONKEYPATCHED METHODS
 Py_report_html.append_values_to_arrays = append_values_to_arrays
 Py_report_html.get_arc_degree_and_radius_values = get_arc_degree_and_radius_values
 Py_report_html.prepare_ontoplot_data = prepare_ontoplot_data
 Py_report_html.ontoplot = ontoplot
+Py_report_html.similarity_matrix_plot = similarity_matrix_plot
