@@ -25,6 +25,8 @@ from py_exp_calc.exp_calc import invert_nested_hash, flatten
 
 #For stENGINE
 import torch
+from torch import cuda
+import gc
 from sentence_transformers import SentenceTransformer, util
 import gzip, pickle
 import xml.etree.ElementTree as ET
@@ -354,11 +356,17 @@ def main_stEngine(opts):
         if total_papers >= options['chunk_size']:
           corpus_basename = f"corpus_{count}"
           count += 1
-          corpus_info = embed_save_corpus(options, corpus_basename, all_textIDs, all_corpus, embedder)
+          corpus_info = embed_save_corpus(options, corpus_basename, all_textIDs, all_corpus, embedder, total_papers)
           all_textIDs = []
           all_corpus = []
           total_papers = 0
-          if options.get("output_file") == None: corpus_info = None # If similarities won't be calculated delete lasta embedding because it's saved as pickle 
+          if options.get("output_file") == None: 
+              # If similarities won't be calculated delete lasta embedding because it's saved as pickle 
+              del corpus_info
+              gc.collect()
+              cuda.empty_cache()
+              corpus_info = None
+
       #LOAD EMBEDDED CORPUS
       else:
         if options["verbose"]: print(f"---Loading embedded corpus from {os.path.basename(corpus_filename)}")
@@ -368,6 +376,9 @@ def main_stEngine(opts):
       ### CALCULATE SIMILARITIES
       if corpus_info != None: 
           calculate_similarities(options, queries_content, corpus_info)
+          del corpus_info
+          gc.collect()
+          cuda.empty_cache()
           corpus_info = None
 
     # When we aggregate several files we could get an uncompleted chunk and must be processed to no lose the last items.
@@ -930,31 +941,41 @@ def show_gpu_information(options):
       print("-"*30)
 
 def show_general_global_gpu_information():
-		print(f"Are there any GPU available: {torch.cuda.is_available()}")
-		print(f"Number of GPUs available: {torch.cuda.device_count()}")
-		print(f"GPUs UUIDs: {torch.cuda._raw_device_uuid_nvml()}")
-		print(f"CUDA version: {torch.version.cuda}")
-		print(f"Current CUDA device: {torch.cuda.current_device()}")
+		print(f"LOG: Are there any GPU available: {torch.cuda.is_available()}")
+		print(f"LOG: Number of GPUs available: {torch.cuda.device_count()}")
+		print(f"LOG: GPUs UUIDs: {torch.cuda._raw_device_uuid_nvml()}")
+		print(f"LOG: CUDA version: {torch.version.cuda}")
+		print(f"LOG: Current CUDA device: {torch.cuda.current_device()}")
 
 def show_gpu_type_specific_information(device_number):
-		print(f"CUDA device Number: {device_number}")
-		print(f"CUDA device ID: {torch.cuda._get_device_index(device_number)}")
-		print(f"CUDA device name: {torch.cuda.get_device_name(device_number)}")
-		print(f"CUDA device object: {torch.cuda.device(device_number)}")
-		print(f"CUDA device properties: {torch.cuda.get_device_properties(device_number)}")
+		print(f"LOG: CUDA device Number: {device_number}")
+		print(f"LOG: CUDA device ID: {torch.cuda._get_device_index(device_number)}")
+		print(f"LOG: CUDA device name: {torch.cuda.get_device_name(device_number)}")
+		print(f"LOG: CUDA device object: {torch.cuda.device(device_number)}")
+		print(f"LOG: CUDA device properties: {torch.cuda.get_device_properties(device_number)}")
 		show_gpu_specific_stats(device_number)
 		show_gpu_specific_memory_summary(device_number)
 
-def show_gpu_specific_stats(device_number):
-		print(f"GPU memory usage: {torch.cuda.memory_usage(device_number)}")
-		print(f"GPU computation percentage: {torch.cuda.utilization(device_number)}")
-		print(f"GPU binded processes: {torch.cuda.list_gpu_processes(device_number)}")
-    
-def show_gpu_specific_memory_summary(device_number):
-		print(f"GPU memory summary:\n{torch.cuda.memory_summary(device_number)}\n")
+def show_gpu_specific_stats(device_number):        
+		show_gpu_specific_memory_stats(device_number) 
+		show_gpu_specific_usage(device_number)
 
-def embed_save_corpus(options, corpus_basename, all_textIDs, all_corpus, embedder):
-    if options["verbose"]: print(f"---Embedding corpus of {corpus_basename} with {'GPU' if options.get('gpu_device') else 'CPU'}")
+def show_gpu_specific_usage(device_number):
+		print(f"LOG: GPU computation percentage: {torch.cuda.utilization(device_number)}")
+		print(f"LOG: GPU currently active processes: {torch.cuda.list_gpu_processes(device_number)}")    
+
+def show_gpu_specific_memory_stats(device_number):
+    print(f"LOG: GPU memory usage: {torch.cuda.memory_usage(device_number)}")
+    print(f"LOG: GPU memory allocated: {torch.cuda.memory_allocated(device_number)}")
+    print(f"LOG: GPU memory reserved: {torch.cuda.memory_reserved(device_number)}")
+    print(f"LOG: GPU memory max memory allocated: {torch.cuda.max_memory_allocated(device_number)}")
+    print(f"LOG: GPU memory max memory reserved: {torch.cuda.max_memory_reserved(device_number)}")
+
+def show_gpu_specific_memory_summary(device_number):
+		print(f"LOG: GPU memory summary:\n{torch.cuda.memory_summary(device_number)}\n")
+
+def embed_save_corpus(options, corpus_basename, all_textIDs, all_corpus, embedder, total_papers):
+    if options["verbose"]: print(f"---Embedding corpus of {corpus_basename} comprised by {total_papers} initial papers with {len(all_textIDs)} sentences, with {'GPU' if options.get('gpu_device') else 'CPU'}")
     corpus_embeddings = embedd_text(all_corpus, embedder, options)       
     corpus_info = {'textIDs': all_textIDs, "embeddings": corpus_embeddings}
     if options.get("corpus_embedded") != None:
@@ -965,7 +986,6 @@ def embed_save_corpus(options, corpus_basename, all_textIDs, all_corpus, embedde
 
 def calculate_similarities(options, queries_content, corpus_info):
     if options.get("output_file"):
-      if options["verbose"]: print(f"---Calculating similarities for a corpus of size {len(corpus_info['embeddings'])}")
       for query_basename, query_info in queries_content.items():
         best_matches = calculate_similarity(query_info, corpus_info, options)
         output_filename = os.path.join(options["output_file"],query_basename)
