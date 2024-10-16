@@ -35,13 +35,20 @@ class TextIndexer:
             cls.process_single_abstract([options, filename])
         else:
           with ProcessPoolExecutor(max_workers=options["n_cpus"]) as executor:
-            for result in executor.map(process_single_abstract, [[options, filename] for filename in filenames]): return result
+            for result in executor.map(cls.process_single_abstract, [[options, filename] for filename in filenames]): return result
     
     @classmethod
     def process_single_abstract(cls, options_filename_pair):
         options, filename = options_filename_pair
+
+        pID = getpid()
+        logger.add(f"./logs/{pID}.log", format="{level} : {time} : {message}: {process}", filter=lambda record: record["extra"]["task"] == f"{pID}")
+        child_logger = logger.bind(task=f"{pID}")
+        options["child_logger"] = child_logger
+        child_logger.info("Starting to process papers")
+
         basename = os.path.basename(filename).replace(".xml.gz", "")
-        abstract_index = get_index(filename, options)
+        abstract_index = cls.get_index(filename, options)
         out_filename = os.path.join(options["output"], basename+".gz")
         cls.save_abstracts(out_filename, abstract_index)
 
