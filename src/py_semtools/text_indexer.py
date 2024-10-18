@@ -1,18 +1,16 @@
 import sys
 import os
 import glob
-from loguru import logger
-logger.remove(0)
-from os import getpid
 import warnings
 import tarfile
 import xml.etree.ElementTree as ET
 import re
-from concurrent.futures import ProcessPoolExecutor
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from py_exp_calc.exp_calc import invert_nested_hash, flatten
 import json
 import gzip
+
+from py_semtools.parallelizer import Parallelizer
 
 class TextIndexer:
 
@@ -24,65 +22,37 @@ class TextIndexer:
             sys.exit(1)
 
         if options["n_cpus"] == 1:
-            cls.process_files([options, filenames, 0])
+            from loguru import logger
+            logger.add(f"./logs/main.log", format="{level} : {time} : {message}: {process}")
+            logger.info("Starting process")
+            cls.process_files(options, filenames, 0, logger = logger)
+            logger.success("Process finished succesfully")            
         else:
+            manager = Parallelizer(options["n_cpus"], options["chunk_size"])
             if options["items_per_file"] == 0:
-                items = [[options, [filename], None] for filename in filenames] # filename is a list to assign a one item list to a worker (worker per file)
+                items = [[cls.process_files, [[options, [filename], None], {}]] for filename in filenames] # filename is a list to assign a one item list to a worker (worker per file)
             else:
-                chunks = cls.get_chunks(filenames, options["n_cpus"], options["chunk_size"])
-                items = [[options, chunk, idx] for idx,chunk in enumerate(chunks)]
-            with ProcessPoolExecutor(max_workers=options["n_cpus"]) as executor:
-                for result in executor.map(cls.process_files, items): return result
+                chunks = manager.get_chunks(filenames)
+                items = [[cls.process_files, [[options, chunk, idx], {}]] for idx,chunk in enumerate(chunks)]
+            manager.execute(items)
 
     @classmethod
-    def get_chunks(cls, items, n_cpus, chunk_size):
-        chunks = []
-        if chunk_size == 0: # all workload is given to all cpus in a single working round
-            chunk_size = len(items)// n_cpus
-            for index in range(0, n_cpus):
-                chunk = []
-                for index in range(0, chunk_size):
-                    chunk.append(items.pop())
-                chunks.append(chunk)
-            for i, item in enumerate(items):
-                chunks[i].append(item)
-            chunks = [ chunk for chunk in chunks if chunk] # remove possible empty chunks
-        else: # The workload is partitioned in several fixed size chunks and each worker will execute more than one chunk
-            while len(items) > 0:
-                chunk = []
-                for index in range(0, chunk_size):
-                    if items: chunk.append(items.pop())
-                chunks.append(chunk)
-        return chunks
-
-    @classmethod
-    def process_files(cls, args):
-        options, filenames, sup_counter = args
-        
-        pID = getpid()
-        logger.add(f"./logs/{pID}.log", format="{level} : {time} : {message}: {process}", filter=lambda record: record["extra"]["task"] == f"{pID}")
-        child_logger = logger.bind(task=f"{pID}")
-        options["child_logger"] = child_logger
-        child_logger.info("Starting to process papers")
-         
+    def process_files(cls, options, filenames, sup_counter, logger = None):
         acummulative_abstracts = []
         counter = 0
         for filename in filenames:    
-          abstract_index = cls.get_index(filename, options)
+          abstract_index = cls.get_index(filename, options, logger = logger)
           if options["items_per_file"] == 0:
             basename = os.path.basename(filename).replace(".xml.gz", "").replace(".tar.gz", "")
-            print(basename + "\n")
             cls.write_abstracts(abstract_index, options["output"], basename)
           else:
               acummulative_abstracts.extend(abstract_index)
               while len(acummulative_abstracts) >= options["items_per_file"]:
                 abstracts_to_save = [acummulative_abstracts.pop() for _times in range(options["items_per_file"])]
                 cls.write_abstracts(abstracts_to_save, options["output"], options["tag"], a_suffix=sup_counter, b_suffix=counter)
-                counter += 1
-        
+                counter += 1    
         # For records saved in acummulative_abstracts that the loop has not writed
         cls.write_abstracts(acummulative_abstracts, options["output"], options["tag"], a_suffix=sup_counter, b_suffix=counter)
-        child_logger.success("Proccess finished succesfully")
 
     @classmethod
     def write_abstracts(cls, abstracts, folder, name, a_suffix=None, b_suffix=None):
@@ -98,16 +68,16 @@ class TextIndexer:
               f.write(f"{pmid}\t{text}\t{original_filename}\t{year}\t{abstract_length}\t{number_of_sentences}\t{length_of_sentences}\t{title}\t{article_type}\t{article_category}\n")
 
     @classmethod
-    def get_index(cls, file, options):
+    def get_index(cls, file, options, logger = None):
         if options["parse_paper"] == True:
-            return cls.get_paper_index(file, options)
+            return cls.get_paper_index(file, options, logger = logger)
         else:
-            return cls.get_abstract_index(file, options)
+            return cls.get_abstract_index(file, options, logger = logger)
 
     ##### New functions to parse papers
 
     @classmethod
-    def get_paper_index(cls, file_path, options):
+    def get_paper_index(cls, file_path, options, logger = None):
         PMC_PMID_dict = None
         if options["equivalences_file"] != None: PMC_PMID_dict = dict(CmdTabs.load_input_data(options["equivalences_file"]))
         texts = [] # aggregate all papers in XML file (Technically it is just one for each xml file, but it is emulating the original abstract part logic)
@@ -116,10 +86,10 @@ class TextIndexer:
         errors = 0
         
         file_exist = "does exist" if os.path.exists(file_path) else "does not exist"
-        options["child_logger"].info(f"The file {file_path} {file_exist}")
+        logger.info(f"The file {file_path} {file_exist}")
         
         tar = tarfile.open(file_path, 'r:gz') 
-        options["child_logger"].info(f"The file {file_path} has { len([member for member in tar.getmembers()]) } xml papers")
+        logger.info(f"The file {file_path} has { len([member for member in tar.getmembers()]) } xml papers")
         for member in tar.getmembers():
             total += 1
             f=tar.extractfile(member)
@@ -142,7 +112,7 @@ class TextIndexer:
                     texts.append(pmid_content_and_stats)
             except Exception as e:
                 errors += 1
-                options["child_logger"].error(f"There was a problem proccessing the file {filename} with the following error: {e}")
+                logger.error(f"There was a problem proccessing the file {filename} with the following error: {e}")
         tar.close()
 
         if options["debugging_mode"]: warnings.warn(f"stats:file={file_path},total={total},no_abstract={stats['no_abstract']},no_pmid={stats['no_pmid']}")
