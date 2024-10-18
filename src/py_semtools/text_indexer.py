@@ -23,44 +23,16 @@ class TextIndexer:
             sys.stderr.write(f"ERROR: {options['input']} has not files\n")
             sys.exit(1)
 
-        if options["chunk_size"] == 0:
-            cls.process_several_abstracts(options, filenames)
-        else:
-            cls.process_several_custom_chunksize_abstracts(options, filenames)
-
-    @classmethod
-    def process_several_abstracts(cls, options, filenames):
         if options["n_cpus"] == 1:
-          for filename in filenames:
-            cls.process_single_abstract([options, filename])
+            cls.process_files([options, filenames, 0])
         else:
-          with ProcessPoolExecutor(max_workers=options["n_cpus"]) as executor:
-            for result in executor.map(cls.process_single_abstract, [[options, filename] for filename in filenames]): return result
-    
-    @classmethod
-    def process_single_abstract(cls, options_filename_pair):
-        options, filename = options_filename_pair
-
-        pID = getpid()
-        logger.add(f"./logs/{pID}.log", format="{level} : {time} : {message}: {process}", filter=lambda record: record["extra"]["task"] == f"{pID}")
-        child_logger = logger.bind(task=f"{pID}")
-        options["child_logger"] = child_logger
-        child_logger.info("Starting to process papers")
-
-        basename = os.path.basename(filename).replace(".xml.gz", "")
-        abstract_index = cls.get_index(filename, options)
-        out_filename = os.path.join(options["output"], basename+".gz")
-        cls.save_abstracts(out_filename, abstract_index)
-
-    @classmethod
-    def process_several_custom_chunksize_abstracts(cls, options, filenames):
-        if options["n_cpus"] == 1:
-          cls.process_a_pack_of_custom_chunksize_abstracts([options, filenames, 0])
-        else:
-          filenames_lots = cls.distribute_files_workload(filenames, options["n_cpus"])
-          distributed_work = [[options, filename_lot, idx] for idx,filename_lot in enumerate(filenames_lots) if filename_lot]
-          with ProcessPoolExecutor(max_workers=options["n_cpus"]) as executor:
-            for result in executor.map(cls.process_a_pack_of_custom_chunksize_abstracts, distributed_work): return result
+            if options["chunk_size"] == 0:
+                items = [[options, [filename], None] for filename in filenames] # filename is a list to assign a one item list to a worker (worker per file)
+            else:
+                filenames_lots = cls.distribute_files_workload(filenames, options["n_cpus"])
+                items = [[options, filename_lot, idx] for idx,filename_lot in enumerate(filenames_lots) if filename_lot]
+            with ProcessPoolExecutor(max_workers=options["n_cpus"]) as executor:
+                for result in executor.map(cls.process_files, items): return result
 
     @classmethod
     def distribute_files_workload(cls, filenames, n_cpus):
@@ -75,32 +47,42 @@ class TextIndexer:
         return filenames_lots
 
     @classmethod
-    def process_a_pack_of_custom_chunksize_abstracts(cls, options_filenames_counter_trio):
-        options, filenames, sup_counter = options_filenames_counter_trio
+    def process_files(cls, args):
+        options, filenames, sup_counter = args
         
         pID = getpid()
         logger.add(f"./logs/{pID}.log", format="{level} : {time} : {message}: {process}", filter=lambda record: record["extra"]["task"] == f"{pID}")
         child_logger = logger.bind(task=f"{pID}")
         options["child_logger"] = child_logger
         child_logger.info("Starting to process papers")
-        
+         
         acummulative_abstracts = []
         counter = 0
         for filename in filenames:    
           abstract_index = cls.get_index(filename, options)
-          acummulative_abstracts.extend(abstract_index)
-          while len(acummulative_abstracts) >= options["chunk_size"]:
-            out_filename = os.path.join(options["output"], options["tag"]+f"{sup_counter}_{counter}.gz" )
-            counter += 1
-            abstracts_to_save = [acummulative_abstracts.pop() for _times in range(options["chunk_size"])]
-            cls.save_abstracts(out_filename, abstracts_to_save)
+          if options["chunk_size"] == 0:
+            basename = os.path.basename(filename).replace(".xml.gz", "").replace(".tar.gz", "")
+            print(basename + "\n")
+            cls.write_abstracts(abstract_index, options["output"], basename)
+          else:
+              acummulative_abstracts.extend(abstract_index)
+              while len(acummulative_abstracts) >= options["chunk_size"]:
+                abstracts_to_save = [acummulative_abstracts.pop() for _times in range(options["chunk_size"])]
+                cls.write_abstracts(abstracts_to_save, options["output"], options["tag"], a_suffix=sup_counter, b_suffix=counter)
+                counter += 1
         
-        out_filename = os.path.join(options["output"], options["tag"]+f"{sup_counter}_{counter}.gz" )
-        cls.save_abstracts(out_filename, acummulative_abstracts)
+        # For records saved in acummulative_abstracts that the loop has not writed
+        cls.write_abstracts(acummulative_abstracts, options["output"], options["tag"], a_suffix=sup_counter, b_suffix=counter)
         child_logger.success("Proccess finished succesfully")
 
     @classmethod
-    def save_abstracts(cls, out_filename, abstracts):
+    def write_abstracts(cls, abstracts, folder, name, a_suffix=None, b_suffix=None):
+        if a_suffix == None: a_suffix = ""
+        if b_suffix != None: 
+            f"_{b_suffix}"
+        else:
+            b_suffix = ""
+        out_filename = os.path.join(folder, name+f"{a_suffix}{b_suffix}.gz" )
         if len(abstracts) > 0:
           with gzip.open(out_filename, 'wt') as f:
             for pmid, text, original_filename, year, abstract_length, number_of_sentences, length_of_sentences, title, article_type, article_category in abstracts:
