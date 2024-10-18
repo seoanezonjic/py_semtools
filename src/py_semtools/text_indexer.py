@@ -26,25 +26,34 @@ class TextIndexer:
         if options["n_cpus"] == 1:
             cls.process_files([options, filenames, 0])
         else:
-            if options["chunk_size"] == 0:
+            if options["items_per_file"] == 0:
                 items = [[options, [filename], None] for filename in filenames] # filename is a list to assign a one item list to a worker (worker per file)
             else:
-                filenames_lots = cls.distribute_files_workload(filenames, options["n_cpus"])
-                items = [[options, filename_lot, idx] for idx,filename_lot in enumerate(filenames_lots) if filename_lot]
+                chunks = cls.get_chunks(filenames, options["n_cpus"], options["chunk_size"])
+                items = [[options, chunk, idx] for idx,chunk in enumerate(chunks)]
             with ProcessPoolExecutor(max_workers=options["n_cpus"]) as executor:
                 for result in executor.map(cls.process_files, items): return result
 
     @classmethod
-    def distribute_files_workload(cls, filenames, n_cpus):
-        filenames_lots = []
-        lot_size = (len(filenames)+(len(filenames) % n_cpus)) // n_cpus
-        for index in range(0, n_cpus):
-          if index == n_cpus-1:
-            for idx, remaining_filename in enumerate(filenames[index*lot_size:]):
-              filenames_lots[idx].append(remaining_filename)
-          else:
-            filenames_lots.append(filenames[index*lot_size:(index+1)*lot_size])
-        return filenames_lots
+    def get_chunks(cls, items, n_cpus, chunk_size):
+        chunks = []
+        if chunk_size == 0: # all workload is given to all cpus in a single working round
+            chunk_size = len(items)// n_cpus
+            for index in range(0, n_cpus):
+                chunk = []
+                for index in range(0, chunk_size):
+                    chunk.append(items.pop())
+                chunks.append(chunk)
+            for i, item in enumerate(items):
+                chunks[i].append(item)
+            chunks = [ chunk for chunk in chunks if chunk] # remove possible empty chunks
+        else: # The workload is partitioned in several fixed size chunks and each worker will execute more than one chunk
+            while len(items) > 0:
+                chunk = []
+                for index in range(0, chunk_size):
+                    if items: chunk.append(items.pop())
+                chunks.append(chunk)
+        return chunks
 
     @classmethod
     def process_files(cls, args):
@@ -60,14 +69,14 @@ class TextIndexer:
         counter = 0
         for filename in filenames:    
           abstract_index = cls.get_index(filename, options)
-          if options["chunk_size"] == 0:
+          if options["items_per_file"] == 0:
             basename = os.path.basename(filename).replace(".xml.gz", "").replace(".tar.gz", "")
             print(basename + "\n")
             cls.write_abstracts(abstract_index, options["output"], basename)
           else:
               acummulative_abstracts.extend(abstract_index)
-              while len(acummulative_abstracts) >= options["chunk_size"]:
-                abstracts_to_save = [acummulative_abstracts.pop() for _times in range(options["chunk_size"])]
+              while len(acummulative_abstracts) >= options["items_per_file"]:
+                abstracts_to_save = [acummulative_abstracts.pop() for _times in range(options["items_per_file"])]
                 cls.write_abstracts(abstracts_to_save, options["output"], options["tag"], a_suffix=sup_counter, b_suffix=counter)
                 counter += 1
         

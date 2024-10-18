@@ -270,12 +270,14 @@ def get_pubmed_index(args = None):
             help="Path to the pubmed input file in xml format (gzip compressed) to extract. Wildcards are accepted to process multiple files")
     parser.add_argument('-o', "--output", dest="output", default= None,
             help="Output path to save the extracted data (gzip compressed).")
-    parser.add_argument('-k', "--chunk_size", dest="chunk_size", default= 0, type = int,
+    parser.add_argument('-k', "--items_per_file", dest="items_per_file", default= 0, type = int,
             help="Number of abstracts to be accumulated and saved in a file. If not used, the same input-output files will be used")
     parser.add_argument('-t', "--tag", dest="tag", default= "file_",
-            help="If a chunk size is used, this tag will be used to name the output files")
+            help="If a items_per_file is used, this tag will be used to name the output files")
     parser.add_argument('-c', "--n_cpus", dest="n_cpus", default= 1, type = int,
             help="Number of cpus to be used for parallel processing")
+    parser.add_argument('-z', "--chunk_size", dest="chunk_size", default= 0, type = int,
+            help="Number of files to be processed be each cpu")
     parser.add_argument('-d', '--debugging_mode', dest="debugging_mode", default=False, action='store_true',
             help="Activate to output stats about the content of the xml as warnings")
     parser.add_argument('-s', "--split", dest="split", default= False, action='store_true',
