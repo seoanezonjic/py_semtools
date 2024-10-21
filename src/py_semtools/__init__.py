@@ -3,5 +3,7 @@ from py_semtools.oboparser import OboParser
 from py_semtools.json_parser import JsonParser
 from py_semtools.ontology import Ontology
 from py_semtools.text_indexer import TextIndexer
+from py_semtools.text_pubmed_parser import TextPubmedParser
+from py_semtools.text_pubmed_paper_parser import TextPubmedPaperParser
 from py_semtools.cli_manager import *
 from py_semtools.parallelizer import Parallelizer

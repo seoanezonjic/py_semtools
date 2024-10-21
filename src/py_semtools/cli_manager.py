@@ -260,7 +260,7 @@ def stEngine(args = None):
     opts =  parser.parse_args(args)
     main_stEngine(opts)
 
-def get_pubmed_index(args = None):
+def get_corpus_index(args = None):
     if args is None:
         args = sys.argv[1:]
 
@@ -282,18 +282,18 @@ def get_pubmed_index(args = None):
             help="Activate to output stats about the content of the xml as warnings")
     parser.add_argument('-s', "--split", dest="split", default= False, action='store_true',
             help="Use it to split your text into smaller text units (then returned as a json)")
-    parser.add_argument('-p', "--parse_paper", dest="parse_paper", default= False, action='store_true',
-            help="Use it to parse whole papers from PMC XMLs intead of PBMID abstracts")	
+    parser.add_argument('-p', "--parse", dest="parse", default = None,
+            help="'PubmedAbstract' for pubmed files with abstracs and 'PubmedPaper' for full paper Pubmed(PMC) files ")	
     parser.add_argument('-e', "--equivalences_file", dest="equivalences_file", default= None,
             help="Path to a 2 columns file with PMC-PMID equivalences to use when a parsed papers only finds the PMC ID inside its content.")
     opts =  parser.parse_args(args)
-    main_get_pubmed_index(opts)
+    main_get_corpus_index(opts)
 
 #########################################################################
 # MAIN FUNCTIONS 
 #########################################################################
 
-def main_get_pubmed_index(opts):
+def main_get_corpus_index(opts):
   options = vars(opts)
   TextIndexer.build_index(options)
 
