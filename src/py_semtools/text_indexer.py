@@ -69,7 +69,7 @@ class TextIndexer:
     def get_index(cls, file, options, logger = None):
         if options["parse"] == 'PubmedPaper':
             return cls.get_paper_index(file, options, logger = logger)
-        elif options["parser"] == 'PubmedAbstract':
+        elif options["parse"] == 'PubmedAbstract':
             return cls.get_abstract_index(file, options, logger = logger)
 
 
