@@ -278,6 +278,8 @@ def get_corpus_index(args = None):
             help="Number of cpus to be used for parallel processing")
     parser.add_argument('-z', "--chunk_size", dest="chunk_size", default= 0, type = int,
             help="Number of files to be processed be each cpu")
+    parser.add_argument('-b', "--text_balancing_size", dest="text_balancing_size", default= 0, type = int,
+            help="When white texts to disk, sort by text length and distribute them in packages of the given size. These packages are writed to the same file.")
     parser.add_argument('-d', '--debugging_mode', dest="debugging_mode", default=False, action='store_true',
             help="Activate to output stats about the content of the xml as warnings")
     parser.add_argument('-s', "--split", dest="split", default= False, action='store_true',

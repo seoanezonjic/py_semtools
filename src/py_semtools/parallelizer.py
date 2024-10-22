@@ -1,3 +1,4 @@
+import sys
 from concurrent.futures import ProcessPoolExecutor
 from os import getpid
 from loguru import logger
@@ -8,7 +9,9 @@ class Parallelizer:
         self.n_processes = n_processes
         self.chunk_size = chunk_size
 
-    def get_chunks(self, items):
+    def get_chunks(self, items, workload_balance = None, workload_function = None):
+        if workload_balance != None: items = self.balance_workload(items, workload_balance, workload_function)
+
         chunks = []
         if self.chunk_size == 0: # all workload is given to all cpus in a single working round
             chunk_size = len(items)// self.n_processes
@@ -27,10 +30,35 @@ class Parallelizer:
                     if items: chunk.append(items.pop())
                 chunks.append(chunk)
         return chunks
-    
-    def execute(self, items):
-        with ProcessPoolExecutor(max_workers=self.n_processes) as executor:
-            for result in executor.map(self.worker, items): return result
+
+    def balance_workload(self, items, workload_balance, workload_function):
+        items.sort(key=workload_function)
+        if workload_balance == 'min_max':
+            items = self.balance_min_max(items)
+        elif workload_balance == 'disperse_max':
+            items = self.balance_disperse_max(items)
+        items.reverse()
+        return items
+
+    def balance_min_max(self, items):
+        item_workload = []
+        while len(items) > 0:
+            item_workload.append(items.pop(0)) # Take max workload
+            if len(items) > 0: item_workload.append(items.pop()) # Take min workload
+        return item_workload
+
+    def balance_disperse_max(self, items):
+        item_workload = []
+        n_chunks = (len(items) // self.chunk_size)
+        if len(items) % self.chunk_size > 0: n_chunks += 1
+        chunks = [[] for i in range(n_chunks)]
+        while len(items) > 0:
+            for n in range(0, n_chunks):
+                if len(items) > 0: chunks[n].append(items.pop()) 
+                # The top i items with maximum workload is given to different workers 
+                # to avoid that a single worker collapse with the top workload items
+        for chunk in chunks: item_workload.extend(chunk)
+        return item_workload
 
     def worker(self, arguments):
         task, all_args = arguments
@@ -44,3 +72,7 @@ class Parallelizer:
         task(*args, **kwargs)         
 
         child_logger.success("Chunk finished succesfully")
+    
+    def execute(self, items):
+        with ProcessPoolExecutor(max_workers=self.n_processes) as executor:
+            for result in executor.map(self.worker, items): return result

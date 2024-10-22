@@ -38,22 +38,26 @@ class TextIndexer:
     def process_files(cls, options, filenames, sup_counter, logger = None):
         accumulated_texts = []
         counter = 0
+        if options['text_balancing_size'] == 0:
+            balancer = None
+        else:
+            balancer = Parallelizer(1, options['text_balancing_size'])
         for filename in filenames:    
           text_index = cls.get_index(filename, options, logger = logger)
           if options["items_per_file"] == 0:
             basename = os.path.basename(filename).replace(".xml.gz", "").replace(".tar.gz", "")
-            cls.write_texts(text_index, options["output"], basename)
+            cls.write_texts(text_index, options["output"], basename, balancer = balancer)
           else:
               accumulated_texts.extend(text_index)
               while len(accumulated_texts) >= options["items_per_file"]:
                 texts2save = [accumulated_texts.pop() for _times in range(options["items_per_file"])]
-                cls.write_texts(texts2save, options["output"], options["tag"], a_suffix=sup_counter, b_suffix=counter)
+                cls.write_texts(texts2save, options["output"], options["tag"], a_suffix=sup_counter, b_suffix=counter, balancer = balancer)
                 counter += 1    
         # For records saved in accumulated_texts that the loop has not writed
-        cls.write_texts(accumulated_texts, options["output"], options["tag"], a_suffix=sup_counter, b_suffix=counter)
+        cls.write_texts(accumulated_texts, options["output"], options["tag"], a_suffix=sup_counter, b_suffix=counter, balancer = balancer)
 
     @classmethod
-    def write_texts(cls, texts, folder, name, a_suffix=None, b_suffix=None):
+    def write_texts(cls, texts, folder, name, a_suffix=None, b_suffix=None, balancer = None):
         if a_suffix == None: a_suffix = ""
         if b_suffix != None: 
             f"_{b_suffix}"
@@ -61,9 +65,10 @@ class TextIndexer:
             b_suffix = ""
         out_filename = os.path.join(folder, name+f"{a_suffix}{b_suffix}.gz" )
         if len(texts) > 0:
-          with gzip.open(out_filename, 'wt') as f:
-            for pmid, text, original_filename, year, text_length, number_of_sentences, length_of_sentences, title, article_type, article_category in texts:
-              f.write(f"{pmid}\t{text}\t{original_filename}\t{year}\t{text_length}\t{number_of_sentences}\t{length_of_sentences}\t{title}\t{article_type}\t{article_category}\n")
+            if balancer != None: texts = balancer.balance_workload(texts, workload_balance='disperse_max', workload_function= lambda i: len(i[1]))
+            with gzip.open(out_filename, 'wt') as f:
+                for pmid, text, original_filename, year, text_length, number_of_sentences, length_of_sentences, title, article_type, article_category in texts:
+                    f.write(f"{pmid}\t{text}\t{original_filename}\t{year}\t{text_length}\t{number_of_sentences}\t{length_of_sentences}\t{title}\t{article_type}\t{article_category}\n")
 
     @classmethod
     def get_index(cls, file, options, logger = None):
