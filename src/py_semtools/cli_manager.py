@@ -23,6 +23,7 @@ from py_cmdtabs import CmdTabs
 from py_exp_calc.exp_calc import invert_nested_hash, flatten
 
 #For get_pubmed_index
+import numpy as np
 
 ONTOLOGY_INDEX = str(files('py_semtools.external_data').joinpath('ontologies.txt'))
 #https://pypi.org/project/platformdirs/
@@ -231,7 +232,7 @@ def stEngine(args = None):
             help="Path to save/load the embedded corpus file. Wildcards are accepted to LOAD multiple files")
     parser.add_argument('-o', "--output_file", dest="output_file", default= None,
             help="Path to save the output file with semantic scores")
-    parser.add_argument('-k', "--top_k", dest="top_k", default= 20, type = lambda num: int(num) if num != "0" else np.inf,
+    parser.add_argument('-k', "--top_k", dest="top_k", default= 20, type = int,
             help="Get top scores per keyword")
     parser.add_argument('-t', "--threshold", dest="threshold", default= 0, type = float,
             help="Similarity threshold to filter results to write")    
@@ -247,7 +248,7 @@ def stEngine(args = None):
             help="Use it if your corpus comes splitted in smaller parts as list of lists (embedded in a json)")
     parser.add_argument("--order", dest="order", default= "corpus-query",
             help="Order of the semantic search. Options: 'corpus-query' or 'query-corpus'")
-    parser.add_argument("--chunk_size", dest="chunk_size", default=5000, type=int,
+    parser.add_argument("--chunk_size", dest="chunk_size", default=10000, type=int,
             help="Size to be accumulating corpora until a threshold is reached before proceeding to embedd")
     opts =  parser.parse_args(args)
     main_stEngine(opts)
@@ -276,6 +277,8 @@ def get_corpus_index(args = None):
             help="Activate to output stats about the content of the xml as warnings")
     parser.add_argument('-s', "--split", dest="split", default= False, action='store_true',
             help="Use it to split your text into smaller text units (then returned as a json)")
+    parser.add_argument("--split_output_files", dest="split_output_files", default= False, action='store_true',
+            help="Use this option to split output files with 'text_balancing_size' texts per file")
     parser.add_argument('-p', "--parse", dest="parse", default = None,
             help="'PubmedAbstract' for pubmed files with abstracs and 'PubmedPaper' for full paper Pubmed(PMC) files ")	
     parser.add_argument('-e', "--equivalences_file", dest="equivalences_file", default= None,
@@ -294,6 +297,7 @@ def main_get_corpus_index(opts):
 
 def main_stEngine(opts):
     options = vars(opts)
+    if options["top_k"] == 0: options["top_k"] = np.inf
     stEngine = STengine(gpu_devices=options["gpu_device"])
     if options.get("gpu_device"): stEngine.show_gpu_information(verbose= options['verbose'])
 

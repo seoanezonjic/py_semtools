@@ -16,7 +16,7 @@ class TextPubmedAbstractParser:
             pubmed_article_set = mytree.getroot()
             for article in pubmed_article_set:
                 stats['total'] += 1
-                text_data = parse_abstract(article)
+                text_data = cls.parse_abstract(article)
                 pmid, abstract_content, year, title, article_type, article_category = text_data
                 texts.append(text_data)
                 if pmid == None:
@@ -25,7 +25,7 @@ class TextPubmedAbstractParser:
                 elif abstract_content == "":
                     stats["no_abstract"] += 1
                     if logger != None: logger.warning(f"Warning: Article PDMID:{pmid} without abstract found in file {file}")
-        return texts
+        return texts, stats
 
     @classmethod
     def parse_abstract(cls, article):

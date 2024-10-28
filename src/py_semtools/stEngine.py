@@ -7,6 +7,7 @@ from sentence_transformers import SentenceTransformer, util
 import gzip, pickle
 import json
 import numpy as np
+import warnings
 
 class STengine:
 
@@ -82,7 +83,7 @@ class STengine:
           for query_basename, query_info in self.queries_content.items():
             best_matches = self.calculate_similarity(query_info, corpus_info, options)
             output_filename = os.path.join(options["output_file"],query_basename)
-            save_similarities(output_filename, best_matches, options)
+            self.save_similarities(output_filename, best_matches, options)
 
     def load_several_queries(self, options, embedded_queries_filenames, verbose = False):
         if verbose: print("\n-Loading embedded queries:")
