@@ -7,7 +7,7 @@ from py_exp_calc.exp_calc import invert_nested_hash, flatten
 import json
 import gzip
 
-import CmdTabs
+from py_cmdtabs import CmdTabs
 from py_semtools.parallelizer import Parallelizer
 from py_semtools.text_pubmed_paper_parser import TextPubmedPaperParser
 from py_semtools.text_pubmed_abstract_parser import TextPubmedAbstractParser 
@@ -80,6 +80,7 @@ class TextIndexer:
                 if split_output_files and item_count >= items_per_file:
                     f.close()
                     file_count += 1
+                    item_count = 0
                     f = gzip.open(os.path.join(folder, name+f"{a_suffix}{b_suffix}_{file_count}.gz" ), 'wt')
                 f.write(f"{pmid}\t{text}\t{original_filename}\t{year}\t{text_length}\t{number_of_sentences}\t{length_of_sentences}\t{title}\t{article_type}\t{article_category}\n")
                 item_count += 1

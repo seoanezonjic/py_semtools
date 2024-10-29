@@ -12,6 +12,24 @@ class TextPubmedParser:
             return None
 
     @classmethod
+    def do_recursive_xml_content_parse(cls, element):
+        whole_content = ""
+        if element.tag in ["table-wrap", "table", "fig", "fig-group"]: return whole_content
+        if element.tag == "sec": whole_content += "\n\n"
+        if element.tag == "p": whole_content += "\n\n"  
+        # Content before nested element
+        if element.tag not in ["xref", "sup"]:
+            content = element.text
+            if content != None: whole_content += " " + content.replace('\n', ' ') + " " 
+        # Content of nested element
+        for child in element: 
+            whole_content += cls.do_recursive_xml_content_parse(child)
+        # Content after nested element
+        tail = element.tail
+        if tail != None: whole_content +=  " " + tail.replace('\n', ' ') + " "
+        return re.sub(r'\s+', ' ', whole_content)
+
+    @classmethod
     def check_not_none_or_empty(cls, variable):
         if type(variable) != str: 
             condition = variable != None and variable.text != None and variable.text.strip().replace("&#x000a0;", "") != ""

@@ -5,7 +5,7 @@ import traceback
 import xml.etree.ElementTree as ET
 from py_semtools.text_pubmed_parser import TextPubmedParser
 
-class TextPubmedAbstractParser:
+class TextPubmedAbstractParser(TextPubmedParser):
 
     @classmethod
     def parse(cls, file, logger = None): 
@@ -35,7 +35,7 @@ class TextPubmedAbstractParser:
         article_category = "none"
         year = 0
         title = cls.do_recursive_find(article, ['MedlineCitation','Article','ArticleTitle'])
-        title = cls.get_paper_body_content(title).strip().lower() if cls.check_not_none_or_empty(title) else "none"
+        title = cls.do_recursive_xml_content_parse(title).strip().lower() if cls.check_not_none_or_empty(title) else "none"
         for data in article.find('MedlineCitation'):
             if data.tag == 'PMID':
                 pmid = data.text
@@ -46,7 +46,7 @@ class TextPubmedAbstractParser:
             if abstract != None:
                 for fields in abstract:     
                     if fields.tag == 'AbstractText':
-                        abstractText = cls.get_paper_body_content(fields).strip()
+                        abstractText = cls.do_recursive_xml_content_parse(fields).strip()
                         if abstractText != None and abstractText != "":
                             #print(f"Text of abstract {pmid} in file {file}:")
                             #print(repr(abstractText), "\n\n")

@@ -44,7 +44,7 @@ class TextPubmedPaperParser(TextPubmedParser):
 
         #GETTING ARTICLE TITLE FIELD
         title = cls.do_recursive_find(article_root, ['front','article-meta','title-group','article-title'])
-        title = cls.get_paper_body_content(title).strip().lower() if cls.check_not_none_or_empty(title) else "none"
+        title = cls.do_recursive_xml_content_parse(title).strip().lower() if cls.check_not_none_or_empty(title) else "none"
         #GETTING article-type property from article tag and article category from article-categories tag
         article_type = article_root.get('article-type').lower() if article_root.get('article-type') != None else "none"
         article_category = cls.do_recursive_find(article_root, ['front','article-meta','article-categories', 'subj-group', 'subject'])
@@ -68,23 +68,5 @@ class TextPubmedPaperParser(TextPubmedParser):
 
         #GETTING PAPER WHOLE CONTENT
         paper_root = article_root.find("body")
-        if paper_root != None: whole_content = cls.perform_soft_cleaning(  cls.get_paper_body_content(paper_root).strip()  )
+        if paper_root != None: whole_content = cls.perform_soft_cleaning(  cls.do_recursive_xml_content_parse(paper_root).strip()  )
         return [pmid, pmc, filename, year, whole_content, title, article_type, article_category]
-
-    @classmethod
-    def get_paper_body_content(cls, element):
-        whole_content = ""
-        if element.tag in ["table-wrap", "table", "fig", "fig-group"]: return whole_content
-        if element.tag == "sec": whole_content += "\n\n"
-        if element.tag == "p": whole_content += "\n\n"  
-        # Content before nested element
-        if element.tag not in ["xref", "sup"]:
-            content = element.text
-            if content != None: whole_content += " " + content.replace('\n', ' ') + " " 
-        # Content of nested element
-        for child in element: 
-            whole_content += cls.get_paper_body_content(child)
-        # Content after nested element
-        tail = element.tail
-        if tail != None: whole_content +=  " " + tail.replace('\n', ' ') + " "
-        return re.sub(r'\s+', ' ', whole_content)

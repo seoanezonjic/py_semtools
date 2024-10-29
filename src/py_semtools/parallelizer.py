@@ -10,14 +10,18 @@ class Parallelizer:
         self.chunk_size = chunk_size
 
     def get_chunks(self, items, workload_balance = None, workload_function = None):
+        one_worker_round = False
+        if self.chunk_size == 0: # all workload is given to all cpus in a single working round
+            one_worker_round = True
+            self.chunk_size = len(items)// self.n_processes
+
         if workload_balance != None: items = self.balance_workload(items, workload_balance, workload_function)
 
         chunks = []
-        if self.chunk_size == 0: # all workload is given to all cpus in a single working round
-            chunk_size = len(items)// self.n_processes
+        if one_worker_round: # all workload is given to all cpus in a single working round
             for index in range(0, self.n_processes):
                 chunk = []
-                for index in range(0, chunk_size):
+                for index in range(0, self.chunk_size):
                     chunk.append(items.pop())
                 chunks.append(chunk)
             for i, item in enumerate(items):
