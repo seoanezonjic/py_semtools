@@ -15,8 +15,8 @@ class TextPubmedParser:
     def do_recursive_xml_content_parse(cls, element):
         whole_content = ""
         if element.tag in ["table-wrap", "table", "fig", "fig-group"]: return whole_content
-        if element.tag == "sec": whole_content += "\n\n"
-        if element.tag == "p": whole_content += "\n\n"  
+        if element.tag == "sec": whole_content += r"\n\n"
+        if element.tag == "p": whole_content += r"\n\n"  
         # Content before nested element
         if element.tag not in ["xref", "sup"]:
             content = element.text
