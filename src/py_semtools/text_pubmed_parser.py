@@ -38,11 +38,11 @@ class TextPubmedParser:
         return condition
 
     @classmethod
-    def perform_soft_cleaning(cls, abstract):
-        raw_abstract = abstract.strip().replace("\r", "\n").replace("&#13", "\n").replace("\t", " ")
-        raw_abstract = re.sub(r"\\[a-z]+(\[.+\])?(\{.+\})", r" ", raw_abstract) #Removing latex commands
-        raw_abstract = re.sub(r"[ ]+", r" ", raw_abstract) #Removing additional whitespaces between words
-        raw_abstract = re.sub(r"([A-Za-z\(\)]+[ ]*)\n([ ]*[A-Z-a-z\(\)]+)", r"\1 \2", raw_abstract) #Removing nonsense newlines
-        raw_abstract = re.sub(r"([0-9]+)[\.\,]([0-9]+)", r"\1'\2", raw_abstract) #Changing floating point numbers from 4.5 or 4,5 to 4'5
-        raw_abstract = re.sub(r"i\.?e\.?", "ie", raw_abstract).replace("al.", "al ") #Changing i.e to ie and et al. to et al
-        return raw_abstract
+    def perform_soft_cleaning(cls, raw_document):
+        document = raw_document.strip().replace("\r", "\n").replace("&#13", "\n").replace("\t", " ")
+        document = re.sub(r"\\[a-z]+(\[.+\])?(\{.+\})", r" ", document) #Removing latex commands
+        document = re.sub(r"[ ]+", r" ", document) #Removing additional whitespaces between words
+        document = re.sub(r"([A-Za-z\(\)]+[ ]*)\n([ ]*[A-Z-a-z\(\)]+)", r"\1 \2", document) #Removing nonsense newlines
+        document = re.sub(r"([0-9]+)[\.\,]([0-9]+)", r"\1'\2", document) #Changing floating point numbers from 4.5 or 4,5 to 4'5
+        document = re.sub(r"i\.?e\.?", "ie", document).replace("al.", "al ") #Changing i.e to ie and et al. to et al
+        return document

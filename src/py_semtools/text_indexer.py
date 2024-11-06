@@ -141,18 +141,18 @@ class TextIndexer:
         file = file.replace("\n", "")
         year = str(year).replace("\n", "")
 
-        abstract_length = str(len(text))
+        document_length = str(len(text))
         if options["split"]:
-          abstract_parts = cls.split_document(text, pmid)
-          flattened_abstract = flatten(abstract_parts)
-          number_of_sentences = str(len(flattened_abstract))
-          length_of_sentences = ",".join([str(len(sentence)) for sentence in flattened_abstract])
-          abstract_parts_json = json.dumps(abstract_parts)
-          prepared_index = [pmid, abstract_parts_json, file, year, abstract_length, number_of_sentences, length_of_sentences, 
+          document_parts = cls.split_document(text, pmid)
+          flattened_document = flatten(document_parts)
+          number_of_sentences = str(len(flattened_document))
+          length_of_sentences = ",".join([str(len(sentence)) for sentence in flattened_document])
+          document_parts_json = json.dumps(document_parts)
+          prepared_index = [pmid, document_parts_json, file, year, document_length, number_of_sentences, length_of_sentences, 
                             title, article_type, article_category] 
         else:
-          cleaned_abstract = text.strip().strip().replace("\r", "\n").replace("&#13", "\n").replace("\t", " ").replace("\n", " ")
-          prepared_index = [pmid, cleaned_abstract, file, year, abstract_length, 1, abstract_length, 
+          cleaned_document = text.strip().strip().replace("\r", "\n").replace("&#13", "\n").replace("\t", " ").replace("\n", " ")
+          prepared_index = [pmid, cleaned_document, file, year, document_length, 1, document_length, 
                             title, article_type, article_category]
         return prepared_index
 
