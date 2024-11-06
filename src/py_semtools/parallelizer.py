@@ -8,6 +8,7 @@ class Parallelizer:
     def __init__(self, n_processes, chunk_size):
         self.n_processes = n_processes
         self.chunk_size = chunk_size
+        self.workers_logger = {}
 
     def get_chunks(self, items, workload_balance = None, workload_function = None):
         one_worker_round = False
@@ -68,11 +69,15 @@ class Parallelizer:
         task, all_args = arguments
         args, kwargs = all_args
         pID = getpid()
-        logger.add(f"./logs/{pID}.log", format="{level} : {time} : {message}: {process}", filter=lambda record: record["extra"]["task"] == f"{pID}")
-        child_logger = logger.bind(task=f"{pID}")
-        child_logger.info("Starting chunk process")
-        kwargs['logger'] = child_logger
-       
+        if self.workers_logger.get(pID) == None: 
+            logger.add(f"./logs/{pID}.log", format="{level} : {time} : {message}: {process}", filter=lambda record: record["extra"]["task"] == f"{pID}")
+            child_logger = logger.bind(task=f"{pID}")
+            child_logger.info("Starting chunk process")
+            self.workers_logger[pID] = child_logger
+        else:
+            child_logger = self.workers_logger[pID]
+
+        kwargs['logger'] = child_logger       
         task(*args, **kwargs)         
 
         child_logger.success("Chunk finished succesfully")
