@@ -120,7 +120,12 @@ class TextIndexer:
             pmid, pmc, filename, year, whole_content, title, article_type, article_category = parsed_text
             if pmid == None and PMC_PMID_dict != None: pmid = PMC_PMID_dict.get(pmc)
 
-            if pmid != None and whole_content != "": # TODO: Check if always there is al least pmc and change to PMC the indexing
+            #If there is no pmid in the paper or in the PMC_PMID_dict, we will use the pmc as the document identifier, specifying it is PMC in the index. 
+            #If not PMC nor PMID, we will warn the user
+            if pmid == None and pmc == None: warnings.warn(f"ERROR: The file {file_path} has a paper without PMID and PMC")
+            elif pmid == None and pmc != None: pmid = pmc
+
+            if pmid != None and whole_content != "":
                 #pmid_content_and_stats = cls.prepare_indexes(whole_content, pmc+"-"+pmid, filename, year, options)
                 pmid_content_and_stats = cls.prepare_indexes(whole_content, pmid, filename, year, title, article_type, article_category, options)
                 texts.append(pmid_content_and_stats)
@@ -138,7 +143,7 @@ class TextIndexer:
 
         abstract_length = str(len(text))
         if options["split"]:
-          abstract_parts = cls.split_abstract(text, pmid)
+          abstract_parts = cls.split_document(text, pmid)
           flattened_abstract = flatten(abstract_parts)
           number_of_sentences = str(len(flattened_abstract))
           length_of_sentences = ",".join([str(len(sentence)) for sentence in flattened_abstract])
@@ -154,7 +159,7 @@ class TextIndexer:
 
 
     @classmethod
-    def split_abstract(cls, text, pmid):
+    def split_document(cls, text, pmid):
         #paragraph_splitter = RecursiveCharacterTextSplitter(chunk_size = 100, chunk_overlap  = 20, length_function = len, separators=[r"\n\n", r"\.\n?"], keep_separator=False, is_separator_regex=True)
         paragraph_splitter = RecursiveCharacterTextSplitter(chunk_size = 10, chunk_overlap  = 0, length_function = len, separators=["\n\n"], keep_separator=False)
         sentences_splitter = RecursiveCharacterTextSplitter(chunk_size = 10, chunk_overlap  = 0, length_function = len, separators=["\n",".", ";", ","], keep_separator=False, is_separator_regex=False)
