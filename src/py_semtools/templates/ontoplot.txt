@@ -6,6 +6,10 @@
 	import warnings
 	import math
 
+	def to_css_rgb(color):
+		red, green, blue, *alpha = list(map(lambda channel: round(channel*255), color))
+		return f"rgb({red},{green},{blue})"
+
 	def draw_static_rontoplot(data, plotter_list):
 		fig = plotter_list['plt'].figure(figsize=(12,12))
 		ax = fig.add_subplot(projection='polar')
@@ -30,13 +34,17 @@
 		ax.set_yticklabels([])
 
 	def draw_dynamic_rontoplot(data, plotter_list):
-		fig = plotter_list['px'].scatter_polar(data, r="radius_values", theta="arc_values", color="colors", size="sizes", hover_name="hp_names", title=title, width=width, height=height)
+		fig = plotter_list['px'].scatter_polar(data, r="radius_values", theta="arc_values", size="sizes", hover_name="hp_names",
+					color="colors", color_discrete_map = color_legend, title=title, width=width, height=height)
 		return fig
 
 	plotter.hash_vars[f"{id}_df"] = pd.DataFrame(plotter.hash_vars[id][1:], columns=plotter.hash_vars[id][0])
 	if dynamic:
 		plotter.hash_vars[f"{id}_df"]["arc_values"] = plotter.hash_vars[f"{id}_df"]["arc_values"] / (2*math.pi) * 360
 		plotter.hash_vars[f"{id}_df"]["colors"] = plotter.hash_vars[f"{id}_df"]["colors"].apply(lambda color: color_legend[color])
+		px_color_legend = {label: to_css_rgb(rgb) for rgb, label in color_legend.items()}
+		color_legend.clear()
+		color_legend.update(px_color_legend)
 	
 	plotter_to_use = draw_dynamic_rontoplot if dynamic else draw_static_rontoplot
 %>
