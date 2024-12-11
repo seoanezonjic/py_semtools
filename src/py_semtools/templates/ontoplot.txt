@@ -36,6 +36,7 @@
 	def draw_dynamic_rontoplot(data, plotter_list):
 		fig = plotter_list['px'].scatter_polar(data, r="radius_values", theta="arc_values", size="sizes", hover_name="hp_names",
 					color="colors", color_discrete_map = color_legend, title=title, width=width, height=height)
+		fig.update_layout(polar = dict(angularaxis = dict(showticklabels = False)))
 		return fig
 
 	plotter.hash_vars[f"{id}_df"] = pd.DataFrame(plotter.hash_vars[id][1:], columns=plotter.hash_vars[id][0])
