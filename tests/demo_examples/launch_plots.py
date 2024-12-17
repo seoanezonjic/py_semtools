@@ -1,0 +1,51 @@
+#! /usr/bin/env python
+import os, argparse
+import py_report_html
+from py_report_html import Py_report_html
+from py_cmdtabs import CmdTabs
+import py_semtools
+from py_semtools import Ontology
+from importlib.resources import files
+import site
+
+########################### GLOBAL VARIABLES ###########################
+ONTOLOGY_INDEX = str(files('py_semtools.external_data').joinpath('ontologies.txt'))
+ONTOLOGIES=os.path.join(site.USER_BASE, "semtools", 'ontologies')
+
+########################### FUNCTIONS ################################
+
+def get_ontology_file(path, source, ontologies_folder):
+  if not os.path.exists(path):
+    ont_index = dict(CmdTabs.load_input_data(source))
+    if ont_index.get(path) != None:
+      path = os.path.join(ontologies_folder, path + '.obo')
+    else:
+      raise Exception("Input ontology file not exists")
+  return path
+
+########################### OPTPARSE ###########################
+parser = argparse.ArgumentParser(description=f'Usage: {os.path.basename(__file__)} [options]')
+parser.add_argument("-p", "--profiles", dest="profiles", default= None, help="Path to the profiles file")
+parser.add_argument("-s", "--terms_separator", dest="terms_separator", default= ",", help="Separator for terms in profiles file")
+parser.add_argument("-O", "--ontology_file", dest="ontology_file", default= None, help="Path to ontology file")
+parser.add_argument("-t", "--template", dest="template", default= None, help="Path to the template file")
+parser.add_argument("-o", "--output", dest="output", default= None, help="Output filepath")
+opts = parser.parse_args()
+options = vars(opts)
+
+########################### MAIN ###########################
+# Loading data
+template = open(options['template']).read()
+ontology_file = get_ontology_file(options['ontology_file'], ONTOLOGY_INDEX, ONTOLOGIES)
+profiles = {row[0]: row[1].split(options['terms_separator']) for row in CmdTabs.load_input_data(options['profiles'])}
+
+# Loading ontology and getting profiles terms frequency
+ontology = Ontology(file = ontology_file, load_file = True, extra_dicts = {})
+ontology.load_profiles(profiles, reset_stored=True)
+hpo_freqs = ontology.get_profiles_terms_frequency(asArray=False, translate=False, count_parentals = True, min_freq = 0.015)
+
+# Building report
+container = {"profile_freqs": hpo_freqs, "ontology": ontology}
+report = Py_report_html(container, os.path.basename(options["output"]), True)
+report.build(template)
+report.write(options['output'] + '.html')

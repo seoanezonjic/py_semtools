@@ -1,0 +1,2 @@
+${plotter.ontoplot(id=f"profile_freqs", ontology="ontology", root_node="HP:0000118", reference_node="HP:0000118", 
+                        height=800, width=800, title=f"Profiles signature", dynamic = True)}
