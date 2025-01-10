@@ -1,2 +1,12 @@
-${plotter.ontoplot(id=f"profile_freqs", ontology="ontology", root_node="HP:0000118", reference_node="HP:0000118", 
-                        height=800, width=800, title=f"Profiles signature", dynamic = True)}
+<div style="width: 90%; background-color:#ecf0f1; margin: 0 auto;"> 
+    <h1 style="text-align: center; background-color:#d6eaf8">HPO annotations distribution</h1>
+    <div style="overflow: hidden">
+
+        ${plotter.ontodist(ontology="ontology", dist_type=['count', 'perc'], height=800, width=800)}
+    </div>
+
+    <div style="width: 90%; background-color:#ecf0f1; margin: 0 auto;">
+        ${plotter.ontoplot(id=f"profile_freqs", ontology="ontology", root_node="HP:0000118", reference_node="HP:0000118", 
+                                height=800, width=800, title=f"Profiles signature", dynamic = True)}
+    </div>
+</div>

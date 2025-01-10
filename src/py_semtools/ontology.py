@@ -1704,6 +1704,16 @@ def ontoplot(self, **user_options):
   user_options["dynamic"] = dynamic
   return self.renderize_child_template(self.get_internal_template('ontoplot.txt'), color_legend=color_legend, **user_options)
 
+def ontodist(self, **user_options):
+    ontology = self.hash_vars[user_options['ontology']]
+    ontology_levels, distribution_percentage = ontology.get_profile_ontology_distribution_tables()
+    ontology_levels.insert(0, ["level", "ontology", "cohort"])
+    distribution_percentage.insert(0, ["level", "ontology", "weighted cohort", "uniq terms cohort"])
+    self.hash_vars['ontology_levels'] = ontology_levels
+    self.hash_vars['distribution_percentage'] = distribution_percentage
+    return self.renderize_child_template(self.get_internal_template('ontodist.txt'), **user_options)
+
+
 #### METHODS FOR SIMILARITY MATRIX HEATMAP
 
 def similarity_matrix_plot(self, **user_options):
@@ -1713,5 +1723,6 @@ def similarity_matrix_plot(self, **user_options):
 Py_report_html.append_values_to_arrays = append_values_to_arrays
 Py_report_html.get_arc_degree_and_radius_values = get_arc_degree_and_radius_values
 Py_report_html.prepare_ontoplot_data = prepare_ontoplot_data
+Py_report_html.ontodist = ontodist
 Py_report_html.ontoplot = ontoplot
 Py_report_html.similarity_matrix_plot = similarity_matrix_plot
