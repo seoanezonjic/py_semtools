@@ -39,10 +39,10 @@
 		fig.update_layout(polar = dict(angularaxis = dict(showticklabels = False)))
 		return fig
 
-	plotter.hash_vars[f"{id}_df"] = pd.DataFrame(plotter.hash_vars[id][1:], columns=plotter.hash_vars[id][0])
+	plotter.hash_vars["ontoplot_table_format_df"] = pd.DataFrame(plotter.hash_vars["ontoplot_table_format"][1:], columns=plotter.hash_vars["ontoplot_table_format"][0])
 	if dynamic:
-		plotter.hash_vars[f"{id}_df"]["arc_values"] = plotter.hash_vars[f"{id}_df"]["arc_values"] / (2*math.pi) * 360
-		plotter.hash_vars[f"{id}_df"]["colors"] = plotter.hash_vars[f"{id}_df"]["colors"].apply(lambda color: color_legend[color])
+		plotter.hash_vars["ontoplot_table_format_df"]["arc_values"] = plotter.hash_vars["ontoplot_table_format_df"]["arc_values"] / (2*math.pi) * 360
+		plotter.hash_vars["ontoplot_table_format_df"]["colors"] = plotter.hash_vars["ontoplot_table_format_df"]["colors"].apply(lambda color: color_legend[color])
 		px_color_legend = {label: to_css_rgb(rgb) for rgb, label in color_legend.items()}
 		color_legend.clear()
 		color_legend.update(px_color_legend)
@@ -50,4 +50,4 @@
 	plotter_to_use = draw_dynamic_rontoplot if dynamic else draw_static_rontoplot
 %>
 
-${plotter.static_plot_main(id=f"{id}_df", dynamic=dynamic, raw=True, header=True, row_names=False, var_attr=[0],  plotting_function = plotter_to_use, height=height, width=width, title=title)}
+${plotter.static_plot_main(id="ontoplot_table_format_df", dynamic=dynamic, raw=True, header=True, row_names=False, var_attr=[0],  plotting_function = plotter_to_use, height=height, width=width, title=title)}

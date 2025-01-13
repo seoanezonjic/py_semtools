@@ -1,0 +1,8 @@
+% if 'term' in dist_type:
+	${ plotter.scatter2D(id= 'term_ics', header=False, row_names=False, title='HP term IC distribution', x_label = 'HP Ontology IC', y_label = 'HP Frequency based IC', alpha=0.6, add_densities=True, config={"dataPointSize":8, "setMaxX": 4.5, "setMaxY":4.5, "setMinX": 0, "setMinY": 0}  )}
+% endif
+
+
+% if 'prof' in dist_type:
+	${ plotter.scatter2D(id= 'profile_ics', header=False, row_names=False, title='HP patient profile IC distribution', x_label = 'HP Ontology Profile IC', y_label = 'HP Frequency based Profile IC', alpha=0.6, add_densities=True, config={"dataPointSize":8, "setMaxX": 4.5, "setMaxY":4.5, "setMinX": 0, "setMinY": 0}  )}
+% endif

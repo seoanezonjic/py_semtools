@@ -1,0 +1,1 @@
+${ plotter.scatter2D(id= 'term_redundancy', header=False, row_names=False, title = 'HP term redundancy in patient profiles', x_label = 'ProfileSize', y_label = 'ParentTerms', alpha=0.6, add_densities=True, config={"dataPointSize":8} )}

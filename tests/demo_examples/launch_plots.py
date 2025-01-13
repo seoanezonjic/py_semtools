@@ -42,10 +42,14 @@ profiles = {row[0]: row[1].split(options['terms_separator']) for row in CmdTabs.
 # Loading ontology and getting profiles terms frequency
 ontology = Ontology(file = ontology_file, load_file = True, extra_dicts = {})
 ontology.load_profiles(profiles, reset_stored=True)
-hpo_freqs = ontology.get_profiles_terms_frequency(asArray=False, translate=False, count_parentals = True, min_freq = 0.015)
+ontology.get_profiles_terms_frequency(count_parentals = True, min_freq = 0.015)
+ontology.get_profile_redundancy()
+ontology.get_observed_ics_by_onto_and_freq()
+ontology.get_profiles_resnik_dual_ICs()
 
 # Building report
-container = {"profile_freqs": hpo_freqs, "ontology": ontology}
+container = {"ontology": ontology}
 report = Py_report_html(container, os.path.basename(options["output"]), True)
+report.data_from_files = False # We are sending the a ontology object not a raw table file loaded with report_html's I/O methods
 report.build(template)
 report.write(options['output'] + '.html')

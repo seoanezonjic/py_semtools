@@ -22,7 +22,7 @@ from py_report_html import Py_report_html
 from py_semtools import OboParser
 from py_semtools import JsonParser
 
-from py_exp_calc.exp_calc import intersection, union, diff
+from py_exp_calc.exp_calc import intersection, union, diff, add_record
 
 class Ontology:
     TEMPLATES = "py_semtools.templates"
@@ -64,7 +64,8 @@ class Ontology:
             elif fformat != None:
                 warnings.warn('Format not allowed. Loading process will not be performed')
             if build: self.precompute()
-
+        self.dicts['prof_IC_struct'] = {}
+        self.dicts['prof_IC_observ'] = {}
     #############################################
     # GENERATE METADATA FOR ALL TERMS
     #############################################
@@ -1052,9 +1053,13 @@ class Ontology:
     # ===== Parameters
     # +reset+:: if true, reset observed freqs alreeady stored befor re-calculate
     def add_observed_terms_from_profiles(self, reset = False):
-        if reset: 
+        if reset:
+            self.items = {}
             for term, freqs in self.meta.items(): freqs['observed_freq'] = -1 
-        for pr_id, terms in self.profiles.items(): self.add_observed_terms(terms = terms)
+        for pr_id, terms in self.profiles.items(): 
+            for t_id in terms:
+                add_record(self.items, t_id, pr_id )
+            self.add_observed_terms(terms = terms)
 
     # ===== Returns 
     # profiles assigned to a given ID
@@ -1166,7 +1171,7 @@ class Ontology:
     # +translate+:: if true, term IDs will be translated to 
     # ===== Returns 
     # stored profiles terms frequencies
-    def get_profiles_terms_frequency(self, ratio = True, asArray = True, translate = True, count_parentals = False, min_freq = 0):
+    def get_profiles_terms_frequency(self, ratio = True, asArray = True, translate = False, count_parentals = False, min_freq = 0):
         freqs = defaultdict(lambda: 0)
         for t_id, terms in self.profiles.items():
             unique_terms = set() 
@@ -1194,6 +1199,7 @@ class Ontology:
                     terms_to_filter_out.append(term)
             for term in terms_to_filter_out: del freqs[term]
 
+        self.dicts['term_stats'] = freqs
         if asArray:
             freqs = [ [k, v] for k,v in freqs.items() ]
             freqs.sort(key = lambda f: f[1], reverse=True)
@@ -1212,9 +1218,8 @@ class Ontology:
     def get_profile_redundancy(self):
         profile_sizes = self.get_profiles_sizes()
         parental_terms_per_profile = self.parentals_per_profile()# clean_profiles
-        #parental_terms_per_profile = [item[0] for item in parental_terms_per_profile]
-        profile_sizes, parental_terms_per_profile = list(zip(*sorted(list(zip(profile_sizes, parental_terms_per_profile)), key=lambda i: i[0])[::-1]))
-        #profile_sizes, parental_terms_per_profile = profile_sizes.zip(parental_terms_per_profile).sort_by{|i| i.first}.reverse.transpose #this is the ruby version of the above line
+        self.profile_sizes = profile_sizes
+        self.parental_terms_per_profile = parental_terms_per_profile
         return profile_sizes, parental_terms_per_profile
 
     def compute_term_list_and_childs(self):
@@ -1238,6 +1243,8 @@ class Ontology:
         for t_id, terms in self.profiles.items():
             struct_ics[t_id] = self.get_profile_mean_IC(terms, ic_type = struct)
             observ_ics[t_id] = self.get_profile_mean_IC(terms, ic_type = observ)
+        self.dicts['prof_IC_struct'] = struct_ics
+        self.dicts['prof_IC_observ'] = observ_ics
         return struct_ics, observ_ics
 
 
@@ -1247,7 +1254,7 @@ class Ontology:
     def get_observed_ics_by_onto_and_freq(self): 
         ic_ont = {}
         resnik_observed = {}
-        observed_terms = set([ t_id for terms in self.profiles.values() for t_id in terms ])
+        observed_terms = list(self.items.keys())
         for term in observed_terms:
             ic_ont[term] = self.get_IC(term)
             resnik_observed[term] = self.get_IC(term, ic_type = 'resnik_observed')
@@ -1688,19 +1695,17 @@ def prepare_ontoplot_data(self, ontology, hpo_stats_dict, root_node, reference_n
 
 def ontoplot(self, **user_options):
   dynamic = user_options.get('dynamic', False)
-  term_frequencies = {term: proportion*100 for term, proportion in self.hash_vars[user_options['id']].items()}
   ontology = self.hash_vars[user_options['ontology']]
+  term_frequencies = {term: proportion*100 for term, proportion in ontology.dicts['term_stats'].items()}
   root_node = user_options['root_node']
   reference_node = user_options['reference_node']
   prepared_data, color_legend = self.prepare_ontoplot_data(ontology, term_frequencies, root_node, reference_node)
   colors, sizes, radius_values, arc_values, hp_names = prepared_data
 
-  rontoplot_table_format = [["colors", "sizes", "radius_values", "arc_values", "hp_names"]]
-  rontoplot_table_format = rontoplot_table_format + [[colors[i], sizes[i], radius_values[i], arc_values[i], hp_names[i]] for i in range(len(colors))]
+  ontoplot_table_format = [["colors", "sizes", "radius_values", "arc_values", "hp_names"]]
+  ontoplot_table_format = ontoplot_table_format + [[colors[i], sizes[i], radius_values[i], arc_values[i], hp_names[i]] for i in range(len(colors))]
   
-  ponto_id= f"{user_options['id']}_trans"
-  self.hash_vars[ponto_id] = rontoplot_table_format
-  user_options["id"] = ponto_id
+  self.hash_vars["ontoplot_table_format"] = ontoplot_table_format
   user_options["dynamic"] = dynamic
   return self.renderize_child_template(self.get_internal_template('ontoplot.txt'), color_legend=color_legend, **user_options)
 
@@ -1713,6 +1718,31 @@ def ontodist(self, **user_options):
     self.hash_vars['distribution_percentage'] = distribution_percentage
     return self.renderize_child_template(self.get_internal_template('ontodist.txt'), **user_options)
 
+def ontoICdist(self, **user_options):
+    ontology = self.hash_vars[user_options['ontology']]
+    term_IC_struct, term_IC_observed = ontology.get_observed_ics_by_onto_and_freq() # IC for TERMS
+    prof_IC_struct = ontology.dicts['prof_IC_struct']
+    prof_IC_observ = ontology.dicts['prof_IC_observ']
+    term_ics = [ list(p) for p in zip(list(term_IC_struct.values()),list(term_IC_observed.values())) ]
+    profile_ics = [ list(p) for p in zip(list(prof_IC_struct.values()), list(prof_IC_observ.values())) ]
+    self.hash_vars['term_ics'] = term_ics
+    self.hash_vars['profile_ics'] = profile_ics
+    return self.renderize_child_template(self.get_internal_template('ontoICdist.txt'), **user_options)
+
+def plotProfRed(self, **user_options):
+    ontology = self.hash_vars[user_options['ontology']]
+    term_redundancy = sorted(list(zip(ontology.profile_sizes, ontology.parental_terms_per_profile)), reverse=True, 
+        key=lambda i: i[0])
+    term_redundancy = [ list(i) for i in term_redundancy]
+    self.hash_vars['term_redundancy'] = term_redundancy
+    return self.renderize_child_template(self.get_internal_template('plotProfRed.txt'), **user_options)
+
+def makeTermFreqTable(self, **user_options):
+    ontology = self.hash_vars[user_options['ontology']]
+    term_stat_dict = ontology.dicts['term_stats']
+    term_stats = [ [ontology.translate_id(term), freq * 100] for term, freq in term_stat_dict.items()] 
+    self.hash_vars['term_stats'] = term_stats
+    return self.renderize_child_template(self.get_internal_template('makeTermFreqTable.txt'), **user_options)
 
 #### METHODS FOR SIMILARITY MATRIX HEATMAP
 
@@ -1725,4 +1755,7 @@ Py_report_html.get_arc_degree_and_radius_values = get_arc_degree_and_radius_valu
 Py_report_html.prepare_ontoplot_data = prepare_ontoplot_data
 Py_report_html.ontodist = ontodist
 Py_report_html.ontoplot = ontoplot
+Py_report_html.ontoICdist = ontoICdist
+Py_report_html.plotProfRed = plotProfRed
+Py_report_html.makeTermFreqTable = makeTermFreqTable
 Py_report_html.similarity_matrix_plot = similarity_matrix_plot
