@@ -353,7 +353,7 @@ def main_semtools(opts):
         if options.get('list_translate') == None and options.get('filter_list') == None or options['keyword'] != None:
             data = format_data(data, options)
             if options.get('translate') != 'codes' and options.get('keyword') == None:
-                store_profiles(data, ontology, load_hard_cleaned_profiles = options['load_hard_cleaned_profiles'], options = options) 
+                for t_id, terms in data: ontology.add_profile(t_id, terms, clean_hard = options['load_hard_cleaned_profiles'], options = options)
     if options.get('list_translate') != None:
         for term in data:
             if options['list_translate'] == 'names':
@@ -380,7 +380,7 @@ def main_semtools(opts):
             pr_id, terms = info
             profiles[pr_id] = terms
         translate(ontology, 'codes', options, profiles)
-        store_profiles(list(profiles.items()), ontology, load_hard_cleaned_profiles = options['load_hard_cleaned_profiles'], options = options)
+        for t_id, terms in profiles.items(): ontology.add_profile(t_id, terms, clean_hard = options['load_hard_cleaned_profiles'], options = options)
            
     if options.get('clean_profiles'):
         removed_profiles = clean_profiles(ontology.profiles, ontology, options)    

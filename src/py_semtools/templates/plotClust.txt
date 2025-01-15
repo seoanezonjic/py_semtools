@@ -1,0 +1,10 @@
+<%
+	semantic_clust = plotter.hash_vars['semantic_clust']
+	plotter.hash_vars['clust_similarity_matrix'] = semantic_clust['sim']
+	clustering = [ i[0] for i in semantic_clust['raw_cls']]
+	uniq_cls = set(clustering)
+	lut = dict(zip(uniq_cls, plotter.get_color_palette(len(uniq_cls))))
+	row_colors = [ lut[i] for i in clustering ]
+%>
+${ plotter.static_plot_main( id = 'clust_similarity_matrix', raw = True,
+	plotting_function = lambda data, plotter_list: plotter_list["sns"].clustermap(data=data, row_linkage=semantic_clust['link'], col_linkage=semantic_clust['link'], row_colors=row_colors ), whole=True)}

@@ -66,6 +66,8 @@ class Ontology:
             if build: self.precompute()
         self.dicts['prof_IC_struct'] = {}
         self.dicts['prof_IC_observ'] = {}
+        self.clustering = {}
+
     #############################################
     # GENERATE METADATA FOR ALL TERMS
     #############################################
@@ -1104,6 +1106,22 @@ class Ontology:
         if store: self.profiles = cleaned_profiles 
         return cleaned_profiles
 
+    def get_general_profile(self, thr = 0): 
+        term_count = defaultdict(lambda: 0)
+        for id, prof in self.each_profile():
+            for term in prof: term_count[term] += 1
+
+        records = len(self.profiles)
+        general_profile = []
+        for term, count in term_count.items(): 
+            if count / float(records) >= thr: general_profile.append(term)
+        
+        return self.clean_profile_hard(general_profile)
+
+    def each_profile(self):
+        for id, profile in self.profiles.items():
+            yield(id, profile)
+
     # ID Handlers
     ####################################
 
@@ -1349,6 +1367,88 @@ class Ontology:
             sim = self.get_profile_similarities(prof, sim_type = sim_type, ic_type = ic_type, store_mica = True)
             profiles_similarity[t_id] = 1 if (np.isnan(sim) and len(prof) == 1) else sim
         return profiles_similarity
+
+    ## clustering methods
+    ########################################################
+    def get_matrix_similarity(self, method_name, options, reference_profiles=None, profiles_similarity_filename=None, matrix_filename = None):
+        if reference_profiles == None: 
+            profiles_similarity = self.compare_profiles(sim_type = method_name, external_profiles = reference_profiles)
+        else: # AS reference profiles are constant, the sematic comparation will be A => B (A reference). So, we have to invert the elements to perform the comparation
+            pat_profiles = self.profiles # TEmporal copy to preserve patient profiles and inject reference profiles
+            self.load_profiles(reference_profiles, reset_stored = True)
+            profiles_similarity = self.compare_profiles(sim_type = method_name, 
+                external_profiles = pat_profiles, 
+                bidirectional = False)
+            self.load_profiles(pat_profiles, reset_stored = True)
+            profiles_similarity = pxc.invert_nested_hash(profiles_similarity)
+        if options.get('sim_thr') != None: pxc.remove_nested_entries(profiles_similarity, lambda id, sim: sim >= options['sim_thr']) 
+        if profiles_similarity_filename != None: self.write_profile_pairs(profiles_similarity, profiles_similarity_filename)
+        if reference_profiles == None:
+            y_names = None
+            similarity_matrix, x_names = pxc.to_wmatrix(profiles_similarity, squared = True, symm = True)
+        else:
+            similarity_matrix, y_names, x_names = pxc.to_wmatrix(profiles_similarity, squared = False, symm = False)
+        if matrix_filename != None:
+            axis_file_x = re.sub('.npy','_x.lst', matrix_filename)
+            axis_file_y = re.sub('.npy','_y.lst', matrix_filename)
+            pxc.save(similarity_matrix, matrix_filename, 
+                x_axis_names=x_names, x_axis_file=axis_file_x, 
+                y_axis_names=y_names, y_axis_file=axis_file_y)
+        return similarity_matrix, y_names, x_names
+
+    def write_profile_pairs(self, similarity_pairs, filename):
+        with open(filename, 'w') as f:
+            for pairsA, pairsB_and_values in similarity_pairs.items():
+                for pairsB, values in pairsB_and_values.items():
+                    f.write(f"{pairsA}\t{pairsB}\t{values}\n")
+
+    def get_similarity_clusters(self, method_name, options, temp_folder = None, reference_profiles = None):
+        clusters = {}
+        similarity_matrix = None
+        linkage = None
+        raw_cls = None
+        if len(self.profiles) > 1:
+            if temp_folder != None: # To save and load results from disk
+                matrix_filename = os.path.join(temp_folder, f"similarity_matrix_{method_name}.npy")
+                axis_file = re.sub('.npy','_x.lst', matrix_filename)
+                axis_file_y = None if reference_profiles == None else re.sub('.npy','_y.lst', matrix_filename)
+                profiles_similarity_filename = os.path.join(temp_folder, f'profiles_similarity_{method_name}.txt')
+                cluster_file = os.path.join(temp_folder, f"{method_name}_clusters.txt")
+                linkage_file = os.path.join(temp_folder, f"{method_name}_linkage.npy")
+                raw_cls_file = os.path.join(temp_folder, f"{method_name}_raw_cls.npy")
+            if temp_folder == None or not os.path.exists(matrix_filename):
+                similarity_matrix, y_names, x_names = self.get_matrix_similarity(method_name, options, 
+                    reference_profiles=reference_profiles,  
+                    profiles_similarity_filename=profiles_similarity_filename, 
+                    matrix_filename = matrix_filename)
+            elif temp_folder != None or os.path.exists(matrix_filename):
+                similarity_matrix, x_names, y_names = pxc.load(matrix_filename, x_axis_file=axis_file, y_axis_file=axis_file_y)
+            
+            if temp_folder == None or not os.path.exists(cluster_file):
+                if method_name == 'resnik':
+                    dist_matrix = np.amax(similarity_matrix) - similarity_matrix
+                elif method_name == 'lin':
+                    dist_matrix = 1 - similarity_matrix
+                clusters, cls_objects = pxc.get_hc_clusters(dist_matrix, dist = 'custom', method = 'ward', identify_clusters='max_avg', n_clusters=3, item_list = x_names)
+                linkage = cls_objects['link']
+                raw_cls = cls_objects['cls']
+                
+                if temp_folder != None:
+                    with open(cluster_file, 'w') as f:
+                        for clusterID, patientIDs in clusters.items(): f.write(f"{clusterID}\t{','.join(patientIDs)}\n")
+                    np.save(linkage_file, linkage)
+                    np.save(raw_cls_file, np.array(raw_cls, dtype=np.int32))
+                    #with open(raw_cls_file, 'w') as f: f.write(json.dumps(raw_cls))
+            elif temp_folder != None or os.path.exists(cluster_file):
+                with open(cluster_file) as f:
+                    for l in f: 
+                        clusterID, patientIDs = l.rstrip().split("\t")
+                        clusters[int(clusterID)] = patientIDs.split(",")
+                linkage = np.load(linkage_file)
+                raw_cls = np.load(raw_cls_file)
+                #with open(raw_cls_file) as f: raw_cls = json.loads(f.read())
+            self.clustering[method_name] = {'cls': clusters, 'sim': similarity_matrix, 'link': linkage, 'raw_cls': raw_cls}
+        return clusters, similarity_matrix, linkage, raw_cls
 
     # specifity_index related methods
     ####################################
@@ -1744,6 +1844,12 @@ def makeTermFreqTable(self, **user_options):
     self.hash_vars['term_stats'] = term_stats
     return self.renderize_child_template(self.get_internal_template('makeTermFreqTable.txt'), **user_options)
 
+def plotClust(self, **user_options):
+    ontology = self.hash_vars[user_options['ontology']]
+    self.hash_vars['semantic_clust'] = ontology.clustering[user_options['method_name']]
+    return self.renderize_child_template(self.get_internal_template('plotClust.txt'), **user_options)
+
+
 #### METHODS FOR SIMILARITY MATRIX HEATMAP
 
 def similarity_matrix_plot(self, **user_options):
@@ -1757,5 +1863,6 @@ Py_report_html.ontodist = ontodist
 Py_report_html.ontoplot = ontoplot
 Py_report_html.ontoICdist = ontoICdist
 Py_report_html.plotProfRed = plotProfRed
+Py_report_html.plotClust = plotClust
 Py_report_html.makeTermFreqTable = makeTermFreqTable
 Py_report_html.similarity_matrix_plot = similarity_matrix_plot
