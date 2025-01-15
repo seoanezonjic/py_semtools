@@ -9,6 +9,7 @@ import gzip
 
 from py_cmdtabs import CmdTabs
 from py_semtools.parallelizer import Parallelizer
+from py_semtools.text_pubmed_parser import TextPubmedParser
 from py_semtools.text_pubmed_paper_parser import TextPubmedPaperParser
 from py_semtools.text_pubmed_abstract_parser import TextPubmedAbstractParser 
 
@@ -48,26 +49,24 @@ class TextIndexer:
           text_index = cls.get_index(filename, options, logger = logger)
           if options["items_per_file"] == 0:
             basename = os.path.basename(filename).replace(".xml.gz", "").replace(".tar.gz", "")
-            cls.write_texts(text_index, options["output"], basename, balancer = balancer, split_output_files = options["split_output_files"], items_per_file = options["text_balancing_size"])
+            cls.write_indexes(text_index, options["output"], basename, balancer = balancer, split_output_files = options["split_output_files"], items_per_file = options["text_balancing_size"])
           else:
               accumulated_texts.extend(text_index)
               while len(accumulated_texts) >= options["items_per_file"]:
                 texts2save = [accumulated_texts.pop() for _times in range(options["items_per_file"])]
-                cls.write_texts(texts2save, options["output"], options["tag"], a_suffix=sup_counter, b_suffix=counter, balancer = balancer, split_output_files = options["split_output_files"], items_per_file = options["text_balancing_size"])
+                cls.write_indexes(texts2save, options["output"], options["tag"], a_suffix=sup_counter, b_suffix=counter, balancer = balancer, split_output_files = options["split_output_files"], items_per_file = options["text_balancing_size"])
                 counter += 1    
         # For records saved in accumulated_texts that the loop has not writed
-        cls.write_texts(accumulated_texts, options["output"], options["tag"], a_suffix=sup_counter, b_suffix=counter, balancer = balancer, split_output_files = options["split_output_files"], items_per_file = options["text_balancing_size"])
+        cls.write_indexes(accumulated_texts, options["output"], options["tag"], a_suffix=sup_counter, b_suffix=counter, balancer = balancer, split_output_files = options["split_output_files"], items_per_file = options["text_balancing_size"])
 
     @classmethod
-    def write_texts(cls, texts, folder, name, a_suffix=None, b_suffix=None, balancer = None, split_output_files = False, items_per_file = 0):
-        if a_suffix == None: a_suffix = ""
-        if b_suffix != None: 
-            b_suffix = f"_{b_suffix}"
-        else:
-            b_suffix = ""
-        if len(texts) > 0:
-            if balancer != None: texts = balancer.balance_workload(texts, workload_balance='disperse_max', workload_function= lambda i: len(i[1]))
-            texts.reverse()
+    def write_indexes(cls, indexes, folder, name, a_suffix=None, b_suffix=None, balancer = None, split_output_files = False, items_per_file = 0):
+        a_suffix = "" if a_suffix == None else f"_{a_suffix}"
+        b_suffix = "" if b_suffix == None else f"_{b_suffix}"
+
+        if len(indexes) > 0:
+            if balancer != None: indexes = balancer.balance_workload(indexes, workload_balance='disperse_max', workload_function= lambda idx: len(idx[1]))
+            indexes.reverse()
             file_count = 0
             if split_output_files:
                 out_filename = os.path.join(folder, name+f"{a_suffix}{b_suffix}_{file_count}.gz")
@@ -75,8 +74,8 @@ class TextIndexer:
                 out_filename = os.path.join(folder, name+f"{a_suffix}{b_suffix}.gz" )
             f = gzip.open(out_filename, 'wt')
             item_count = 0
-            while texts:
-                pmid, text, original_filename, year, text_length, number_of_sentences, length_of_sentences, title, article_type, article_category  =  texts.pop()
+            while indexes:
+                pmid, text, original_filename, year, text_length, number_of_sentences, length_of_sentences, title, article_type, article_category  =  indexes.pop()
                 if split_output_files and item_count >= items_per_file:
                     f.close()
                     file_count += 1
@@ -151,8 +150,8 @@ class TextIndexer:
           prepared_index = [pmid, document_parts_json, file, year, document_length, number_of_sentences, length_of_sentences, 
                             title, article_type, article_category] 
         else:
-          cleaned_document = text.strip().strip().replace("\r", "\n").replace("&#13", "\n").replace("\t", " ").replace("\n", " ")
-          prepared_index = [pmid, cleaned_document, file, year, document_length, 1, document_length, 
+          cleaned_document = TextPubmedParser.perform_soft_cleaning(text)
+          prepared_index = [pmid, cleaned_document, file, year, document_length, "1", document_length, 
                             title, article_type, article_category]
         return prepared_index
 
@@ -161,11 +160,12 @@ class TextIndexer:
     @classmethod
     def split_document(cls, text, pmid):
         #paragraph_splitter = RecursiveCharacterTextSplitter(chunk_size = 100, chunk_overlap  = 20, length_function = len, separators=[r"\n\n", r"\.\n?"], keep_separator=False, is_separator_regex=True)
-        paragraph_splitter = RecursiveCharacterTextSplitter(chunk_size = 10, chunk_overlap  = 0, length_function = len, separators=[r"\n\n"], keep_separator=False)
+        paragraph_splitter = RecursiveCharacterTextSplitter(chunk_size = 10, chunk_overlap  = 0, length_function = len, separators=["\n\n"], keep_separator=False)
         sentences_splitter = RecursiveCharacterTextSplitter(chunk_size = 10, chunk_overlap  = 0, length_function = len, separators=["\n",".", ";", ","], keep_separator=False, is_separator_regex=False)
         #sentences_splitter = RecursiveCharacterTextSplitter(chunk_size = 120, chunk_overlap  = 20, length_function = len, separators=["\n", " ", ""], keep_separator=False, is_separator_regex=False)
-        paragraphs = paragraph_splitter.split_text(text)
+        paragraphs = [paragraph.strip() for paragraph in paragraph_splitter.split_text(text)]
         sentences = [ sentences_splitter.split_text(paragraph.replace("\n", "")) for paragraph in paragraphs ]
+        sentences = [ list(map(lambda sentence: sentence.strip(), paragraph)) for paragraph in sentences ]
         
         formated = []       
         for paragraph in sentences:

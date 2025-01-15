@@ -219,6 +219,7 @@ class STengine:
       query_embeddings = torch.from_numpy(query_embeddings).to("cuda")
       query_embeddings = util.normalize_embeddings(query_embeddings)
       results = self.make_single_similarity_calculation(corpus_embeddings, query_embeddings, top_k=top_k, gpu_calc=True, order=order)
+      del corpus_embeddings; del query_embeddings; gc.collect(); cuda.empty_cache()
       if verbose: print(f"----Time to calculate similarities with GPU: {time.time() - start} seconds")
       return results
 
