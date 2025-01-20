@@ -67,7 +67,7 @@ def main_get_sorted_profs(opts):
     data = CmdTabs.load_input_data(options['input_file'])
     data = format_data(data, options)
     for t_id, terms in data: ontology.add_profile(t_id, terms, clean_hard = options['hard_check'], options = options)
-    clean_profiles = copy.deepcopy(ontology.profiles)
+    clean_profiles = ontology.profiles
 
     if options.get("ref_prof"):
       ref_profile = ontology.clean_profile_hard(options["ref_prof"])

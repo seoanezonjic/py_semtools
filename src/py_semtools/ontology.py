@@ -1417,6 +1417,8 @@ class Ontology:
                 cluster_file = os.path.join(temp_folder, f"{method_name}_clusters.txt")
                 linkage_file = os.path.join(temp_folder, f"{method_name}_linkage.npy")
                 raw_cls_file = os.path.join(temp_folder, f"{method_name}_raw_cls.npy")
+            else:
+                matrix_filename, profiles_similarity_filename = None, None
             if temp_folder == None or not os.path.exists(matrix_filename):
                 similarity_matrix, y_names, x_names = self.get_matrix_similarity(method_name, options, 
                     reference_profiles=reference_profiles,  
