@@ -1,9 +1,11 @@
-import argparse, re, sys
+import argparse, re, sys, inspect
 from py_semtools.main_modules import *
 
 ###########################################################################
 ## TYPES
 ###########################################################################
+
+def one_column_file(file): return [line.strip() for line in open(file).readlines()]
 
 def text_list(string): return string.split(',')
 
@@ -257,3 +259,33 @@ def get_corpus_index(args = None):
             help="Path to a 2 columns file with PMC-PMID equivalences to use when a parsed papers only finds the PMC ID inside its content.")
     opts =  parser.parse_args(args)
     main_get_corpus_index(opts)
+
+
+def get_sorted_profs(args=None):
+    if args == None: args = sys.argv[1:]
+    parser = argparse.ArgumentParser(description=f'Usage: {inspect.stack()[0][3]} [options]')
+    parser.add_argument("-i", "--input_file", dest="input_file", default= None,
+                        help="Input file with ids and profiles")
+    parser.add_argument("-d", "--pat_id_col", dest="subject_column", default= 0, type=int,
+                        help="0-based position of the column with the subject id")    
+    parser.add_argument("-p", "--term_col", dest="annotations_column", default= 1, type=int,
+                        help="0-based position of the column with the ontology terms")    
+    parser.add_argument("-S", "--terms_separator", dest="separator", default='|',
+                        help="Set which character must be used to split the terms profile. Default '|'")
+    parser.add_argument("-r", "--ref_profile", dest="ref_prof", default= None, type = one_column_file,
+                        help="Path to reference profile. One term code per line. If not used, a general one will be made from the union of all external profiles")    
+    parser.add_argument("-O", "--ontology_file", dest="ontology_file", default= None, 
+                        help="Path to ontology file or Ontology name to use")   
+    parser.add_argument("-X", "--excluded_terms", dest="excluded_terms", default= [], type = one_column_file,
+                        help="File with excluded terms. One term code per line.")
+    parser.add_argument("--hard_check", dest="hard_check", default= True, action="store_false",
+                        help="Set to disable hard check cleaning. Default true")    
+    parser.add_argument("-o", "--output_file", dest="output_file", default= 'report.html',
+                        help="Output report file")
+    parser.add_argument("-f", "--general_prof_freq", dest="term_freq", default= 0, type= float,
+                        help="When reference profile is not given, a general ine is computed with all profiles. If a freq is defined (0-1), all terms with freq minor than limit are removed")
+    parser.add_argument("-L", "--matrix_limits", dest="matrix_limits", default= [20, 40], type= lambda data: [int(i) for i in data.split(",")],
+                        help="Number of rows and columns to show in heatmap defined as 'Nrows,Ncols'. Default 20,40")
+    parser.add_argument("--header_id", dest="header_id", default="HP", help="Header ID to use in plotted heatmaps")
+    opts =  parser.parse_args(args)
+    main_get_sorted_profs(opts)

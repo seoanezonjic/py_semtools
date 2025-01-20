@@ -52,3 +52,6 @@ MANIFEST
 .venv*/
 .conda*/
 .python-version
+
+# Other paths
+tests/demo_examples/py_venv/

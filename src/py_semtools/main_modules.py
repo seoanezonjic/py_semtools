@@ -1,15 +1,6 @@
-import sys
-import os
-import glob
-import math
-import re
-import subprocess
-import warnings
-import time
-import requests
+import sys, os, glob, math, re, subprocess, warnings, time, requests, site, copy
 from collections import defaultdict
 from importlib.resources import files
-import site
 
 from py_semtools.ontology import Ontology
 from py_semtools.text_indexer import TextIndexer
@@ -20,9 +11,12 @@ from py_semtools.sim_handler import *
 import py_exp_calc.exp_calc as pxc
 from py_cmdtabs import CmdTabs
 from py_exp_calc.exp_calc import invert_nested_hash, flatten
+from py_report_html import Py_report_html
 
 #For get_pubmed_index
 import numpy as np
+
+from py_semtools.cons import Cons
 
 ONTOLOGY_INDEX = str(files('py_semtools.external_data').joinpath('ontologies.txt'))
 #https://pypi.org/project/platformdirs/
@@ -61,6 +55,44 @@ def main_stEngine(opts):
     stEngine.process_corpus_get_similarities(corpus_filenames, options, options['verbose'])
 
     if options.get("gpu_device"): stEngine.show_gpu_information(verbose= options['verbose']) #A final check to GPU information
+
+
+def main_get_sorted_profs(opts):
+    options = vars(opts)
+
+    options['ontology_file'] = get_ontology_file(options['ontology_file'], ONTOLOGY_INDEX, ONTOLOGIES) 
+    ontology = Ontology(file = options['ontology_file'], load_file = True, removable_terms= options['excluded_terms'])
+    ontology.precompute()
+
+    data = CmdTabs.load_input_data(options['input_file'])
+    data = format_data(data, options)
+    for t_id, terms in data: ontology.add_profile(t_id, terms, clean_hard = options['hard_check'], options = options)
+    clean_profiles = copy.deepcopy(ontology.profiles)
+
+    if options.get("ref_prof"):
+      ref_profile = ontology.clean_profile_hard(options["ref_prof"])
+    else:
+      ref_profile = ontology.get_general_profile(options["term_freq"])
+
+    ontology.load_profiles({"ref": ref_profile}, reset_stored= True)
+
+    candidate_sim_matrix, _, candidates_ids, similarities = ontology.calc_sim_term2term_similarity_matrix(ref_profile, "ref", clean_profiles, 
+          term_limit = options["matrix_limits"][0], candidate_limit = options["matrix_limits"][-1], sim_type = 'lin', bidirectional = False,
+          string_format = True, header_id = "HP")
+    
+    negative_matrix, _ = ontology.get_negative_terms_matrix(ref_profile, clean_profiles, candidate_ids = candidates_ids, 
+            term_limit = options["matrix_limits"][0], candidate_limit = options["matrix_limits"][-1],
+            string_format = True, header_id = options['header_id'])
+    
+    template = open(str(files('py_semtools.templates').joinpath('similarity_matrix.txt'))).read()
+    container = { "similarity_matrix": candidate_sim_matrix, "negative_matrix": negative_matrix}
+    report = Py_report_html(container, 'Similarity matrix')
+    report.build(template)
+    report.write(options["output_file"])
+
+    with open(options["output_file"].replace('.html','') +'.txt', 'w') as f:
+      for candidate, value in sorted(similarities["ref"].items(), key=lambda pair: pair[1], reverse=True):
+        f.write("\t".join([str(candidate), str(value)])+"\n")
 
             
 def main_semtools(opts):
