@@ -72,20 +72,17 @@ class TextIndexerTestCase(unittest.TestCase):
         name, a_suffix, b_suffix = "tmp", "mock", "index"
         index_file = os.path.join(TMP, f"{name}_{a_suffix}_{b_suffix}.gz")
 
-        expected_mock_indexes = copy.deepcopy([self.mock_index, self.mock_index2])
-
         #The variable below is going to be modified by "pop" method inside write_indexes method.
         indexes_to_write = copy.deepcopy([self.mock_index, self.mock_index2]) 
         TextIndexer.write_indexes(indexes_to_write, folder=TMP, name=name, a_suffix=a_suffix, b_suffix=b_suffix)
         
-        #CmdTabs.compressed_input = True
-        CmdTabs.compressed = True
+        CmdTabs.compressed_input = True
         returned_index = CmdTabs.load_input_data(index_file)
+        expected_mock_indexes = copy.deepcopy([self.mock_index, self.mock_index2])
         self.assertEqual(expected_mock_indexes, returned_index)
 
-        #shutil.rmtree(TMP, ignore_errors=True)
-        #CmdTabs.compressed_input = False
-        CmdTabs.compressed = False
+        shutil.rmtree(TMP, ignore_errors=True)
+        CmdTabs.compressed_input = False
 
     def test_split_document(self):
         returned = TextIndexer.split_document(self.text, self.pmid)
