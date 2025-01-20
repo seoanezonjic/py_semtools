@@ -8,12 +8,17 @@ from py_semtools.text_pubmed_parser import TextPubmedParser
 class TextPubmedPaperParser(TextPubmedParser):
 
     @classmethod
+    def parse_xml(cls, string_xml):
+        return super().parse_xml(string_xml, is_file=False, as_element_tree = False)
+
+    @classmethod
     def parse(cls, file_path, logger = None):
         members = []
         stats = {"no_abstract": 0, "no_pmid": 0, "total": 0, "errors": 0}
         tar = tarfile.open(file_path, 'r:gz') 
         if logger != None: logger.info(f"The file {file_path} has { len([member for member in tar.getmembers()]) } xml papers")
         for member in tar.getmembers():
+            if member.isdir(): continue
             stats['total'] += 1
             f=tar.extractfile(member)
             filename = os.path.join(file_path, member.path)
@@ -40,7 +45,7 @@ class TextPubmedPaperParser(TextPubmedParser):
         year = 0
         pmc = None
         pmid = None
-        article_root = ET.fromstring(paper_xml_string)
+        article_root = cls.parse_xml(paper_xml_string)
 
         #GETTING ARTICLE TITLE FIELD
         title = cls.do_recursive_find(article_root, ['front','article-meta','title-group','article-title'])
@@ -58,13 +63,13 @@ class TextPubmedPaperParser(TextPubmedParser):
 
         for date_fields in article_root.iter("date"):
             if date_fields.get("date-type") == "accepted":
-                year = date_fields.find("year").text
+                year = int(date_fields.find("year").text)
         if year == 0: #In case date-type is not available, we try getting year by using pmc-release field
             for date_fields in article_root.iter("pub-date"):
                 if date_fields.get("pub-type") == "pmc-release":
-                    year = date_fields.find("year").text
+                    year = int(date_fields.find("year").text)
                 if date_fields.get("pub-type") != "pmc-release" and year == 0:
-                    year = date_fields.find("year").text
+                    year = int(date_fields.find("year").text)
 
         #GETTING PAPER WHOLE CONTENT
         paper_root = article_root.find("body")

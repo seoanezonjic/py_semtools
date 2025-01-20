@@ -1,0 +1,172 @@
+<PubmedArticleSet>
+    <PubmedArticle>
+        <MedlineCitation Status="MEDLINE" Owner="NLM">
+        <PMID Version="1">22981092</PMID>
+        <DateCompleted>
+            <Year>2014</Year>
+            <Month>11</Month>
+            <Day>18</Day>
+        </DateCompleted>
+        <DateRevised>
+            <Year>2014</Year>
+            <Month>02</Month>
+            <Day>17</Day>
+        </DateRevised>
+        <Article PubModel="Print-Electronic">
+            <Journal>
+            <ISSN IssnType="Electronic">2212-4411</ISSN>
+            <JournalIssue CitedMedium="Internet">
+                <Volume>117</Volume>
+                <Issue>3</Issue>
+                <PubDate>
+                <Year>2014</Year>
+                <Month>Mar</Month>
+                </PubDate>
+            </JournalIssue>
+            <Title>Oral surgery, oral medicine, oral pathology and oral radiology</Title>
+            <ISOAbbreviation>Oral Surg Oral Med Oral Pathol Oral Radiol</ISOAbbreviation>
+            </Journal>
+            <ArticleTitle>Depth of penetration of methylene blue in mandibular cortical bone.</ArticleTitle>
+            <Pagination>
+            <MedlinePgn>e246-8</MedlinePgn>
+            </Pagination>
+            <ELocationID EIdType="doi" ValidYN="Y">10.1016/j.oooo.2012.04.029</ELocationID>
+            <ELocationID EIdType="pii" ValidYN="Y">S2212-4403(12)00397-5</ELocationID>
+            <Abstract>
+            <AbstractText Label="BACKGROUND" NlmCategory="BACKGROUND">Surgeons treating keratinizing odontogenic tumors (KOT) and other intrabony lesions frequently use methylene blue as an adjunct in peripheral ostectomy in estimating the depth of bone that has been removed. Depth of methylene blue penetration in cortical bone has not been evaluated.</AbstractText>
+            <AbstractText Label="STUDY DESIGN" NlmCategory="METHODS">Specimens of mandible harvested from 9 fresh unembalmed cadaveric mandibles were stained with methylene blue. A microcaliper was used to measure total thickness of the cortical specimen along with the amount of dye penetration within the cortical block to the nearest 0.1 mm.</AbstractText>
+            <AbstractText Label="RESULTS" NlmCategory="RESULTS">Average depth of dye penetration was 0.48 mm in the symphysis. Average dye penetration was 0.53 mm in the body. Average depth of penetration of 0.42 mm in the angle.</AbstractText>
+            <AbstractText Label="CONCLUSIONS" NlmCategory="CONCLUSIONS">The use of methylene blue as a depth gauge to ensure adequate ostectomy with a single application of the dye may be inadequate to ensure complete removal of lesion from bony wall.</AbstractText>
+            <CopyrightInformation>Copyright © 2014 Elsevier Inc. All rights reserved.</CopyrightInformation>
+            </Abstract>
+            <AuthorList CompleteYN="Y">
+            <Author ValidYN="Y">
+                <LastName>Gailey</LastName>
+                <ForeName>David G</ForeName>
+                <Initials>DG</Initials>
+                <AffiliationInfo>
+                <Affiliation>Chief Resident, Division of Oral and Maxillofacial Surgery, University of Cincinnati, Cincinnati, Ohio.</Affiliation>
+                </AffiliationInfo>
+            </Author>
+            <Author ValidYN="Y">
+                <LastName>Krishnan</LastName>
+                <ForeName>Deepak G</ForeName>
+                <Initials>DG</Initials>
+                <AffiliationInfo>
+                <Affiliation>Assistant Professor and Residency Program Director, Division of Oral and Maxillofacial Surgery, University of Cincinnati, Cincinnati, Ohio. Electronic address: deepak.krishnan@uc.edu.</Affiliation>
+                </AffiliationInfo>
+            </Author>
+            <Author ValidYN="Y">
+                <LastName>Marciani</LastName>
+                <ForeName>Robert D</ForeName>
+                <Initials>RD</Initials>
+                <AffiliationInfo>
+                <Affiliation>Professor and Chairman, Division of Oral and Maxillofacial Surgery, University of Cincinnati, Cincinnati, Ohio.</Affiliation>
+                </AffiliationInfo>
+            </Author>
+            </AuthorList>
+            <Language>eng</Language>
+            <PublicationTypeList>
+            <PublicationType UI="D016428">Journal Article</PublicationType>
+            </PublicationTypeList>
+            <ArticleDate DateType="Electronic">
+            <Year>2012</Year>
+            <Month>09</Month>
+            <Day>12</Day>
+            </ArticleDate>
+        </Article>
+        <MedlineJournalInfo>
+            <Country>United States</Country>
+            <MedlineTA>Oral Surg Oral Med Oral Pathol Oral Radiol</MedlineTA>
+            <NlmUniqueID>101576782</NlmUniqueID>
+        </MedlineJournalInfo>
+        <ChemicalList>
+            <Chemical>
+            <RegistryNumber>0</RegistryNumber>
+            <NameOfSubstance UI="D004396">Coloring Agents</NameOfSubstance>
+            </Chemical>
+            <Chemical>
+            <RegistryNumber>T42P99266K</RegistryNumber>
+            <NameOfSubstance UI="D008751">Methylene Blue</NameOfSubstance>
+            </Chemical>
+        </ChemicalList>
+        <CitationSubset>IM</CitationSubset>
+        <MeshHeadingList>
+            <MeshHeading>
+            <DescriptorName UI="D002102" MajorTopicYN="N">Cadaver</DescriptorName>
+            </MeshHeading>
+            <MeshHeading>
+            <DescriptorName UI="D004396" MajorTopicYN="Y">Coloring Agents</DescriptorName>
+            <QualifierName UI="Q000493" MajorTopicYN="N">pharmacokinetics</QualifierName>
+            </MeshHeading>
+            <MeshHeading>
+            <DescriptorName UI="D006801" MajorTopicYN="N">Humans</DescriptorName>
+            </MeshHeading>
+            <MeshHeading>
+            <DescriptorName UI="D008334" MajorTopicYN="Y">Mandible</DescriptorName>
+            </MeshHeading>
+            <MeshHeading>
+            <DescriptorName UI="D008751" MajorTopicYN="Y">Methylene Blue</DescriptorName>
+            <QualifierName UI="Q000493" MajorTopicYN="N">pharmacokinetics</QualifierName>
+            </MeshHeading>
+            <MeshHeading>
+            <DescriptorName UI="D009808" MajorTopicYN="N">Odontogenic Tumors</DescriptorName>
+            <QualifierName UI="Q000601" MajorTopicYN="N">surgery</QualifierName>
+            </MeshHeading>
+            <MeshHeading>
+            <DescriptorName UI="D010027" MajorTopicYN="N">Osteotomy</DescriptorName>
+            </MeshHeading>
+            <MeshHeading>
+            <DescriptorName UI="D013194" MajorTopicYN="N">Staining and Labeling</DescriptorName>
+            <QualifierName UI="Q000379" MajorTopicYN="Y">methods</QualifierName>
+            </MeshHeading>
+        </MeshHeadingList>
+        </MedlineCitation>
+        <PubmedData>
+        <History>
+            <PubMedPubDate PubStatus="received">
+            <Year>2011</Year>
+            <Month>09</Month>
+            <Day>25</Day>
+            </PubMedPubDate>
+            <PubMedPubDate PubStatus="revised">
+            <Year>2012</Year>
+            <Month>03</Month>
+            <Day>08</Day>
+            </PubMedPubDate>
+            <PubMedPubDate PubStatus="accepted">
+            <Year>2012</Year>
+            <Month>04</Month>
+            <Day>15</Day>
+            </PubMedPubDate>
+            <PubMedPubDate PubStatus="entrez">
+            <Year>2012</Year>
+            <Month>9</Month>
+            <Day>18</Day>
+            <Hour>6</Hour>
+            <Minute>0</Minute>
+            </PubMedPubDate>
+            <PubMedPubDate PubStatus="pubmed">
+            <Year>2012</Year>
+            <Month>9</Month>
+            <Day>18</Day>
+            <Hour>6</Hour>
+            <Minute>0</Minute>
+            </PubMedPubDate>
+            <PubMedPubDate PubStatus="medline">
+            <Year>2014</Year>
+            <Month>11</Month>
+            <Day>19</Day>
+            <Hour>6</Hour>
+            <Minute>0</Minute>
+            </PubMedPubDate>
+        </History>
+        <PublicationStatus>ppublish</PublicationStatus>
+        <ArticleIdList>
+            <ArticleId IdType="pubmed">22981092</ArticleId>
+            <ArticleId IdType="pii">S2212-4403(12)00397-5</ArticleId>
+            <ArticleId IdType="doi">10.1016/j.oooo.2012.04.029</ArticleId>
+        </ArticleIdList>
+        </PubmedData>
+  </PubmedArticle>
+</PubmedArticleSet>

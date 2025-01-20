@@ -8,23 +8,26 @@ from py_semtools.text_pubmed_parser import TextPubmedParser
 class TextPubmedAbstractParser(TextPubmedParser):
 
     @classmethod
+    def parse_xml(cls, zipped_file):
+        return super().parse_xml(zipped_file, is_file=True, is_compressed=True, as_element_tree = True)
+
+    @classmethod
     def parse(cls, file, logger = None): 
         texts = [] # aggregate all abstracts in XML file
         stats = {"total": 0, "no_abstract": 0, "no_pmid": 0}
-        with gzip.open(file) as gz:
-            mytree = ET.parse(gz)
-            pubmed_article_set = mytree.getroot()
-            for article in pubmed_article_set:
-                stats['total'] += 1
-                text_data = cls.parse_abstract(article)
-                pmid, abstract_content, year, title, article_type, article_category = text_data
-                texts.append(text_data)
-                if pmid == None:
-                    stats["no_pmid"] += 1
-                    if logger != None: logger.warning(f"Warning: Article without PMID found in file {file}")
-                elif abstract_content == "":
-                    stats["no_abstract"] += 1
-                    if logger != None: logger.warning(f"Warning: Article PDMID:{pmid} without abstract found in file {file}")
+        mytree = cls.parse_xml(file)
+        pubmed_article_set = mytree.getroot()
+        for article in pubmed_article_set:
+            stats['total'] += 1
+            text_data = cls.parse_abstract(article)
+            pmid, abstract_content, year, title, article_type, article_category = text_data
+            texts.append(text_data)
+            if pmid == None:
+                stats["no_pmid"] += 1
+                if logger != None: logger.warning(f"Warning: Article without PMID found in file {file}")
+            elif abstract_content == "":
+                stats["no_abstract"] += 1
+                if logger != None: logger.warning(f"Warning: Article PDMID:{pmid} without abstract found in file {file}")
         return texts, stats
 
     @classmethod
@@ -52,4 +55,5 @@ class TextPubmedAbstractParser(TextPubmedParser):
                             #print(repr(abstractText), "\n\n")
                             raw_abstract = cls.perform_soft_cleaning(abstractText)                                                 
                             abstract_content += raw_abstract + "\n\n"
+        abstract_content = cls.perform_soft_cleaning(abstract_content)        
         return [pmid, abstract_content, year, title, article_type, article_category]
