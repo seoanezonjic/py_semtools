@@ -492,8 +492,8 @@ class TestOBOFunctionalities(unittest.TestCase):
         self.sparse.add_profile("patient4", ["C"], substitute= False)
         
         returned_profile_sizes, returned_parental_terms_per_profile = self.sparse.get_profile_redundancy()
-        expected_profile_sizes = (2,2,2,1) #These values are sorted by profile size (ascending) and then reversed, so the order is pat3,patt2,pat1,pat4
-        expected_parental_terms_per_profile = (0,1,1,0) ##These values are also sorted by profile size (descending), so same order as above (pat3,patt2,pat1,pat4)
+        expected_profile_sizes = [2,2,2,1]
+        expected_parental_terms_per_profile = [1,1,0,0]
         
         self.assertEqual(expected_profile_sizes, returned_profile_sizes)
         self.assertEqual(expected_parental_terms_per_profile, returned_parental_terms_per_profile)

@@ -1,6 +1,4 @@
-import pytest
-import sys
-import os 
+import pytest, shutil, sys, os 
 from io import StringIO
 from py_semtools import Ontology, JsonParser
 import py_semtools
@@ -10,6 +8,10 @@ ONTOLOGY_PATH = os.path.join(ROOT_PATH, 'data')
 DATA_TEST_PATH = os.path.join(ONTOLOGY_PATH, 'input_scripts')
 REF_DATA_PATH=os.path.join(ONTOLOGY_PATH ,'ref_output_scripts')
 GET_SORTED_SUGG_PATH = os.path.join(ROOT_PATH, 'data', 'get_sorted_suggestions')
+GET_SORTED_PROFS_PATH = os.path.join(ROOT_PATH, 'data', 'get_sorted_profs')
+
+#THIS IS NOT THE PROPER WAY TO DO IT, BUT SOMETHING IS FAILING AT TRYING TO GET site.USER_BASE ontologies from the group, ask PSZ later
+HPO="/mnt/home/soft/soft_bio_267/programs/x86_64/python_cache/semtools/ontologies/HPO.obo" 
 
 @pytest.fixture(scope="session")
 def tmp_dir(tmpdir_factory):
@@ -27,6 +29,14 @@ def enrichment_ontology_3():
 @pytest.fixture
 def profiles():
     return os.path.join(DATA_TEST_PATH, 'profiles')
+
+@pytest.fixture
+def omim_profiles():
+    return os.path.join(ROOT_PATH, "demo_examples", "data", "profiles.txt")
+
+@pytest.fixture
+def ref_profile():
+    return os.path.join(ROOT_PATH, "demo_examples", "data", "ref_profile.txt")
 
 def capture_stdout(func):
     def wrapper(*args, **kwargs):
@@ -365,3 +375,19 @@ def test_get_sorted_suggestions():
     path_to_remove_files = os.path.join(GET_SORTED_SUGG_PATH, 'returned')
     for file in os.listdir(path_to_remove_files):
         os.remove(os.path.join(path_to_remove_files, file))
+
+
+def test_get_sorted_profs(omim_profiles, ref_profile):
+    os.makedirs(f"{os.path.join(GET_SORTED_PROFS_PATH)}", exist_ok=True)
+    list_of_args = ["-i", omim_profiles,
+                    "-r", ref_profile, 
+                    "-S", ",", 
+                    "-O", HPO,
+                    "-o", f"{os.path.join(GET_SORTED_PROFS_PATH, 'report.html')}"]
+    
+    #Testing to check if calculations can be executed and report done without errors. Just checking that file exist
+    py_semtools.get_sorted_profs(list_of_args)
+    assert os.path.exists(f"{os.path.join(GET_SORTED_PROFS_PATH, 'report.html')}")
+    assert os.path.exists(f"{os.path.join(GET_SORTED_PROFS_PATH, 'report.txt')}")
+
+    #shutil.rmtree(f"{os.path.join(GET_SORTED_PROFS_PATH)}")
