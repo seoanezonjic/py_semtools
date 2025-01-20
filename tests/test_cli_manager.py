@@ -390,4 +390,4 @@ def test_get_sorted_profs(omim_profiles, ref_profile):
     assert os.path.exists(f"{os.path.join(GET_SORTED_PROFS_PATH, 'report.html')}")
     assert os.path.exists(f"{os.path.join(GET_SORTED_PROFS_PATH, 'report.txt')}")
 
-    #shutil.rmtree(f"{os.path.join(GET_SORTED_PROFS_PATH)}")
+    shutil.rmtree(f"{os.path.join(GET_SORTED_PROFS_PATH)}")

@@ -2,10 +2,8 @@
 # Load necessary packages
 #########################################################
 
-import unittest
-import os
-import sys
-import math
+import unittest, os, math, shutil
+import numpy as np
 from py_semtools import Ontology, JsonParser
 
 ROOT_PATH = os.path.dirname(__file__)
@@ -60,10 +58,10 @@ class TestOBOFunctionalities(unittest.TestCase):
                 "Parental": {"id": "Parental", "name": "All", "comment": "none"}, 
                 "ChildA": {"id": "ChildA", "name": "ChildA", "is_a": ["Parental"]}, 
                 "ChildB": {"id": "ChildB", "name": "ChildB", "is_a": ["Parental"]}, 
-                "GrandChildA1": {"id": "GrandChildA1", "name": "GrandChildA1", "is_a": ["ChildA"]},
-                "GrandChildA2": {"id": "GrandChildA2", "name": "GrandChildA2", "is_a": ["ChildA"]},
-                "GrandChildB1": {"id": "GrandChildB1", "name": "GrandChildB1", "is_a": ["ChildB"]},
-                "GrandChildB2": {"id": "GrandChildB2", "name": "GrandChildB2", "is_a": ["ChildB"]}
+                "ChildA1": {"id": "ChildA1", "name": "ChildA1", "is_a": ["ChildA"]},
+                "ChildA2": {"id": "ChildA2", "name": "ChildA2", "is_a": ["ChildA"]},
+                "ChildB1": {"id": "ChildB1", "name": "ChildB1", "is_a": ["ChildB"]},
+                "ChildB2": {"id": "ChildB2", "name": "ChildB2", "is_a": ["ChildB"]}
                 }, 
             "typedefs": {}, "instances": {}})
         #self.load_Circular = (
@@ -454,6 +452,19 @@ class TestOBOFunctionalities(unittest.TestCase):
 
     # Description of profile size
     ####################################
+
+    def test_get_general_profile(self):
+        self.branched.load_profiles({"A": ["ChildA", "ChildB", "Parental"], "B": ["ChildA", "ChildB", "Parental", "FakeID"], 
+                                    "C": ["ChildA1", "ChildB", "Parental"], "D": ["Parental"]}, calc_metadata= False, substitute= False)
+        returned = self.branched.get_general_profile()
+        expected = ['ChildB', 'ChildA1'] #This is the general profile (hard cleaned) of the aboves profile terms
+        #self.assertEqual(expected, returned)
+        self.assertEqual(returned, expected)
+
+        #Testing with frequency threshold parameter
+        returned = self.branched.get_general_profile(thr= 0.5)
+        expected = ['ChildB'] #ChildB is the only term with a frequency higher than 0.5
+        
     
     def test_description_profile_size(self):
         self.hierarchical.add_profile("A", ["Child2", "Parental"], substitute= False) # Add profiles
@@ -582,6 +593,77 @@ class TestOBOFunctionalities(unittest.TestCase):
     def test_get_detailed_similarity(self): #Helper function of get_term2term_similarity_matrix
         pass
         #self.assertFalse(True, "Helper function of get_term2term_similarity_matrix")
+
+    # Clustering method
+    ###################################
+
+    def test_get_matrix_similarity(self): #Helper function tested in get_similarity_clusters (its higher order function)
+        pass
+        #self.assertFalse(True, "Helper function tested in get_similarity_clusters")
+
+    def test_get_similarity_clusters(self):
+        ont = self.branched
+        tmp_folder = os.path.join(ROOT_PATH, "tmp", "similarity_cluster")
+        os.makedirs(tmp_folder, exist_ok=True)
+
+        options = {"sim_thr": 0.3}
+        method_name = "resnik"
+        profiles = {"A": ["ChildA1", "ChildA2"], "B": ["ChildB1", "ChildB2"], "C": ["ChildA1", "Parental"], "D": ["ChildB1","Parental"], "E": ["Parental"], "F": ["ChildA1"]}
+        self.branched.precompute()
+        ont.load_profiles(profiles)
+
+        #Testing for the first time (no files in tmp_folder, so values have to be calculated)
+        clusters, similarity_matrix, linkage, raw_cls = self.branched.get_similarity_clusters(method_name, options, temp_folder=tmp_folder, reference_profiles=None)
+        
+        clusters_expected = {7: ['F', 'A', 'C'], 6: ['B', 'D']}
+        similarity_matrix_expected = [[0.         , 0.68605762 , 0.56339869 , 0.         , 0.        ],
+                                      [0.68605762 , 0.         , 0.51454322 , 0.         , 0.        ],
+                                      [0.56339869 , 0.51454322 , 0.         , 0.         , 0.        ],
+                                      [0.         , 0.         , 0.         , 0.         , 0.51454322],
+                                      [0.         , 0.         , 0.         , 0.51454322 , 0.        ]]
+        linkage_expected =           [[0.         , 1.         , 0.         , 2.        ],
+                                      [3.         , 4.         , 0.17151441 , 2.        ],
+                                      [2.         , 5.         , 0.17216737 , 3.        ],
+                                      [6.         , 7.         , 1.04886281 , 5.        ]]
+        raw_cls_expected = [[7],[7],[7],[6],[6]]
+
+        self.assertEqual(clusters, clusters_expected)
+        self.assertTrue(np.isclose(similarity_matrix, similarity_matrix_expected).all())
+        self.assertTrue(np.isclose(linkage, linkage_expected).all())
+        self.assertTrue((raw_cls == raw_cls_expected).all())
+
+        self.assertTrue(os.path.exists(os.path.join(tmp_folder, f"similarity_matrix_{method_name}.npy")))
+        self.assertTrue(os.path.exists(os.path.join(tmp_folder, f"similarity_matrix_{method_name}_x.lst")))
+        self.assertFalse(os.path.exists(os.path.join(tmp_folder, f"similarity_matrix_{method_name}_y.lst")))
+        self.assertTrue(os.path.exists(os.path.join(tmp_folder, f"{method_name}_clusters.txt")))
+        self.assertTrue(os.path.exists(os.path.join(tmp_folder, f'profiles_similarity_{method_name}.txt')))
+        self.assertTrue(os.path.exists(os.path.join(tmp_folder, f'{method_name}_linkage.npy')))
+        self.assertTrue(os.path.exists(os.path.join(tmp_folder, f'{method_name}_raw_cls.npy')))
+
+        #Testing for the second time (files in tmp_folder, so values will be loaded from files instead of being calculated)
+        clusters, similarity_matrix, linkage, raw_cls = self.branched.get_similarity_clusters(method_name, options, temp_folder=tmp_folder, reference_profiles=None)
+        self.assertEqual(clusters, clusters_expected)
+        self.assertTrue(np.isclose(similarity_matrix, similarity_matrix_expected).all())
+        self.assertTrue(np.isclose(linkage, linkage_expected).all())
+        self.assertTrue((raw_cls == raw_cls_expected).all())
+        
+        shutil.rmtree(tmp_folder)
+
+
+    def test_write_profile_pairs(self):
+        pairs = {"A": {"B": 3, "C": 4}, "B": {"C": 5, "D": 9}, "C": {"D": 6}}
+        tmp_folder = os.path.join(ROOT_PATH, "tmp", "dummy_profile")
+        filename = os.path.join(tmp_folder, "profile_pairs.txt")
+        os.makedirs(tmp_folder, exist_ok=True)
+
+        self.branched.write_profile_pairs(pairs, filename)
+        self.assertTrue(os.path.exists(filename))
+
+        filee = open(filename)
+        self.assertEqual("A\tB\t3\nA\tC\t4\nB\tC\t5\nB\tD\t9\nC\tD\t6\n", filee.read())
+        filee.close()
+
+        shutil.rmtree(tmp_folder)
 
     # specifity_index related methods
     ####################################
