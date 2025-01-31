@@ -1,4 +1,4 @@
-import sys, os, glob, math, re, subprocess, warnings, time, requests, site, copy
+import sys, os, glob, math, re, subprocess, warnings, time, requests, site, copy, argparse
 from collections import defaultdict
 from importlib.resources import files
 
@@ -27,12 +27,12 @@ ONTOLOGIES=os.path.join(site.USER_BASE, "semtools", 'ontologies')
 # MAIN FUNCTIONS 
 #########################################################################
 
-def main_get_corpus_index(opts):
+def main_get_corpus_index(opts: argparse.Namespace) -> None: 
   options = vars(opts)
   TextIndexer.build_index(options)
 
 
-def main_stEngine(opts):
+def main_stEngine(opts: argparse.Namespace) -> None: 
     options = vars(opts)
     if options["top_k"] == 0: options["top_k"] = np.inf
     stEngine = STengine(gpu_devices=options["gpu_device"])
@@ -57,7 +57,19 @@ def main_stEngine(opts):
     if options.get("gpu_device"): stEngine.show_gpu_information(verbose= options['verbose']) #A final check to GPU information
 
 
-def main_get_sorted_profs(opts):
+def main_get_sorted_profs(opts: argparse.Namespace) -> None: 
+    """
+    Main function to get sorted profiles based on ontology term similarities.
+
+    :param opts: Command-line options parsed by argparse.
+    :type opts: argparse.Namespace
+
+    :returns: None
+
+    --------- DEBUG ---------
+    We should reformat or wrap part of this functionallity in order to be used as a method when loading the library. 
+    However, it is still needed to change how methods in Ontology class work (they need to save info in slots instead of returning it) 
+    """
     options = vars(opts)
 
     options['ontology_file'] = get_ontology_file(options['ontology_file'], ONTOLOGY_INDEX, ONTOLOGIES) 
@@ -76,11 +88,12 @@ def main_get_sorted_profs(opts):
 
     ontology.load_profiles({"ref": ref_profile}, reset_stored= True)
 
-    candidate_sim_matrix, _, candidates_ids, similarities = ontology.calc_sim_term2term_similarity_matrix(ref_profile, "ref", clean_profiles, 
+    candidate_sim_matrix, _, candidates_ids, similarities, candidate_pr_cd_term_matches, candidate_terms_all_sims = ontology.calc_sim_term2term_similarity_matrix(ref_profile, "ref", clean_profiles, 
           term_limit = options["matrix_limits"][0], candidate_limit = options["matrix_limits"][-1], sim_type = 'lin', bidirectional = False,
           string_format = True, header_id = "HP")
     
-    negative_matrix, _ = ontology.get_negative_terms_matrix(ref_profile, clean_profiles, candidate_ids = candidates_ids, 
+    candidate_terms_all_sims = {candidates_ids[candidate_idx]:canditate_terms_sims for candidate_idx, canditate_terms_sims in candidate_terms_all_sims.items()}
+    negative_matrix, _ = ontology.get_negative_terms_matrix(candidate_terms_all_sims, 
             term_limit = options["matrix_limits"][0], candidate_limit = options["matrix_limits"][-1],
             string_format = True, header_id = options['header_id'])
     
@@ -95,7 +108,18 @@ def main_get_sorted_profs(opts):
         f.write("\t".join([str(candidate), str(value)])+"\n")
 
             
-def main_semtools(opts):
+def main_semtools(opts: argparse.Namespace) -> None: 
+    """
+    Main function to handle various ontology-related operations based on command-line options.
+
+    :param opts: Command-line options parsed by argparse.
+    :type opts: argparse.Namespace
+
+    :returns: None
+
+    ------- DEBUG ------
+    It is needed a whole refactor of the main semtools binary, as it has grown in a unsorted way
+    """
     options = vars(opts)
     if options["external_separator"] is None: options["external_separator"] = options["separator"]
     if options.get('download') != None:
@@ -271,7 +295,7 @@ def main_semtools(opts):
                 text_to_print += "None\t" if field_content == None else f"{field_content}\t"
             print(text_to_print)
 
-def main_strsimnet(options):
+def main_strsimnet(options: argparse.Namespace) -> None: 
     texts2compare = load_table_file(input_file = options.input_file,
                                  splitChar = options.split_char,
                                  targetCol = options.cindex,
@@ -287,7 +311,7 @@ def main_strsimnet(options):
           f.write("\t".join([item, item2 , str(sim)]) + "\n" )
 
 
-def main_remote_retriever(opts):
+def main_remote_retriever(opts: argparse.Namespace) -> None: 
     keywords = load_keywords(opts.input_file)
     if opts.source == 'pubmed':
         query_pubmed(keywords, opts.output_file)
@@ -326,7 +350,7 @@ def query_pubmed(keywords, file):
             f.write(f"{id}\t{query}\n") # write on the fly to avoid lose the previous queries for any incovenience
             time.sleep(1)
 
-def main_get_sorted_suggestions(opts):
+def main_get_sorted_suggestions(opts: argparse.Namespace) -> None: 
     options = vars(opts)
 
     ##### LOADING AND PRECOMPUTING ONTOLOGY AND LOADING AND CLEANING QUERY INPUT TERMS

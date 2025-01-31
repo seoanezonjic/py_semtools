@@ -579,7 +579,7 @@ class TestOBOFunctionalities(unittest.TestCase):
         ont = self.branched
         ont.load_profiles(ref_profile_dict)
         
-        candidate_sim_matrix, candidates, candidates_ids, similarities = ont.calc_sim_term2term_similarity_matrix(reference_profile, ref_profile_id, external_profiles, string_format=True)
+        candidate_sim_matrix, candidates, candidates_ids, similarities, _, _ = ont.calc_sim_term2term_similarity_matrix(reference_profile, ref_profile_id, external_profiles, string_format=True)
         candidate_sim_matrix.pop(0)
         self.assertEqual(candidate_sim_matrix, [['Child1A1', 1.0, 1.0, 1.0, 0.0, 0.0, 0.0], ['ChildA2', 1.0, 0, 0.0, 0.0, 0.0, 0]])
         self.assertEqual(candidates, [['A', 1.0], ['F', 0.8118083219821401], ['C', 0.6088562414866051], ['B', 0.0], ['D', 0.0], ['E', 0.0]])
@@ -593,6 +593,29 @@ class TestOBOFunctionalities(unittest.TestCase):
     def test_get_detailed_similarity(self): #Helper function of get_term2term_similarity_matrix
         pass
         #self.assertFalse(True, "Helper function of get_term2term_similarity_matrix")
+
+    def test_get_negative_terms_matrix(self): 
+        ont = self.branched
+        candidate_terms_all_sims = {"Profile1": {"ChildA": [0.2,0.1,0.1], "ChildB": [0.3,0.5,0.1], "ChildA1": [0.8,0.1,0.1]},
+                                    "Profile2": {"ChildA": [0.2,0.1,0.1], "ChildB1": [0.1,0.1,0.1], "ChildA2": [0.8,0.7,0.5]},
+                                    "Profile3": {"ChildA": [0.2,0.0,0.1], "ChildB1": [0.1,0.1,0.0], "ChildB2": [0.1,0.2,0.1]}}
+        
+        expected = [['HP', 'Profile1', 'Profile2', 'Profile3'], ['ChildA', 3, 3, 3], ['ChildB1', 0, 2, 2], ['ChildB2', 0, 0, 1]]
+        returned, _ = ont.get_negative_terms_matrix(candidate_terms_all_sims, term_limit = 10, candidate_limit = 10, 
+                                                    string_format = True, header_id = "HP")
+        self.assertEqual(expected, returned)
+
+        #Testing with term_limit lower than the number of terms
+        expected = [['HP', 'Profile1', 'Profile2', 'Profile3'], ['ChildA', 3, 3, 3], ['ChildB1', 0, 2, 2]]
+        returned, _ = ont.get_negative_terms_matrix(candidate_terms_all_sims, term_limit = 2, candidate_limit = 10,
+                                                    string_format = True, header_id = "HP")
+        self.assertEqual(expected, returned)
+        
+        #Testing with candidate_limit lower than the number of candidates
+        expected = [['HP', 'Profile1', 'Profile2'], ['ChildA', 2, 2], ['ChildB1', 0, 1]]
+        returned, _ = ont.get_negative_terms_matrix(candidate_terms_all_sims, term_limit = 10, candidate_limit = 2,
+                                                    string_format = True, header_id = "HP")
+        self.assertEqual(expected, returned)
 
     # Clustering method
     ###################################

@@ -919,9 +919,9 @@ class Ontology:
 
     def calc_sim_term2term_similarity_matrix(self, ref_profile, ref_profile_id, external_profiles, term_limit = 100, candidate_limit = 100, sim_type = 'lin', bidirectional = True, string_format = False, header_id = "id",other_scores = {}, id2label = {}):
         similarities = self.compare_profiles(external_profiles = external_profiles, sim_type = sim_type, bidirectional = bidirectional)
-        candidate_sim_matrix, candidates, candidates_ids = self.get_term2term_similarity_matrix(ref_profile, similarities[ref_profile_id], external_profiles, term_limit, candidate_limit, string_format = string_format, other_scores = other_scores, id2label = id2label)
+        candidate_sim_matrix, candidates, candidates_ids, candidate_pr_cd_term_matches, candidate_terms_all_sims = self.get_term2term_similarity_matrix(ref_profile, similarities[ref_profile_id], external_profiles, term_limit, candidate_limit, string_format = string_format, other_scores = other_scores, id2label = id2label)
         if string_format: candidate_sim_matrix.insert(0, [header_id] + candidates_ids)
-        return candidate_sim_matrix, candidates, candidates_ids, similarities
+        return candidate_sim_matrix, candidates, candidates_ids, similarities, candidate_pr_cd_term_matches, candidate_terms_all_sims
 
     def get_term2term_similarity_matrix(self, reference_prof, similarities, evidence_profiles, term_limit, candidate_limit, string_format=False, other_scores = {}, id2label = {}):
         candidates = [ list(pair) for pair in similarities.items()]
@@ -944,28 +944,32 @@ class Ontology:
             for c in candidates: c.pop()
 
         candidates_ids = [c[0] for c in candidates]
-        candidate_similarity_matrix = self.get_detailed_similarity(reference_prof, candidates, evidence_profiles)
+        candidate_similarity_matrix, candidate_pr_cd_term_matches, candidate_terms_all_sims = self.get_detailed_similarity(reference_prof, candidates, evidence_profiles)
         if string_format:
             for i, row in enumerate(candidate_similarity_matrix):
                 row.insert(0,self.translate_id(reference_prof[i]))
 
         candidate_similarity_matrix.sort(key=lambda r: sum(r[1:len(r)]), reverse=True)
         candidate_similarity_matrix = candidate_similarity_matrix[:term_limit]
-        return candidate_similarity_matrix, candidates, candidates_ids
+        return candidate_similarity_matrix, candidates, candidates_ids, candidate_pr_cd_term_matches, candidate_terms_all_sims
 
     def get_detailed_similarity(self, profile, candidates, evidences):
         profile_length = len(profile)
         matrix = []
+        candidate_pr_cd_term_matches = {}
+        candidate_terms_all_sims = defaultdict(lambda: defaultdict(lambda: []))
         for times in range(profile_length):
             matrix.append([0]*len(candidates))
         cand_number = 0
         for candidate_id, similarity in candidates:
+            candidate_pr_cd_term_matches[cand_number] = {}
             local_sim = []
             candidate_evidence = evidences[candidate_id]
             for profile_term in profile:
                 for candidate_term in candidate_evidence:
                     term_sim = self.compare([candidate_term], [profile_term], sim_type = "lin", bidirectional= False)
                     local_sim.append([profile_term, candidate_term, term_sim])
+                    candidate_terms_all_sims[cand_number][candidate_term].append(term_sim)
 
             local_sim.sort(key = lambda s: s[-1], reverse=True)
             final_pairs = []
@@ -979,16 +983,21 @@ class Ontology:
                 if profile_length == len(processed_profile_terms): break
 
             for pr_term, cd_term, similarity in final_pairs:
+                candidate_pr_cd_term_matches[cand_number][pr_term] = cd_term
                 matrix[profile.index(pr_term)][cand_number] = similarity
             cand_number += 1
-        return matrix
+        return matrix, candidate_pr_cd_term_matches, candidate_terms_all_sims
 
-    def get_negative_terms_matrix(self, ref_profile, external_profiles, candidate_ids = None, term_limit = 100, candidate_limit = 100, string_format = False, header_id = "id"):
-        if candidate_ids != None and len(candidate_ids) < len(external_profiles): 
-            external_profiles = {prof_id: profile for prof_id, profile in external_profiles.items() if prof_id in candidate_ids}
-        if candidate_ids == None: candidate_ids = external_profiles.keys()
+    def get_negative_terms_matrix(self, external_profiles_terms_sims, sim_filter=0.2, term_limit = 100, candidate_limit = 100, string_format = False, header_id = "id"):
+        candidate_ids = list(external_profiles_terms_sims.keys())
+        external_profiles = {profile_id: list(profile_terms_sims_dict.keys()) for profile_id, profile_terms_sims_dict in external_profiles_terms_sims.items()}
+
+        external_specific_terms = []
+        candidates_to_test = list(external_profiles_terms_sims.items())[:candidate_limit]
+        for profile_id, profile_terms_and_sims_dict in candidates_to_test:
+            for profile_term, sims in profile_terms_and_sims_dict.items():
+                if max(sims) <= sim_filter: external_specific_terms.append(profile_term)
         
-        external_specific_terms = [term for profile in external_profiles.values() for term in profile if term not in ref_profile]
         specific_terms_counts = Counter(external_specific_terms)
         specific_terms_counts_sorted = sorted([ [term, count] for term, count in specific_terms_counts.items()], 
                                               key= lambda pair: (pair[1],pair[0]), reverse=True)[:term_limit]
@@ -1003,7 +1012,7 @@ class Ontology:
                 row_to_add.append(profile_term_count)
             final_table.append(row_to_add)
 
-        if string_format: final_table.insert(0, [header_id] + candidate_ids)
+        if string_format: final_table.insert(0, [header_id] + candidate_ids[:candidate_limit])
         return final_table, candidate_ids
 
     #############################################
