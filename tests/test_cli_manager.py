@@ -70,6 +70,9 @@ def sort_table(table, sort_by, transposed=False):
 		table = sorted(table, key= lambda row: row[sort_by])
 	return table
 
+
+################################################## TESTING SEMTOOLS BINARY #######################################################
+
 ## Terms Operations
 
 def test_get_ancestors_descendants(enrichment_ontology):
@@ -274,24 +277,7 @@ def test_download(tmp_dir, profiles):
     expected_result = [['P1'], ['P2'], ['P3'], ['P4'], ['P5']]
     assert expected_result == test_result
 
-# Testing strsimnet
-
-def test_strsimnet(tmp_dir):
-    input_file = os.path.join(DATA_TEST_PATH, 'string_values')
-    output_file1 = os.path.join(tmp_dir, 'strsimnet')
-    args1 = f"-i {input_file} -c 0 -o {output_file1}".split(" ")
-    output_file2 = os.path.join(tmp_dir, 'strsimnet_with_filter')
-    args2 = f"-i {input_file} -c 0 -C 1 -f 2 -o {output_file2}".split(" ")
-    
-    pystrsimnet(args1)
-    test_result = CmdTabs.load_input_data(output_file1)
-    expected_result = CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'strsimnet'))
-    assert expected_result == test_result
-
-    pystrsimnet(args2)
-    test_result = CmdTabs.load_input_data(output_file2)
-    expected_result = CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'strsimnet_cutoff2'))
-    assert expected_result == test_result
+ # Testing list term attributes
 
 def test_list_term_attributes(enrichment_ontology):
     args = f"-O {enrichment_ontology} --list_term_attributes".split(" ")
@@ -313,8 +299,39 @@ def test_retrieve_keyword_matched_hps(enrichment_ontology):
     _, printed = pysemtools(args)
     assert expected == printed
 
+# Testing semtools quality report
 
-# Test get_sorted_suggestions binary
+def test_get_report(tmp_dir, enrichment_ontology_3, profiles):
+    tmp_dir = "./tests/tmp"
+    os.makedirs(tmp_dir, exist_ok=True)
+    output_file = os.path.join(tmp_dir, 'quality_report.html')
+    
+    root = "root"
+    args = f"-i {profiles} -O {enrichment_ontology_3} --output_report {output_file} --similarity_cluster_plot lin --root_term {root} --ref_term {root}".split(" ")
+    pysemtools(args)
+    assert os.path.exists(output_file)
+    shutil.rmtree(output_file, ignore_errors=True)
+
+################################################## TESTING STRSINMNET BINARY #######################################################
+
+def test_strsimnet(tmp_dir):
+    input_file = os.path.join(DATA_TEST_PATH, 'string_values')
+    output_file1 = os.path.join(tmp_dir, 'strsimnet')
+    args1 = f"-i {input_file} -c 0 -o {output_file1}".split(" ")
+    output_file2 = os.path.join(tmp_dir, 'strsimnet_with_filter')
+    args2 = f"-i {input_file} -c 0 -C 1 -f 2 -o {output_file2}".split(" ")
+    
+    pystrsimnet(args1)
+    test_result = CmdTabs.load_input_data(output_file1)
+    expected_result = CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'strsimnet'))
+    assert expected_result == test_result
+
+    pystrsimnet(args2)
+    test_result = CmdTabs.load_input_data(output_file2)
+    expected_result = CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'strsimnet_cutoff2'))
+    assert expected_result == test_result
+
+################################################## TESTING GET_SORTED_SUGGESTIONS BINARY #######################################################
 
 def test_get_sorted_suggestions():
     relations_file = os.path.join(GET_SORTED_SUGG_PATH, 'input_data', 'relations.txt')
@@ -376,6 +393,8 @@ def test_get_sorted_suggestions():
     for file in os.listdir(path_to_remove_files):
         os.remove(os.path.join(path_to_remove_files, file))
 
+
+################################################## TESTING GET_SORTED_PROFS BINARY #######################################################
 
 def test_get_sorted_profs(omim_profiles, ref_profile):
     os.makedirs(f"{os.path.join(GET_SORTED_PROFS_PATH)}", exist_ok=True)

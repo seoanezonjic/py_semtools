@@ -1,4 +1,4 @@
 ${ plotter.table(id= "term_stats", header= True, styled= 'dt', 
 	cell_align= "left center".split(" "), attrib= {'class': 'table table-striped'},
-	func = lambda data: data.insert(0,['HPO', ' Patient percentage']))
+	func = lambda data: data.insert(0,[f'{ONT_NAME}', ' Patient percentage']))
 }

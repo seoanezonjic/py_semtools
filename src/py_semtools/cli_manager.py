@@ -144,7 +144,15 @@ def semtools(args = None):
     parser.add_argument("--profiles_self_similarities", dest="profiles_self_similarities", default= None, 
               help="Use to get the self-similarities of the profiles in the input file (resnik', 'lin' or 'jiang_conrath)")
     parser.add_argument("--profiles_self_similarities_output", dest="profiles_self_similarities_output", default= 'profiles_self_similarities.txt', 
-              help="Use to save the self-similarities of the profiles in the input file (of --profiles_self_similarities) to a file")        
+              help="Use to save the self-similarities of the profiles in the input file (of --profiles_self_similarities) to a file")
+    parser.add_argument("--output_report", dest="output_report", default=None,
+              help="Use to create a short quality report with the chosen ontology and input profiles, to be saved at the path given")
+    parser.add_argument("--root_term", dest="root_term", default=None,
+              help="For the output report, it sets the root term to show in center of ontoplot")
+    parser.add_argument("--ref_term", dest="ref_term", default=None,
+              help="For the output report, it sets the term whose childs will be in the color legend to indicate the branches of descendants")
+    parser.add_argument("--similarity_cluster_plot", dest="similarity_cluster_plot", default=None,
+              help="For output report, use to activate profiles clustering and clustermap plot with a similarity method (resnik', 'lin' or 'jiang_conrath). Not active by default")        
     opts =  parser.parse_args(args)
     main_semtools(opts)
 
@@ -262,6 +270,14 @@ def get_corpus_index(args = None):
 
 
 def get_sorted_profs(args=None):
+    """
+    Parses command-line arguments and calls the main function to get sorted profiles based on ontology term similarities.
+
+    :param args: List of command-line arguments. If None, sys.argv[1:] is used.
+    :type args: list or None
+
+    :returns: None
+    """
     if args == None: args = sys.argv[1:]
     parser = argparse.ArgumentParser(description=f'Usage: {inspect.stack()[0][3]} [options]')
     parser.add_argument("-i", "--input_file", dest="input_file", default= None,

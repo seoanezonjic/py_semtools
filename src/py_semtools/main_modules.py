@@ -19,6 +19,7 @@ import numpy as np
 from py_semtools.cons import Cons
 
 ONTOLOGY_INDEX = str(files('py_semtools.external_data').joinpath('ontologies.txt'))
+REPORT_TEMPLATE = str(files('py_semtools.templates').joinpath('report.txt'))
 #https://pypi.org/project/platformdirs/
 ONTOLOGIES=os.path.join(site.USER_BASE, "semtools", 'ontologies')
 
@@ -152,6 +153,7 @@ def main_semtools(opts: argparse.Namespace) -> None:
         if options.get('list_translate') == None and options.get('filter_list') == None or options['keyword'] != None:
             data = format_data(data, options)
             if options.get('translate') != 'codes' and options.get('keyword') == None:
+                #TODO: change add_profile for load_profiles method and add the clean_hard argument to the method
                 for t_id, terms in data: ontology.add_profile(t_id, terms, clean_hard = options['load_hard_cleaned_profiles'], options = options)
     if options.get('list_translate') != None:
         for term in data:
@@ -294,6 +296,24 @@ def main_semtools(opts: argparse.Namespace) -> None:
                 field_content = attrs.get(user_field)
                 text_to_print += "None\t" if field_content == None else f"{field_content}\t"
             print(text_to_print)
+    
+    if options.get('output_report') != None:
+      ontology.add_observed_terms_from_profiles(reset = True)
+      if not ontology.dicts.get('term_stats'): ontology.get_profiles_terms_frequency(count_parentals = True)
+      if not hasattr(ontology, 'profile_sizes') and not hasattr(ontology, 'parental_terms_per_profile'): ontology.get_profile_redundancy()
+      if not ontology.dicts.get('prof_IC_struct') and not ontology.dicts.get('prof_IC_observ'):
+        ontology.get_observed_ics_by_onto_and_freq()
+        ontology.get_profiles_resnik_dual_ICs()
+      if options.get('similarity_cluster_plot'):
+        cluster_activated = True if options['similarity_cluster_plot'] else False
+        ontology.get_similarity_clusters(method_name=options['similarity_cluster_plot'], options={})
+      # Building report
+      container = {"ontology": ontology, 'cluster_activated': cluster_activated, "root_term": options['root_term'], "ref_term":options['ref_term']}
+      template = open(REPORT_TEMPLATE).read()
+      report = Py_report_html(container, os.path.basename(options["output_report"]), True)
+      report.data_from_files = False # We are sending the a ontology object not a raw table file loaded with report_html's I/O methods
+      report.build(template)
+      report.write(options['output_report'])
 
 def main_strsimnet(options: argparse.Namespace) -> None: 
     texts2compare = load_table_file(input_file = options.input_file,

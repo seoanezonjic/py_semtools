@@ -61,6 +61,7 @@ class OboParser(FileParser):
         _, header, stanzas = cls.load_obo(file, zipped)
         cls.header = header
         cls.stanzas = stanzas
+        ontology.ont_name = header['ontology'].split("/")[-1].split(".")[0] if header.get('ontology') else None
         if len(cls.removable_terms) > 0 : cls.remove_black_list_terms() 
         if build: cls.build_index(ontology, extra_dicts = extra_dicts) 
 

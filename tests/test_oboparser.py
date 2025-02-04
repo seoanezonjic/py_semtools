@@ -36,12 +36,12 @@ class OBOParserTestCase(unittest.TestCase):
         ## OBO INFO
         self.load_Header = (
             {"file": os.path.join(DATA_TEST_PATH, "only_header_sample.obo"), "name": "only_header_sample"}, 
-            {"format-version":"1.2", "data-version": "test/a/b/c/"}, 
+            {"format-version":"1.2", "data-version": "test/a/b/c/", 'ontology': 'only_header_sample.obo'}, 
             {"terms":{}, "typedefs": {}, "instances":{}})
 
         self.load_Hierarchical_WithoutIndex = (
             {"file": os.path.join(DATA_TEST_PATH, "hierarchical_sample.obo"), "name": "hierarchical_sample"}, 
-            {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
+            {"format-version": "1.2", "data-version": "test/a/b/c/", 'ontology': 'hierarchical_sample.obo'}, 
             {"terms": {
                 "Parental": {"id": "Parental", "name": "All", "comment": "none"}, 
                 "Child1": {"id": "Child1", "name": "Child1", "is_obsolete": "true", "is_a": ["Parental"], "replaced_by": ["Child2"]}, 
@@ -64,7 +64,7 @@ class OBOParserTestCase(unittest.TestCase):
         #TODO: Confirm if the ontology below is defined correctly
         self.load_Hierarchical_altid = (
             {"file": os.path.join(DATA_TEST_PATH, "hierarchical_sample.obo"), "name": "hierarchical_sample"}, 
-            {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
+            {"format-version": "1.2", "data-version": "test/a/b/c/", 'ontology': 'hierarchical_sample.obo'}, 
             {"terms": {
                 "Parental": {"id": "Parental", "name": "All", "comment": "none"}, 
                 "Child1": {"id": "Child1", "name": "Child1", "is_obsolete": "true", "is_a": ["Parental"], "replaced_by": ["Child2"]}, 
@@ -77,7 +77,7 @@ class OBOParserTestCase(unittest.TestCase):
 
         self.load_Hierarchical = (
             {"file": os.path.join(DATA_TEST_PATH, "hierarchical_sample.obo"), "name": "hierarchical_sample"}, 
-            {"format-version": "1.2", "data-version": "test/a/b/c/"},
+            {"format-version": "1.2", "data-version": "test/a/b/c/", 'ontology': 'hierarchical_sample.obo'},
             {"terms":{
                 "Parental": {"id": "Parental", "name": "All", "comment": "none"}, 
                 "Child1": {"id": "Child1", "name": "Child1", "is_obsolete": "true", "is_a": ["Parental"], "replaced_by": ["Child2"]}, 
@@ -97,7 +97,7 @@ class OBOParserTestCase(unittest.TestCase):
 
         self.load_Atomic = (
             {"file": os.path.join(DATA_TEST_PATH, "sparse_sample.obo"), "name": "sparse_sample"}, 
-            {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
+            {"format-version": "1.2", "data-version": "test/a/b/c/", 'ontology': 'sparse_sample.obo'}, 
             {"terms": {
                 "Parental": {"id": "Parental", "name": "All", "comment": "none"}, 
                 "Child1": {"id": "Child1", "name": "Child1"}, 
@@ -106,7 +106,7 @@ class OBOParserTestCase(unittest.TestCase):
 
         self.load_Sparse = (
             {"file": os.path.join(DATA_TEST_PATH, "sparse2_sample.obo"), "name": "sparse2_sample"}, 
-            {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
+            {"format-version": "1.2", "data-version": "test/a/b/c/", 'ontology': 'sparse2_sample.obo'}, 
             {"terms": {
                 "A": {"id": "A", "name": "All"}, 
                 "B": {"id": "B", "name": "B", "is_a": ["A"]}, 
@@ -117,7 +117,7 @@ class OBOParserTestCase(unittest.TestCase):
         ## OBO INFO2
         self.load_Hierarchical_WithoutIndex2 = (
             {"file": os.path.join(DATA_TEST_PATH, "hierarchical_sample.obo"), "name": "hierarchical_sample"}, 
-            {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
+            {"format-version": "1.2", "data-version": "test/a/b/c/", 'ontology': 'hierarchical_sample.obo'}, 
             {"terms": {
                 "Parental": {"id": "Parental", "name": "All", "comment": "none"}, 
                 "Child1": {"id": "Child1", "name": "Child1", "is_obsolete": "true", "is_a": ["Parental"], "replaced_by": ["Child2"]}, 
@@ -127,7 +127,7 @@ class OBOParserTestCase(unittest.TestCase):
         #TODO: Confirm if the ontology below is defined correctly
         self.load_Hierarchical2 = (
             {"file": os.path.join(DATA_TEST_PATH, "hierarchical_sample.obo"), "name": "hierarchical_sample"}, 
-            {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
+            {"format-version": "1.2", "data-version": "test/a/b/c/", 'ontology': 'hierarchical_sample.obo'}, 
             {"terms": {
                 "Parental": {"id": "Parental", "name": "All", "comment": "none"}, 
                 "Child1": {"id": "Child1", "name": "Child1", "is_obsolete": "true", "is_a": ["Parental"], "replaced_by": ["Child2"]}, 

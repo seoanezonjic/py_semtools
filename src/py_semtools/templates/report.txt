@@ -1,0 +1,42 @@
+<%
+    cluster_activated = plotter.hash_vars['cluster_activated']
+    root_term = plotter.hash_vars['root_term']
+    ref_term = plotter.hash_vars['ref_term']
+    ont_name = plotter.hash_vars['ontology'].ont_name
+
+    default_root_and_ref = {"hp": "HP:0000118", "go": "GO:0008150", "mondo": "MONDO:0000001", "doid": "DOID:4", "efo": "EFO:0000001"}
+    try:
+        root_term = root_term if root_term else default_root_and_ref[ont_name]
+        ref_term = ref_term if ref_term else default_root_and_ref[ont_name]
+    except Exception:
+        if ont_name == None: raise ValueError("Ontology name is not defined in the obo file and no root and ref terms were provided")
+        raise ValueError(f"Ontology name {ont_name} has no default root and ref terms defined (and no root and ref terms were provided by user)")
+%>
+<div style="width: 90%; background-color:#ecf0f1; margin: 0 auto;"> 
+    <h1 style="text-align: center; background-color:#d6eaf8">HPO annotations distribution</h1>
+    <div style="overflow: hidden">
+        ${plotter.ontodist(ontology="ontology", dist_type=['count', 'perc'], height=800, width=800)}
+    </div>
+
+    <div style="overflow: hidden">
+        ${plotter.ontoICdist(ontology="ontology", dist_type=['term', 'prof'], height=800, width=800)}
+    </div>
+    
+    <div style="overflow: hidden">
+        ${ plotter.makeTermFreqTable(ontology="ontology", height=800, width=800)}
+    </div>
+    
+    <div style="overflow: hidden">
+        ${ plotter.plotProfRed(ontology="ontology", height=800, width=800)}
+    </div>
+
+    <div style="width: 90%; background-color:#ecf0f1; margin: 0 auto;">
+        ${plotter.ontoplot(ontology="ontology", root_node=root_term, reference_node=ref_term,
+                                height=800, width=800, title=f"Profiles signature", dynamic = True)}
+    </div>
+    %if cluster_activated:
+        <div style="overflow: hidden">
+            ${plotter.plotClust(ontology="ontology", method_name="lin", height=800, width=800)}
+        </div>
+    %endif
+</div>

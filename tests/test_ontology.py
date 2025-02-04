@@ -153,6 +153,15 @@ class TestOBOFunctionalities(unittest.TestCase):
         # Remove generated files
         os.remove(os.path.join(DATA_TEST_PATH, "testjson.json"))
 
+    ################################
+    # TEST ONTOLOGY NAMES
+    ################################
+
+    def test_get_ontology_names(self):
+        self.assertEqual(self.hierarchical.ont_name, "hierarchical_sample")
+        self.assertEqual(self.branched.ont_name, "branched")
+        self.assertEqual(self.atomic.ont_name, "sparse_sample")
+        self.assertEqual(self.sparse.ont_name, "sparse2_sample")
 
     #################################
     # GENERATE METADATA FOR ALL ITEMS

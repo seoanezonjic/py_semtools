@@ -1,9 +1,9 @@
 % if 'count' in dist_type:
-	${plotter.barplot(id= "ontology_levels", header= True, x_label= 'Number of HPO terms', title= 'HPO annotations distribution', width= "600px", height= "600px", responsive= False, transpose= True, 
+	${plotter.barplot(id= "ontology_levels", header= True, x_label= f'Number of {ONT_NAME} terms', title= f'{ONT_NAME} annotations distribution', width= "600px", height= "600px", responsive= False, transpose= True, 
 		config = { 'graphOrientation': 'vertical'}) }
 % endif
 
 % if 'perc' in dist_type:
-	${plotter.line(id= "distribution_percentage", header= True, x_label= 'Percentage of terms', title= 'HPO percentage distribution', width= "600px", height= "600px", responsive= False, transpose= True, 
+	${plotter.line(id= "distribution_percentage", header= True, x_label= 'Percentage of terms', title= f'{ONT_NAME} percentage distribution', width= "600px", height= "600px", responsive= False, transpose= True, 
 		config = { 'graphOrientation' : 'vertical' }) }
 % endif
