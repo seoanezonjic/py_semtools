@@ -304,11 +304,9 @@ def main_semtools(opts: argparse.Namespace) -> None:
       if not ontology.dicts.get('prof_IC_struct') and not ontology.dicts.get('prof_IC_observ'):
         ontology.get_observed_ics_by_onto_and_freq()
         ontology.get_profiles_resnik_dual_ICs()
-      if options.get('similarity_cluster_plot'):
-        cluster_activated = True if options['similarity_cluster_plot'] else False
-        ontology.get_similarity_clusters(method_name=options['similarity_cluster_plot'], options={})
+      if options.get('similarity_cluster_plot'): ontology.get_similarity_clusters(method_name=options['similarity_cluster_plot'], options={})
       # Building report
-      container = {"ontology": ontology, 'cluster_activated': cluster_activated, "root_term": options['root_term'], "ref_term":options['ref_term']}
+      container = {"ontology": ontology, "root_term": options['root_term'], "ref_term":options['ref_term'], 'similarity_cluster_plot': options['similarity_cluster_plot']}
       template = open(REPORT_TEMPLATE).read()
       report = Py_report_html(container, os.path.basename(options["output_report"]), True)
       report.data_from_files = False # We are sending the a ontology object not a raw table file loaded with report_html's I/O methods

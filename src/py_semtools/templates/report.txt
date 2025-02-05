@@ -1,5 +1,6 @@
 <%
-    cluster_activated = plotter.hash_vars['cluster_activated']
+    similarity_cluster_plot = plotter.hash_vars['similarity_cluster_plot']
+    cluster_activated = True if similarity_cluster_plot else False
     root_term = plotter.hash_vars['root_term']
     ref_term = plotter.hash_vars['ref_term']
     ont_name = plotter.hash_vars['ontology'].ont_name
@@ -36,7 +37,7 @@
     </div>
     %if cluster_activated:
         <div style="overflow: hidden">
-            ${plotter.plotClust(ontology="ontology", method_name="lin", height=800, width=800)}
+            ${plotter.plotClust(ontology="ontology", method_name=similarity_cluster_plot, height=800, width=800)}
         </div>
     %endif
 </div>
