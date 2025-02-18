@@ -299,12 +299,15 @@ def main_semtools(opts: argparse.Namespace) -> None:
     
     if options.get('output_report') != None:
       ontology.add_observed_terms_from_profiles(reset = True)
-      if not ontology.dicts.get('term_stats'): ontology.get_profiles_terms_frequency(count_parentals = True)
+      if not ontology.dicts.get('term_stats'): ontology.get_profiles_terms_frequency(count_parentals = False)
       if not hasattr(ontology, 'profile_sizes') and not hasattr(ontology, 'parental_terms_per_profile'): ontology.get_profile_redundancy()
       if not ontology.dicts.get('prof_IC_struct') and not ontology.dicts.get('prof_IC_observ'):
         ontology.get_observed_ics_by_onto_and_freq()
         ontology.get_profiles_resnik_dual_ICs()
-      if options.get('similarity_cluster_plot'): ontology.get_similarity_clusters(method_name=options['similarity_cluster_plot'], options={})
+      if options.get('similarity_cluster_plot'): 
+        tmp_path = os.path.join(os.path.dirname(options['output_report']), "tmp", "clustermap_tmp")
+        os.makedirs(tmp_path, exist_ok=True)
+        ontology.get_similarity_clusters(method_name=options['similarity_cluster_plot'], temp_folder=tmp_path, options={})
       # Building report
       container = {"ontology": ontology, "root_term": options['root_term'], "ref_term":options['ref_term'], 'similarity_cluster_plot': options['similarity_cluster_plot']}
       template = open(REPORT_TEMPLATE).read()

@@ -20,7 +20,7 @@ import py_exp_calc.exp_calc as pxc
 from py_semtools import OboParser
 from py_semtools import JsonParser
 
-from py_exp_calc.exp_calc import intersection, union, diff, add_record
+from py_exp_calc.exp_calc import intersection, union, diff, add_record, transform_tree
 
 # Importing monkey-patched methods
 import py_semtools.report_ont
@@ -1444,12 +1444,14 @@ class Ontology:
                 clusters, cls_objects = pxc.get_hc_clusters(dist_matrix, dist = 'custom', method = 'ward', identify_clusters='max_avg', n_clusters=3, item_list = x_names)
                 linkage = cls_objects['link']
                 raw_cls = cls_objects['cls']
+                linkage_dnd = transform_tree(linkage, "python", "newick", leaf_names=x_names)
                 
                 if temp_folder != None:
                     with open(cluster_file, 'w') as f:
                         for clusterID, patientIDs in clusters.items(): f.write(f"{clusterID}\t{','.join(patientIDs)}\n")
                     np.save(linkage_file, linkage)
                     np.save(raw_cls_file, np.array(raw_cls, dtype=np.int32))
+                    with open(linkage_file.replace("npy", "dnd"), 'w') as f: f.write(linkage_dnd)
                     #with open(raw_cls_file, 'w') as f: f.write(json.dumps(raw_cls))
             elif temp_folder != None or os.path.exists(cluster_file):
                 with open(cluster_file) as f:
