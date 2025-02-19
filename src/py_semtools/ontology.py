@@ -27,7 +27,7 @@ import py_semtools.report_ont
 
 class Ontology:
     TEMPLATES = "py_semtools.templates"
-    allowed_calcs = {'ics': ['resnik', 'resnik_observed', 'seco', 'zhou', 'sanchez'], 'sims': ['resnik', 'lin', 'jiang_conrath']}
+    allowed_calcs = {'ics': ['resnik', 'resnik_observed', 'seco', 'zhou', 'sanchez'], 'sims': ['resnik', 'lin', 'jiang_conrath', 'eric']}
     
     def __init__(self, file= None, load_file= False, removable_terms= [], build= True, file_format= None, extra_dicts= []):
         self.threads = 2
@@ -540,6 +540,8 @@ class Ontology:
                     sim = (2.0 * sim_res) / (self.get_IC(termA, ic_type=ic_type) + self.get_IC(termB, ic_type=ic_type))
             elif sim_type == 'jiang_conrath': # This is not a similarity, this is a disimilarity (distance)
                 sim = (self.get_IC(termA, ic_type=ic_type) + self.get_IC(termB, ic_type=ic_type)) - (2.0 * sim_res)
+            elif sim_type == 'eric':
+                sim = max(0, 2*sim_res-min(self.get_IC(termA), self.get_IC(termB)))
         return sim
 
     # Checking valid terms
