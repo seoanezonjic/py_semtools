@@ -26,6 +26,10 @@ PAP_CHUNK2 = os.path.join(INPUT_PATH, "papers", "pap_chunk2.tar.gz")
 ABS_CHUNK1 = os.path.join(INPUT_PATH, "abstracts", "abs_chunk1.xml.gz")
 ABS_CHUNK2 = os.path.join(INPUT_PATH, "abstracts", "abs_chunk2.xml.gz")
 
+BLACKLIST1 = os.path.join(INPUT_PATH, "blacklisted_words1.txt")
+BLACKLIST2 = os.path.join(INPUT_PATH, "blacklisted_words2.txt")
+BLACKLIST3 = os.path.join(INPUT_PATH, "blacklisted_words3.txt")
+
 ######### EXPECTED DATA #########
 REF_PATH = os.path.join(ROOT_PATH, 'data', "stEngine", "expected", "ready_indexes")
 
@@ -66,6 +70,21 @@ class TextIndexerTestCase(unittest.TestCase):
         self.mock_index = [self.pmid, processed_text, self.file, self.year, self.text_length, self.n_sentences, self.sentences_length, self.title, self.article_type, self.article_category]
         #Making a slightly different mock index 2 to check in write indexes method that different indexes are written in the same file.
         self.mock_index2 = ["PMID:2", processed_text, "mock_file2.xml", "1996", self.text_length, self.n_sentences, self.sentences_length, self.title, "review", "review-article"]
+
+    def test_check_to_filter_out(self):
+        #This test should find the word 'paper' inside the 'title' field, so it doesnt reach 'original' in 'category' field
+        blackwords = ["compendium", "paper", "original"]
+        filtered, word, type, type_content  = TextIndexer._check_to_filter_out(blackwords, self.title, self.article_category, "partial")
+        self.assertEqual([True, "paper", "title", "Title of the paper"], [filtered, word, type, type_content])
+
+        #This test should find the word 'original' inside the 'category' field
+        blackwords = ["compendium", "other content", "original"]
+        filtered, word, type, type_content  = TextIndexer._check_to_filter_out(blackwords, self.title, self.article_category, "partial")
+        self.assertEqual([True, "original", "category", "original-research"], [filtered, word, type, type_content])
+
+        #This test is doing exact match case, so it is not going to find match in title nor category, returning False and None in the other fields
+        filtered, word, type, type_content  = TextIndexer._check_to_filter_out(blackwords, self.title, self.article_category, "exact")
+        self.assertEqual([False, None, None, None], [filtered, word, type, type_content])
 
     def test_write_indexes(self):
         os.makedirs(TMP, exist_ok=True)
@@ -137,7 +156,7 @@ class TextIndexerTestCase(unittest.TestCase):
         expected_text = open(SINGLE_NONSPLIT_ABS_TEXT_PATH).read().strip()
         expected = [[pmid, expected_text, file, year, text_length, n_sentences, sentences_length, title, article_type, article_category]]
 
-        options = {"split": False}
+        options = {"split": False, "filter_by_blacklist": None}
         returned = TextIndexer.get_abstract_index(SINGLE_ABS_XML_PATH, options)
         self.assertEqual(expected, returned)
 
@@ -147,7 +166,7 @@ class TextIndexerTestCase(unittest.TestCase):
         expected_text = open(SINGLE_SPLIT_ABS_TEXT_PATH).read().strip()
         expected = [[pmid, expected_text, file, year, text_length, n_sentences, sentences_length, title, article_type, article_category]]
 
-        options = {"split": True}
+        options = {"split": True, "filter_by_blacklist": None}
         returned = TextIndexer.get_abstract_index(SINGLE_ABS_XML_PATH, options)
         self.assertEqual(expected, returned)
 
@@ -166,7 +185,7 @@ class TextIndexerTestCase(unittest.TestCase):
         expected_text = open(SINGLE_NONSPLIT_PAP_TEXT_PATH, encoding="utf-8").read().strip()
         expected = [[pmid, expected_text, file, year, text_length, n_sentences, sentences_length, title, article_type, article_category]]
 
-        options = {"split": False, "equivalences_file": None}
+        options = {"split": False, "equivalences_file": None, "filter_by_blacklist": None}
         returned = TextIndexer.get_paper_index(SINGLE_PAP_XML_PATH, options)
         self.assertEqual(expected, returned)
     
@@ -178,7 +197,22 @@ class TextIndexerTestCase(unittest.TestCase):
 
         expected = [[pmid, expected_text, file, year, text_length, n_sentences, sentences_length, title, article_type, article_category]]
         
-        options = {"split": True, "equivalences_file": None}
+        options = {"split": True, "equivalences_file": None, "filter_by_blacklist": None}
+        returned = TextIndexer.get_paper_index(SINGLE_PAP_XML_PATH, options)
+        self.assertEqual(expected, returned)
+
+        ###### Test with blacklisted words filter 1 (Partial Match found in title) #######
+        options = {"split": False, "equivalences_file": None, "filter_by_blacklist": BLACKLIST1, "blacklisted_mode": "partial"}
+        returned = TextIndexer.get_paper_index(SINGLE_PAP_XML_PATH, options)
+        self.assertEqual([], returned)
+
+        ###### Test with blacklisted words filter 2 (Partial Match found in category) #######
+        options = {"split": False, "equivalences_file": None, "filter_by_blacklist": BLACKLIST2, "blacklisted_mode": "partial"}
+        returned = TextIndexer.get_paper_index(SINGLE_PAP_XML_PATH, options)
+        self.assertEqual([], returned)
+
+        ###### Test with blacklisted words filter 3 (No Match is found with any blacklisted words, so the index of the paper is finally added) #######
+        options = {"split": True, "equivalences_file": None, "filter_by_blacklist": BLACKLIST3, "blacklisted_mode": "partial"}
         returned = TextIndexer.get_paper_index(SINGLE_PAP_XML_PATH, options)
         self.assertEqual(expected, returned)
 
@@ -186,25 +220,25 @@ class TextIndexerTestCase(unittest.TestCase):
         #We are only checking equallity in text, but not in the rest of the fields, as it was already done in the previous tests.
 
         #Check it makes abstracts indexes without splitting. 
-        options = {"parse": "PubmedAbstract", "split": False, "equivalences_file": None}
+        options = {"parse": "PubmedAbstract", "split": False, "equivalences_file": None, "filter_by_blacklist": None}
         expected_text = open(SINGLE_NONSPLIT_ABS_TEXT_PATH).read().strip()
         returned_text = TextIndexer.get_index(SINGLE_ABS_XML_PATH, options)[0][1]
         self.assertEqual(expected_text, returned_text)
         
         #Check it makes abstracts indexes with splitting
-        options = {"parse": "PubmedAbstract", "split": True, "equivalences_file": None}
+        options = {"parse": "PubmedAbstract", "split": True, "equivalences_file": None, "filter_by_blacklist": None}
         expected_text = open(SINGLE_SPLIT_ABS_TEXT_PATH).read().strip()
         returned_text = TextIndexer.get_index(SINGLE_ABS_XML_PATH, options)[0][1]
         self.assertEqual(expected_text, returned_text)
 
         #Check it makes papers indexes without splitting
-        options = {"parse": "PubmedPaper", "split": False, "equivalences_file": None}
+        options = {"parse": "PubmedPaper", "split": False, "equivalences_file": None, "filter_by_blacklist": None}
         expected_text = open(SINGLE_NONSPLIT_PAP_TEXT_PATH).read().strip()
         returned_text = TextIndexer.get_index(SINGLE_PAP_XML_PATH, options)[0][1]
         self.assertEqual(expected_text, returned_text)
 
         #Check it makes papers indexes with splitting
-        options = {"parse": "PubmedPaper", "split": True, "equivalences_file": None}
+        options = {"parse": "PubmedPaper", "split": True, "equivalences_file": None, "filter_by_blacklist": None}
         expected_text = open(SINGLE_SPLIT_PAP_TEXT_PATH).read().strip()
         returned_text = TextIndexer.get_index(SINGLE_PAP_XML_PATH, options)[0][1]
         self.assertEqual(expected_text, returned_text)

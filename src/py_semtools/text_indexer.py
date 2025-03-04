@@ -96,12 +96,26 @@ class TextIndexer:
     @classmethod
     def get_abstract_index(cls, file, options, logger = None): 
         texts = [] # aggregate all abstracts in XML file
-        parsed_texts, stats = TextPubmedAbstractParser.parse(file)
+        file_exist = "does exist" if os.path.exists(file) else "does not exist"
+        if logger != None: logger.info(f"The file {file} {file_exist}")
+        parsed_texts, stats = TextPubmedAbstractParser.parse(file, logger= logger)
         for parsed_text in parsed_texts:
             pmid, text, year, title, article_type, article_category = parsed_text
-            if pmid != None and text != "":
-                pmid_content_and_stats = cls.prepare_indexes(text, pmid, file, year, title, article_type, article_category, options)
-                texts.append(pmid_content_and_stats)
+            if pmid == None or text == "": continue
+
+            #If a blacklist word file is given, check to filter out documents whose title or article_category contains any of the words
+            if options['filter_by_blacklist'] != None:
+                if os.path.exists(options['filter_by_blacklist']):
+                    blacklisted_words = [word.strip() for word in open(options['filter_by_blacklist']).readlines()]
+                    filtered_out, w, c, t = TextIndexer._check_to_filter_out(blacklisted_words, title, article_category, options['blacklisted_mode'])
+                    if filtered_out:
+                        if logger != None: logger.warning(f"Blacklisted PMID {pmid} for having word {w} in {c} with content: {t}")
+                        continue
+                else: 
+                    raise Exception("Blacklisted words filepath given does not exist")
+
+            pmid_content_and_stats = cls.prepare_indexes(text, pmid, file, year, title, article_type, article_category, options)
+            texts.append(pmid_content_and_stats)
 
         if logger != None: logger.warning(f"stats:file={file},total={stats['total']},no_abstract={stats['no_abstract']},no_pmid={stats['no_pmid']}")
         return texts
@@ -121,8 +135,19 @@ class TextIndexer:
 
             #If there is no pmid in the paper or in the PMC_PMID_dict, we will use the pmc as the document identifier, specifying it is PMC in the index. 
             #If not PMC nor PMID, we will warn the user
-            if pmid == None and pmc == None: warnings.warn(f"ERROR: The file {file_path} has a paper without PMID and PMC")
+            if pmid == None and pmc == None: logger.warning(f"ERROR: The file {file_path} has a paper without PMID and PMC")
             elif pmid == None and pmc != None: pmid = pmc
+            
+            #If a blacklist word file is given, check to filter out documents whose title or article_category contains any of the words
+            if options['filter_by_blacklist'] != None:
+                if os.path.exists(options['filter_by_blacklist']):
+                    blacklisted_words = [word.strip() for word in open(options['filter_by_blacklist']).readlines()]
+                    filtered_out, w, c, t = TextIndexer._check_to_filter_out(blacklisted_words, title, article_category, options['blacklisted_mode'])
+                    if filtered_out:
+                        if logger != None: logger.warning(f"Blacklisted PMID {pmid} for having word {w} in {c} with content: {t}")
+                        continue
+                else: 
+                    raise Exception("Blacklisted words filepath given does not exist")
 
             if pmid != None and whole_content != "":
                 #pmid_content_and_stats = cls.prepare_indexes(whole_content, pmc+"-"+pmid, filename, year, options)
@@ -177,3 +202,22 @@ class TextIndexer:
             if len(formated_paragraph) > 0: formated.append(formated_paragraph)
         
         return formated
+    
+
+    ######### UTILS METHODS
+
+    @classmethod
+    def _check_to_filter_out(cls, blacklisted_words, title, article_category, mode):
+        title_l = title.lower()
+        article_category_l = article_category.lower()
+        for word in blacklisted_words:
+            word_l = word.lower()
+            if mode == "exact":
+                if word_l == title_l: return True, word, "title", title
+                if word_l == article_category_l: return True, word, "category", article_category
+            elif mode == "partial":
+                if word_l in title_l: return True, word, "title", title
+                if word_l in article_category_l: return True, word, "category", article_category             
+            else: 
+                raise Exception("Wrong blacklisted words filtering out mode has been selected. Acepted modes: partial or exact")
+        return False, None, None, None

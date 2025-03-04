@@ -265,6 +265,10 @@ def get_corpus_index(args = None):
             help="'PubmedAbstract' for pubmed files with abstracs and 'PubmedPaper' for full paper Pubmed(PMC) files ")	
     parser.add_argument('-e', "--equivalences_file", dest="equivalences_file", default= None,
             help="Path to a 2 columns file with PMC-PMID equivalences to use when a parsed papers only finds the PMC ID inside its content.")
+    parser.add_argument('-f', "--filter_by_blacklist", dest="filter_by_blacklist", default= None,
+            help="Path to a single column file with blacklisted words to filter out documents whose titles contains these words")
+    parser.add_argument("--blacklisted_mode", dest="blacklisted_mode", default= 'partial',
+            help="When using 'filter_by_blacklist' use this option to choose between 'exact' or 'partial' match. Default is 'partial'")        
     opts =  parser.parse_args(args)
     main_get_corpus_index(opts)
 
