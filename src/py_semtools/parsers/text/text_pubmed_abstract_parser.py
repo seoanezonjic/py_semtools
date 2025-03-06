@@ -3,7 +3,7 @@ import re
 import gzip
 import traceback
 import xml.etree.ElementTree as ET
-from py_semtools.text_pubmed_parser import TextPubmedParser
+from py_semtools.parsers.text.text_pubmed_parser import TextPubmedParser
 
 class TextPubmedAbstractParser(TextPubmedParser):
 

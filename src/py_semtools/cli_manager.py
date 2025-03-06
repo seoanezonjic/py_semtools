@@ -262,7 +262,7 @@ def get_corpus_index(args = None):
     parser.add_argument("--split_output_files", dest="split_output_files", default= False, action='store_true',
             help="Use this option to split output files with 'text_balancing_size' texts per file")
     parser.add_argument('-p', "--parse", dest="parse", default = None,
-            help="'PubmedAbstract' for pubmed files with abstracs and 'PubmedPaper' for full paper Pubmed(PMC) files ")	
+            help="'Basic' for raw text files. 'PubmedAbstract' for pubmed files with abstracs. 'PubmedPaper' for full paper Pubmed(PMC) files ")	
     parser.add_argument('-e', "--equivalences_file", dest="equivalences_file", default= None,
             help="Path to a 2 columns file with PMC-PMID equivalences to use when a parsed papers only finds the PMC ID inside its content.")
     parser.add_argument('-f', "--filter_by_blacklist", dest="filter_by_blacklist", default= None,

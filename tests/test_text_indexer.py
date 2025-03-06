@@ -10,7 +10,7 @@ import copy
 import unittest
 import os
 import shutil
-from py_semtools import TextIndexer
+from py_semtools.indexers.text_indexer import TextIndexer
 
 ROOT_PATH= os.path.dirname(__file__)
 

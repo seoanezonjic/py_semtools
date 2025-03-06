@@ -3,7 +3,7 @@ from collections import defaultdict
 from importlib.resources import files
 
 from py_semtools.ontology import Ontology
-from py_semtools.text_indexer import TextIndexer
+from py_semtools.indexers.text_indexer import TextIndexer
 from py_semtools.stEngine import STengine
 
 import py_semtools # For external_data

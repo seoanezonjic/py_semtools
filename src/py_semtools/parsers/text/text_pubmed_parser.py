@@ -1,6 +1,8 @@
 import re, gzip
 import xml.etree.ElementTree as ET
-class TextPubmedParser:
+from py_semtools.parsers.text.text_basic_parser import TextBasicParser
+
+class TextPubmedParser(TextBasicParser):
 
     @classmethod
     def parse_xml(cls, path_or_string, is_file=False, is_compressed=False, as_element_tree = False):

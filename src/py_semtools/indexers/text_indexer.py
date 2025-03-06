@@ -9,9 +9,10 @@ import gzip
 
 from py_cmdtabs import CmdTabs
 from py_semtools.parallelizer import Parallelizer
-from py_semtools.text_pubmed_parser import TextPubmedParser
-from py_semtools.text_pubmed_paper_parser import TextPubmedPaperParser
-from py_semtools.text_pubmed_abstract_parser import TextPubmedAbstractParser 
+from py_semtools.parsers.text.text_basic_parser import TextBasicParser
+from py_semtools.parsers.text.text_pubmed_abstract_parser import TextPubmedAbstractParser
+from py_semtools.parsers.text.text_pubmed_paper_parser import TextPubmedPaperParser
+from py_semtools.parsers.text.text_pubmed_parser import TextPubmedParser
 
 class TextIndexer:
 
@@ -91,7 +92,23 @@ class TextIndexer:
             return cls.get_paper_index(file, options, logger = logger)
         elif options["parse"] == 'PubmedAbstract':
             return cls.get_abstract_index(file, options, logger = logger)
+        elif options['parse'] == 'Basic':
+            return cls.get_basic_index(file, options, logger = logger)
 
+    @classmethod
+    def get_basic_index(cls, file_path, options, logger = None):
+        texts = [] # aggregate all texts
+        file_exist = "does exist" if os.path.exists(file_path) else "does not exist"
+        if logger != None: logger.info(f"The file {file_path} {file_exist}")
+        parsed_texts, stats = TextBasicParser.parse(file_path, logger= logger)
+        for parsed_text in parsed_texts:
+            doc_id, file, text = parsed_text
+            if doc_id == None or text == "": continue
+            pmid_content_and_stats = cls.prepare_indexes(text, doc_id, file, "None", "None", "None", "None", options)
+            texts.append(pmid_content_and_stats)
+        if logger != None: logger.warning(f"stats:file={file_path},total={stats['total']}")
+        if logger != None: logger.warning(f"logs_errors:file={file_path},errors_number={stats['errors']}")
+        return texts
 
     @classmethod
     def get_abstract_index(cls, file, options, logger = None): 

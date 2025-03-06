@@ -3,7 +3,7 @@ import re
 import traceback
 import tarfile
 import xml.etree.ElementTree as ET
-from py_semtools.text_pubmed_parser import TextPubmedParser
+from py_semtools.parsers.text.text_pubmed_parser import TextPubmedParser
 
 class TextPubmedPaperParser(TextPubmedParser):
 
@@ -16,7 +16,7 @@ class TextPubmedPaperParser(TextPubmedParser):
         members = []
         stats = {"no_abstract": 0, "no_pmid": 0, "total": 0, "errors": 0}
         tar = tarfile.open(file_path, 'r:gz') 
-        if logger != None: logger.info(f"The file {file_path} has { len([member for member in tar.getmembers()]) } xml papers")
+        if logger != None: logger.info(f"The file {file_path} has { len([member for member in tar.getmembers() if not member.isdir()]) } xml papers")
         for member in tar.getmembers():
             if member.isdir(): continue
             stats['total'] += 1
