@@ -322,14 +322,12 @@ def main_strsimnet(options: argparse.Namespace) -> None:
                                  targetCol = options.cindex,
                                  filterCol = options.findex,
                                  filterValue = options.filter_value)
-    # Obtain all Vs all
-    similitudes_AllVsAll = similitude_network(texts2compare, charsToRemove = options.rm_char)
-
+    # Obtain all Vs all if 1 column was given, or A vs B if 2 columns were given
+    similitudes = similitude_network(texts2compare, charsToRemove = options.rm_char)
     # Iter and store
     with open(options.output_file, "w") as f:
-      for item, item_similitudes in similitudes_AllVsAll.items():
-        for item2, sim in item_similitudes.items():
-          f.write("\t".join([item, item2 , str(sim)]) + "\n" )
+         for item, item2, sim in similitudes:
+            f.write("\t".join([item, item2 , str(sim)]) + "\n" )
 
 
 def main_remote_retriever(opts: argparse.Namespace) -> None: 
@@ -616,15 +614,26 @@ def format_data(data, options):
     if not options.get('simple_list'): format_tabular_data(data, options.get('separator'), options.get('subject_column'), options.get('annotations_column'))
     return data
 
-def load_table_file(input_file, splitChar = "\t", targetCol = 1, filterCol = -1, filterValue = None):
+def load_table_file(input_file, splitChar = "\t", targetCol = [1], filterCol = -1, filterValue = None):
     texts = []
     with open(input_file) as f:
         for line in f:
+            texts_to_add = []
             row = line.rstrip().split(splitChar)
-            if filterCol >= 0 and row[filterCol] != filterValue: continue 
-            texts.append(row[targetCol]) 
+            if filterCol >= 0 and row[filterCol] != filterValue: continue
+            
+            if len(targetCol) == 1:
+              tcol = targetCol[0]
+              texts.append(row[tcol])
+            elif len(targetCol) == 2: 
+              for tcol in targetCol:
+                texts_to_add.append(row[tcol])
+              texts.append(texts_to_add)
+
         # Remove uniques
-        texts = pxc.uniq(texts)
+        if len(targetCol) == 1:
+          texts = pxc.uniq(texts)
+          texts = [[text] for text in texts]
         return texts
     
 def delete_duplicated_entries(query_terms, detailed=False):

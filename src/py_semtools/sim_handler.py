@@ -74,17 +74,45 @@ def clean_fragments(fragments, charsToRemove):
 # +unique+:: boolean flag which indicates if repeated elements must be removed
 # Returns the similarity percentage for all elements into array
 def similitude_network(items_array, splitChar = ";", charsToRemove = "", unique = False):
+  if len(items_array[0]) == 1: #One column case: [["Blaba"], ["Blala"], ["dadad"]] all_vs_all
+    items_array = [item[0] for item in items_array] #Flattening the nested list
+    sims_dict = calc_all_vs_all_sims(items_array, splitChar, charsToRemove, unique)
+    sims = _convert_to_nested_lists(sims_dict)
+  elif len(items_array[0]) == 2: #Two columns case: [["Blaba", "heyy"], ["heho", "hello"], ["dadad", "dad"]] only first_vs_second
+    sims = calc_a_vs_b_sims(items_array, splitChar, charsToRemove)
+  else:
+    raise Exception(f"Wrong number of expected items. Expected 1 column or two columns, but got {len(items_array[0])}")
+  return sims
+
+def calc_all_vs_all_sims(items_array, splitChar = ";", charsToRemove = "", unique = False):
   # Remove repeated elements
   if unique: 
     items_array_unique = []
     for i in items_array:
       if i not in items_array_unique: items_array_unique.append(i)
     items_array = items_array_unique
-  sims = {}
+  sims_dict = {}
   # Per each item into array => Calculate similitude
   while(len(items_array) > 1):
     current = items_array.pop(0)
-    sims[current] = {}
+    sims_dict[current] = {}
     for item in items_array:
-      sims[current][item] = complex_text_similitude(current,item,splitChar,charsToRemove)
+      sims_dict[current][item] = complex_text_similitude(current,item,splitChar,charsToRemove)
+  return sims_dict
+
+def calc_a_vs_b_sims(items_array, splitChar = ";", charsToRemove = ""):
+  sims = []
+  for item1, item2 in items_array:
+    sim = complex_text_similitude(item1, item2, splitChar, charsToRemove)
+    sims.append([item1, item2, sim])  
   return sims
+
+
+########### UTILS FUNCTIONS
+
+def _convert_to_nested_lists(dictionary):
+  nested_list = []
+  for key1, inner_dict in dictionary.items():
+      for key2, value in inner_dict.items():
+        nested_list.append([key1, key2 , value])
+  return nested_list

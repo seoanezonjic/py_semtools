@@ -8,7 +8,7 @@ import json
 import unittest
 import os
 import sys
-from py_semtools.sim_handler import text_similitude, ctext_AtoB, complex_text_similitude, similitude_network
+from py_semtools.sim_handler import text_similitude, ctext_AtoB, complex_text_similitude, calc_all_vs_all_sims
 
 
 ROOT_PATH= os.path.dirname(__file__)
@@ -55,10 +55,9 @@ class TestSimilitudes(unittest.TestCase):
 
     ## Check complex set similitudes
     def test_complex_set_sim(self):
-        self.assertEqual({"abc": {"def": 0.0}},similitude_network(["abc","def"], splitChar= ";", charsToRemove= "", unique= False)) # Simple without repetition
-        self.assertEqual({"abc": {"def": 0.0}},similitude_network(["abc","def","abc"], splitChar= ";", charsToRemove= "", unique= True)) # Simple with repetitions - filtered
-        self.assertEqual({"abcdf": {"abcde": 0.75}},similitude_network(["abcdf","abcde","abcdf"], splitChar= ";", charsToRemove= "", unique= True)) # Simple with repetitions (2) - filtered
-        self.assertEqual({"abcdf": {"abcdf": 1.0}},similitude_network(["abcdf","abcdf"], splitChar= ";", charsToRemove= "", unique= False)) # Simple with repetitions - unfiltered
+        self.assertEqual({"abc": {"def": 0.0}},calc_all_vs_all_sims(["abc","def","abc"], splitChar= ";", charsToRemove= "", unique= True)) # Simple with repetitions - filtered
+        self.assertEqual({"abcdf": {"abcde": 0.75}},calc_all_vs_all_sims(["abcdf","abcde","abcdf"], splitChar= ";", charsToRemove= "", unique= True)) # Simple with repetitions (2) - filtered
+        self.assertEqual({"abcdf": {"abcdf": 1.0}},calc_all_vs_all_sims(["abcdf","abcdf"], splitChar= ";", charsToRemove= "", unique= False)) # Simple with repetitions - unfiltered
 
 
     #################################

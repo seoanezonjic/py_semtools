@@ -31,6 +31,9 @@ def split_keyword_and_fields(string):
     fields = fields.split(',')
     return [keyword, fields]
 
+def split_column_numbers(string):
+    return [int(number) for number in string.split(",")]
+
 #########################################################################
 #CLI PARSERS 
 #########################################################################
@@ -41,8 +44,8 @@ def strsimnet(args = None):
               help="Input OMIM diseases file.")
     parser.add_argument("-s", "--split_char", dest="split_char", default="\t", 
               help="Character for splitting input file. Default: tab.")
-    parser.add_argument("-c", "--column", dest="cindex", default=0, type=int, 
-              help="Column index wich contains texts to be compared. Default: 0.")
+    parser.add_argument("-c", "--columns", dest="cindex", default=[0], type=split_column_numbers, 
+              help="Column(s) index(es) wich contains texts to be compared. If two columns are defined (e.g. 0,1), only items from column 0 vs 1 are compared. Default: 0.")
     parser.add_argument("-C", "--filter_column", dest="findex", default=-1, type=int, 
               help="[OPTIONAL] Column index wich contains to be used as filters. Default: -1.")
     parser.add_argument("-f", "--filter_value", dest="filter_value", default=None, 
