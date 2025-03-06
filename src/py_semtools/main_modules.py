@@ -326,7 +326,7 @@ def main_strsimnet(options: argparse.Namespace) -> None:
     similitudes = similitude_network(texts2compare, charsToRemove = options.rm_char)
     # Iter and store
     with open(options.output_file, "w") as f:
-         for item, item2, sim in similitudes:
+        for item, item2, sim in similitudes:
             f.write("\t".join([item, item2 , str(sim)]) + "\n" )
 
 
