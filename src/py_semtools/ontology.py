@@ -27,7 +27,7 @@ import py_semtools.report_ont
 
 class Ontology:
     TEMPLATES = "py_semtools.templates"
-    allowed_calcs = {'ics': ['resnik', 'resnik_observed', 'seco', 'zhou', 'sanchez'], 'sims': ['resnik', 'lin', 'jiang_conrath', 'eric']}
+    allowed_calcs = {'ics': ['resnik', 'resnik_observed', 'seco', 'zhou', 'sanchez'], 'sims': ['resnik', 'lin', 'jiang_conrath', 'eric', 'neric', 'nweric', 'erlin']}
     
     def __init__(self, file= None, load_file= False, removable_terms= [], build= True, file_format= None, extra_dicts= []):
         self.threads = 2
@@ -540,8 +540,27 @@ class Ontology:
                     sim = (2.0 * sim_res) / (self.get_IC(termA, ic_type=ic_type) + self.get_IC(termB, ic_type=ic_type))
             elif sim_type == 'jiang_conrath': # This is not a similarity, this is a disimilarity (distance)
                 sim = (self.get_IC(termA, ic_type=ic_type) + self.get_IC(termB, ic_type=ic_type)) - (2.0 * sim_res)
-            elif sim_type == 'eric':
+            elif sim_type == 'eric': 
                 sim = max(0, 2*sim_res-min(self.get_IC(termA), self.get_IC(termB)))
+            elif sim_type == 'neric': # Natural noramlization with 0 to 1, not weighting by original ics.
+                if termA == termB:
+                    sim = 1.0
+                else:
+                    raw_sim = max(0, 2 * sim_res - min(self.get_IC(termA), self.get_IC(termB)))
+                    min_ic = min(self.get_IC(termA), self.get_IC(termB)) if min(self.get_IC(termA), self.get_IC(termB)) > 0 else 1  # Evitar división por cero
+                    sim = raw_sim / min_ic 
+            elif sim_type == "nweric": # Adding weight for original ics (as eric does).
+                raw_sim = max(0, 2 * sim_res - min(self.get_IC(termA), self.get_IC(termB)))
+                sim = raw_sim/(-math.log10(1/self.max_freqs())) # Dividing by the maximum theoretical IC
+            elif sim_type == "erlin": # combination of eric filtration and lin metric
+                if termA == termB:
+                    sim = 1.0
+                else:
+                    raw_sim = max(0, 2 * sim_res - min(self.get_IC(termA), self.get_IC(termB)))
+                    if raw_sim > 0:
+                        sim = (2.0 * sim_res) / (self.get_IC(termA, ic_type=ic_type) + self.get_IC(termB, ic_type=ic_type))
+                    else:
+                        sim = 0
         return sim
 
     # Checking valid terms
