@@ -35,6 +35,7 @@
 		ax.set_yticklabels([])
 
 	def draw_dynamic_rontoplot(data, plotter_list):
+		#Previous version of the function
 		#alphas = data['alphas']
 		#fig = plotter_list['px'].scatter_polar(data, r="radius_values", theta="arc_values", size="sizes", hover_name="hp_names", 
 		#			opacity = alphas, color="colors", color_discrete_map = color_legend, title=title, width=width, height=height)
@@ -55,7 +56,7 @@
 		fig.update_traces(mode="markers")
 		fig.update_layout( title = dict(text=title), 
 		                   legend = dict(bordercolor="Black", borderwidth=2, title_font_family="Times New Roman", bgcolor="LightSteelBlue",
-						   				 #itemsizing= 'constant',
+						   				 itemsizing= 'constant',
         								 font = dict(family="Courier", size=12, color="black")), 
 						   polar = dict(angularaxis = dict(showticklabels = False, rotation = 90, direction = "clockwise")) )
 		return fig
@@ -71,5 +72,9 @@
 	plotter_to_use = draw_dynamic_rontoplot if dynamic else draw_static_rontoplot
 %>
 
-
+<style>
+.legendpoints .scatterpts {
+  opacity: 1 !important;
+}
+</style>
 ${plotter.static_plot_main(id="ontoplot_table_format_df", dynamic=dynamic, raw=True, header=True, row_names=False, var_attr=[0],  plotting_function = plotter_to_use, height=height, width=width, title=title)}
