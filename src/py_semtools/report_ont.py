@@ -12,11 +12,29 @@ Py_report_html.additional_templates.append(str(files(Cons.TEMPLATES).joinpath(''
 
 ##### METHODS FOR ONTOPLOT
 
-def append_values_to_arrays(self, arrays, values):
+## UTILS FUNCTIONS
+def _transform_value(self, value, method):
+    if method == "cubic_root":
+        return value**(1/3)
+    elif method == "bins":
+        return self._get_alpha_bin(value)
+    elif method == "none":
+        return value
+    elif callable(method):
+        return method(value)
+
+def _get_alpha_bin(self, value):
+    bins = {(0, 0.2): 0.2, (0.2, 0.4): 0.3, (0.4, 0.6): 0.5, (0.6, 0.8): 0.7, (0.8, 1): 0.9}
+    for bins, binarized_value in bins.items():
+        if value >= bins[0] and value < bins[1]: return binarized_value
+    if value == 1: return value    
+    else: raise Exception(f"Input value is not between the closed range of 0-1, value was: {value}")
+
+def _append_values_to_arrays(self, arrays, values):
     for idx, value in enumerate(values):
         arrays[idx].append(value)
 
-def get_arc_degree_and_radius_values(self, ontology, term, level_linspace, level_current_index, root_level):
+def _get_arc_degree_and_radius_values(self, ontology, term, level_linspace, level_current_index, root_level):
     term_level = ontology.get_term_level(term) - root_level
     current_level_idx = level_current_index[term_level]
     current_level_arc_array = level_linspace[term_level]
@@ -25,7 +43,12 @@ def get_arc_degree_and_radius_values(self, ontology, term, level_linspace, level
     level_current_index[term_level] += 1
     return arc_term_ont, term_level
 
-def prepare_ontoplot_data(self, ontology, hpo_stats_dict, root_node, reference_node):
+## MAIN METHODS
+
+def prepare_ontoplot_data(self, ontology, hpo_stats_dict, root_node, reference_node, freq_by, is_dynamic, fix_alpha):
+    size_factor = 20 if is_dynamic else 200
+    ont_to_prof_dist=0.4 if is_dynamic and freq_by=="size" else 0.3
+
     level_terms = ontology.get_ontology_levels()
     hps_to_filter_in = set()
     root_level = 0
@@ -63,7 +86,10 @@ def prepare_ontoplot_data(self, ontology, hpo_stats_dict, root_node, reference_n
     color_legend = {value: ontology.translate_id(key) for key, value in top_parental_colors.items()}
     color_legend.update({grey: "Ontology", black: "Others"})
 
-    colors, sizes, radius_values, arc_values, hp_names = [grey], [1], [0], [0], [ontology.translate_id(root_node)]
+    ont_size=3
+    ont_alpha=0.7
+    ont_freq=1
+    colors, sizes, radius_values, arc_values, hp_names, alphas, freqs = [grey], [ont_size], [0], [0], [ontology.translate_id(root_node)], [ont_alpha], [ont_freq]
     while len(terms_to_visit) > 0:
         term = terms_to_visit.pop(0)
         if term in visited_terms: continue
@@ -71,27 +97,39 @@ def prepare_ontoplot_data(self, ontology, hpo_stats_dict, root_node, reference_n
         childs = ontology.get_direct_descendants(term)
         if childs != None and len(childs) > 0: terms_to_visit = [term for term in childs if term  in hps_to_filter_in] + terms_to_visit
 
-        arc_hp_ont, hp_level = self.get_arc_degree_and_radius_values(ontology, term, level_linspace, level_current_index, root_level)
-        current_color = all_term_colors[term]
-        self.append_values_to_arrays([colors, sizes, radius_values, arc_values, hp_names], [grey, 1, hp_level, arc_hp_ont, ontology.translate_id(term)])
-        if hpo_stats_dict.get(term) != None: self.append_values_to_arrays([colors, sizes, radius_values, arc_values, hp_names], [current_color, 1 + hpo_stats_dict[term], hp_level + 0.3, arc_hp_ont, ontology.translate_id(term)])
-    return [[colors, sizes, radius_values, arc_values, hp_names], color_legend]
+        arc_hp_ont, hp_level = self._get_arc_degree_and_radius_values(ontology, term, level_linspace, level_current_index, root_level)
+
+        #ADDING THE POINT FOR THE ONTOLOGY TERM
+        self._append_values_to_arrays([colors, sizes, radius_values, arc_values, hp_names, alphas, freqs], [grey, ont_size, hp_level, arc_hp_ont, ontology.translate_id(term), ont_alpha, ont_freq])
+        #IF THE TERM EXIST IN THE PROFILE, ADDING ALSO THE PROFILE TERM POINT
+        if hpo_stats_dict.get(term) != None: 
+            freq = hpo_stats_dict[term]
+            current_color = all_term_colors[term]
+            current_alpha = self._transform_value(freq, method = fix_alpha) if freq_by in ["alpha", "both"] else 1 #method = "bins"
+            current_size = ont_size + (freq*size_factor) if freq_by in ["size", "both"] else 4
+            current_radius = hp_level + ont_to_prof_dist #Making the profile term point a bit further with respect to the ontology point
+            self._append_values_to_arrays([colors, sizes, radius_values, arc_values, hp_names, alphas, freqs], [current_color, current_size, current_radius, arc_hp_ont, ontology.translate_id(term), current_alpha, freq])
+    return [[colors, sizes, radius_values, arc_values, hp_names, alphas, freqs], color_legend]
 
 def ontoplot(self, **user_options):
-  dynamic = user_options.get('dynamic', False)
+  is_dynamic = user_options.get('dynamic', False)
+  freq_by = user_options.get('freq_by', 'size')
+  fix_alpha = user_options.get('fix_alpha', 'none')
+
   ontology = self.hash_vars[user_options['ontology']]
   ONT_NAME = ontology.ont_name.upper() if ontology.ont_name else 'Ontology'
-  term_frequencies = {term: proportion*100 for term, proportion in ontology.dicts['term_stats'].items()}
+  max_freq = 1  #max(ontology.dicts['term_stats'].values()) This would make a max scaling, not the desired behaviour, but leave it here for reference
+  term_frequencies = {term: proportion/max_freq for term, proportion in ontology.dicts['term_stats'].items()}
   root_node = user_options['root_node']
   reference_node = user_options['reference_node']
-  prepared_data, color_legend = self.prepare_ontoplot_data(ontology, term_frequencies, root_node, reference_node)
-  colors, sizes, radius_values, arc_values, hp_names = prepared_data
+  prepared_data, color_legend = self.prepare_ontoplot_data(ontology, term_frequencies, root_node, reference_node, freq_by, is_dynamic, fix_alpha)
+  colors, sizes, radius_values, arc_values, hp_names, alphas, freqs = prepared_data
 
-  ontoplot_table_format = [["colors", "sizes", "radius_values", "arc_values", "hp_names"]]
-  ontoplot_table_format = ontoplot_table_format + [[colors[i], sizes[i], radius_values[i], arc_values[i], hp_names[i]] for i in range(len(colors))]
+  ontoplot_table_format = [["colors", "sizes", "radius_values", "arc_values", "hp_names", "alphas", "freqs"]]
+  ontoplot_table_format = ontoplot_table_format + [[colors[i], sizes[i], radius_values[i], arc_values[i], hp_names[i], alphas[i], freqs[i]] for i in range(len(colors))]
   
   self.hash_vars["ontoplot_table_format"] = ontoplot_table_format
-  user_options["dynamic"] = dynamic
+  user_options["dynamic"] = is_dynamic
   user_options['ONT_NAME'] = ONT_NAME
   return self.renderize_child_template(self.get_internal_template('ontoplot.txt'), color_legend=color_legend, **user_options)
 
@@ -152,8 +190,10 @@ def similarity_matrix_plot(self, **user_options):
     return self.renderize_child_template(self.get_internal_template('similarity_heatmap.txt'), **user_options)
 
 #### LOADING ALL MONKEYPATCHED METHODS
-Py_report_html.append_values_to_arrays = append_values_to_arrays
-Py_report_html.get_arc_degree_and_radius_values = get_arc_degree_and_radius_values
+Py_report_html._transform_value = _transform_value
+Py_report_html._get_alpha_bin = _get_alpha_bin
+Py_report_html._append_values_to_arrays = _append_values_to_arrays
+Py_report_html._get_arc_degree_and_radius_values = _get_arc_degree_and_radius_values
 Py_report_html.prepare_ontoplot_data = prepare_ontoplot_data
 Py_report_html.ontodist = ontodist
 Py_report_html.ontoplot = ontoplot
