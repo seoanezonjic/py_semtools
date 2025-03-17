@@ -551,7 +551,7 @@ class Ontology:
                     sim = raw_sim / min_ic 
             elif sim_type == "nweric": # Adding weight for original ics (as eric does).
                 raw_sim = max(0, 2 * sim_res - min(self.get_IC(termA), self.get_IC(termB)))
-                sim = raw_sim/(-math.log10(1/self.max_freqs())) # Dividing by the maximum theoretical IC
+                sim = raw_sim/(-math.log10(1/self.max_freqs['struct_freq'])) # Dividing by the maximum theoretical IC
             elif sim_type == "erlin": # combination of eric filtration and lin metric
                 if termA == termB:
                     sim = 1.0
