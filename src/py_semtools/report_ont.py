@@ -45,9 +45,12 @@ def _get_arc_degree_and_radius_values(self, ontology, term, level_linspace, leve
 
 ## MAIN METHODS
 
-def prepare_ontoplot_data(self, ontology, hpo_stats_dict, root_node, reference_node, freq_by, is_dynamic, fix_alpha):
+def prepare_ontoplot_data(self, ontology, hpo_stats_dict, root_node, reference_node, freq_by, is_dynamic, fix_alpha, guide_lines):
+    base_dist = 0.2
+    dist_fact = 0.3
+    max_freq = max(hpo_stats_dict.values())
+    ont_to_prof_dist = base_dist+(dist_fact*max_freq) if is_dynamic and freq_by=="size" else 0.2
     size_factor = 20 if is_dynamic else 200
-    ont_to_prof_dist=0.4 if is_dynamic and freq_by=="size" else 0.3
 
     level_terms = ontology.get_ontology_levels()
     hps_to_filter_in = set()
@@ -100,7 +103,8 @@ def prepare_ontoplot_data(self, ontology, hpo_stats_dict, root_node, reference_n
         arc_hp_ont, hp_level = self._get_arc_degree_and_radius_values(ontology, term, level_linspace, level_current_index, root_level)
 
         #ADDING THE POINT FOR THE ONTOLOGY TERM
-        self._append_values_to_arrays([colors, sizes, radius_values, arc_values, hp_names, alphas, freqs], [grey, ont_size, hp_level, arc_hp_ont, ontology.translate_id(term), ont_alpha, ont_freq])
+        if guide_lines == "ont":
+            self._append_values_to_arrays([colors, sizes, radius_values, arc_values, hp_names, alphas, freqs], [grey, ont_size, hp_level, arc_hp_ont, ontology.translate_id(term), ont_alpha, ont_freq])
         #IF THE TERM EXIST IN THE PROFILE, ADDING ALSO THE PROFILE TERM POINT
         if hpo_stats_dict.get(term) != None: 
             freq = hpo_stats_dict[term]
@@ -112,6 +116,7 @@ def prepare_ontoplot_data(self, ontology, hpo_stats_dict, root_node, reference_n
     return [[colors, sizes, radius_values, arc_values, hp_names, alphas, freqs], color_legend]
 
 def ontoplot(self, **user_options):
+  guide_lines = user_options.get('guide_lines', "ont")
   is_dynamic = user_options.get('dynamic', False)
   freq_by = user_options.get('freq_by', 'size')
   fix_alpha = user_options.get('fix_alpha', 'none')
@@ -122,7 +127,7 @@ def ontoplot(self, **user_options):
   term_frequencies = {term: proportion/max_freq for term, proportion in ontology.dicts['term_stats'].items()}
   root_node = user_options['root_node']
   reference_node = user_options['reference_node']
-  prepared_data, color_legend = self.prepare_ontoplot_data(ontology, term_frequencies, root_node, reference_node, freq_by, is_dynamic, fix_alpha)
+  prepared_data, color_legend = self.prepare_ontoplot_data(ontology, term_frequencies, root_node, reference_node, freq_by, is_dynamic, fix_alpha, guide_lines)
   colors, sizes, radius_values, arc_values, hp_names, alphas, freqs = prepared_data
 
   ontoplot_table_format = [["colors", "sizes", "radius_values", "arc_values", "hp_names", "alphas", "freqs"]]
@@ -130,6 +135,7 @@ def ontoplot(self, **user_options):
   
   self.hash_vars["ontoplot_table_format"] = ontoplot_table_format
   user_options["dynamic"] = is_dynamic
+  user_options["guide_lines"] = guide_lines
   user_options['ONT_NAME'] = ONT_NAME
   return self.renderize_child_template(self.get_internal_template('ontoplot.txt'), color_legend=color_legend, **user_options)
 

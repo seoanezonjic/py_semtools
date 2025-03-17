@@ -7,39 +7,43 @@
 	import warnings
 	import math
 
+	gridlines, gridlabels = tuple(range(0,13)), tuple([str(num) for num in range(0,13)])
+	
 	def to_css_rgb(color):
 		red, green, blue, *alpha = list(map(lambda channel: round(channel*255), color))
 		return f"rgb({red},{green},{blue})"
 
 	def draw_static_rontoplot(data, plotter_list):
-		fig = plotter_list['plt'].figure(figsize=(12,12))
+		fig = plotter_list['plt'].figure(figsize=(height/100,width/100), dpi=dpi)
 		ax = fig.add_subplot(projection='polar')
 
 		for color in data["colors"].unique():
 			d = data[data["colors"] == color]
 			scatter = ax.scatter(d["arc_values"], d["radius_values"], s=d["sizes"], color=color, label=color_legend[color], alpha=d["alphas"])
 		
-		# Legend for colors
-		legend1 = ax.legend(loc="upper right", fontsize="7")
-		ax.add_artist(legend1)
-		handles, labels = scatter.legend_elements(prop="sizes", alpha=0.6)
-		legend2 = ax.legend(handles, labels, loc="lower right", title="Frequency", fontsize="7")
+		legend1 = plt.legend(fontsize="7", bbox_to_anchor=(1.04, 1), loc="upper left")
+		legend_point_size = 15
+		for lh in legend1.legend_handles:
+			alphas_len = len(lh.get_alpha())
+			lh.set_sizes(np.array([legend_point_size]))
+			lh.set_alpha(np.array([1]*alphas_len))
 		
 		# Other customizations
 		ax.set_facecolor("white")
 		ax.set_theta_zero_location('N')
 		ax.set_theta_direction(-1)
-		ax.tick_params(axis='y', colors='white')
-		ax.grid(False)
 		ax.set_xticklabels([])
-		ax.set_yticklabels([])
+		if guide_lines != "grid": ax.set_yticklabels([])
+		if guide_lines == "grid": 
+			ax.tick_params(axis='y', colors='grey')
+			ax.grid(True, color="grey")
+			plt.rgrids(gridlines, gridlabels)
+		else:
+			ax.tick_params(axis='y', colors='white')
+			ax.grid(False)
+		plt.tight_layout()
 
 	def draw_dynamic_rontoplot(data, plotter_list):
-		#Previous version of the function
-		#alphas = data['alphas']
-		#fig = plotter_list['px'].scatter_polar(data, r="radius_values", theta="arc_values", size="sizes", hover_name="hp_names", 
-		#			opacity = alphas, color="colors", color_discrete_map = color_legend, title=title, width=width, height=height)
-		
 		#hover_debug="%{customdata}<br>radius_values: %{r:.2f}<br>arc_values: %{theta:.2f}<br>size: %{marker.size:.2f}<br>alpha: %{marker.opacity}"
 		hover="%{customdata[0]}<br>Frequency in profiles: %{customdata[1]:.5f}"
 		
@@ -58,7 +62,13 @@
 		                   legend = dict(bordercolor="Black", borderwidth=2, title_font_family="Times New Roman", bgcolor="LightSteelBlue",
 						   				 itemsizing= 'constant',
         								 font = dict(family="Courier", size=12, color="black")), 
-						   polar = dict(angularaxis = dict(showticklabels = False, rotation = 90, direction = "clockwise")) )
+						   polar = dict(angularaxis = dict(showticklabels = False, rotation = 90, direction = "clockwise"),
+						   				radialaxis = dict(dtick = 1))
+						)
+		if guide_lines != "grid":
+			fig.update_polars(angularaxis_showgrid=False, angularaxis_showline=False, angularaxis_showticklabels=False,
+							  radialaxis_showgrid=False, radialaxis_showline=False, radialaxis_showticklabels=False) 
+							  
 		return fig
 
 	plotter.hash_vars["ontoplot_table_format_df"] = pd.DataFrame(plotter.hash_vars["ontoplot_table_format"][1:], columns=plotter.hash_vars["ontoplot_table_format"][0])
@@ -77,4 +87,6 @@
   opacity: 1 !important;
 }
 </style>
-${plotter.static_plot_main(id="ontoplot_table_format_df", dynamic=dynamic, raw=True, header=True, row_names=False, var_attr=[0],  plotting_function = plotter_to_use, height=height, width=width, title=title)}
+${plotter.static_plot_main(id="ontoplot_table_format_df", dynamic=dynamic, raw=True, header=True, row_names=False, 
+						   plotting_function = plotter_to_use, title=title, var_attr=[0], dynamic_units_calc= False,
+						   height=height, width=width, matplot_height=height/100, matplot_width=width/100, dpi = dpi)}
