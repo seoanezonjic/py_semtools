@@ -1,3 +1,17 @@
+<%
+    root_term = "HP:0000118"
+    ref_term = "HP:0000118"
+
+    def get_ontoplot_call(dyn, freq, fix, guide, root, ref):
+        return f"""<code>plotter.ontoplot(ontology="ontology", root_node="{root}", reference_node="{ref}", dpi = 300,
+                            height=800, width=800, title=f"Profiles signature", dynamic = {dyn}, 
+                            freq_by="{freq}", fix_alpha={fix}, guide_lines="{guide}")</code>"""
+    def get_ontoplot(dyn, freq, fix, guide, root, ref):
+        return plotter.ontoplot(ontology="ontology", root_node=root, reference_node=ref, dpi = 100,
+                            height=800, width=800, title=f"Profiles signature", dynamic = dyn, 
+                            freq_by=freq, fix_alpha=fix, guide_lines=guide)
+%>
+
 <div style="width: 90%; background-color:#ecf0f1; margin: 0 auto;"> 
     <h1 style="text-align: center; background-color:#d6eaf8">HPO annotations distribution</h1>
     <div style="overflow: hidden">
@@ -17,11 +31,43 @@
         ${ plotter.plotProfRed(ontology="ontology", height=800, width=800)}
     </div>
 
-    <div style="width: 90%; background-color:#ecf0f1; margin: 0 auto;">
-        ${plotter.ontoplot(ontology="ontology", root_node="HP:0000118", reference_node="HP:0000118", 
-                                height=800, width=800, title=f"Profiles signature", dynamic = True)}
-    </div>
     <div style="overflow: hidden">
         ${plotter.plotClust(ontology="ontology", method_name="lin", height=800, width=800)}
     </div>
+
 </div>
+
+${ plotter.create_title(f'Ontoplot. Different calls examples', id='div_from', 
+                        hlevel=1, indexable=False, clickable=True, t_id='div_to', clickable_text = '(Click me)') }
+
+<%  
+    content = "<div style=\"width: 90%; background-color:#ecf0f1; margin: 0 auto;\">"
+
+    content += "Dynamic ontoplot, frequency by size and opacity, opacity low values fixed by cubic root, guide lines set by ontology term points" + "<br>"
+    content += get_ontoplot_call(dyn=True, freq="both", fix="\"cubic_root\"", guide="ont", root=root_term, ref=ref_term) + "<br>"
+    content += get_ontoplot(dyn=True, freq="both", fix="cubic_root", guide="ont", root=root_term, ref=ref_term)
+ 
+    content += "Dynamic ontoplot, frequency by size, guide lines set by concentric lines at each level of the ontology"+ "<br>"
+    content += get_ontoplot_call(dyn=True, freq="size", fix="\"none\"", guide="grid", root=root_term, ref=ref_term) + "<br>"
+    content += get_ontoplot(dyn=True, freq="size", fix="none", guide="grid", root=root_term, ref=ref_term) + "<br>"
+    
+    content += "Dynamic ontoplot, frequency by opacity, no guide lines used" + "<br>"
+    content += get_ontoplot_call(dyn=True, freq="alpha", fix="\"none\"", guide="none", root=root_term, ref=ref_term) + "<br>"
+    content += get_ontoplot(dyn=True, freq="alpha", fix="none", guide="none", root=root_term, ref=ref_term) + "<br>"
+
+
+    content += "Static ontoplot, frequency by size and opacity, opacity low values fixed by cubic root, guide lines set by ontology term points" + "<br>"
+    content += get_ontoplot_call(dyn=False, freq="both", fix="\"bins\"", guide="ont", root=root_term, ref=ref_term) + "<br>"
+    content += get_ontoplot(dyn=False, freq="both", fix="bins", guide="ont", root=root_term, ref=ref_term) + "<br>"
+    
+    content += "Static ontoplot, frequency by size, guide lines set by concentric lines at each level of the ontology" + "<br>"
+    content += get_ontoplot_call(dyn=False, freq="size", fix="\"none\"", guide="grid", root=root_term, ref=ref_term) + "<br>"
+    content += get_ontoplot(dyn=False, freq="size", fix="none", guide="grid", root=root_term, ref=ref_term) + "<br>"
+    
+    content += "Static ontoplot, frequency by opacity, no guide lines used" + "<br>"
+    content += get_ontoplot_call(dyn=False, freq="alpha", fix="lambda x: x**(1/3)", guide="none", root=root_term, ref=ref_term) + "<br>"
+    content += get_ontoplot(dyn=False, freq="alpha", fix=lambda x: x**(1/3), guide="none", root=root_term, ref=ref_term) + "<br>"
+    content += "</div>"
+
+%>
+${ plotter.create_collapsable_container('div_to', content, display="visible") }

@@ -32,8 +32,8 @@
     </div>
 
     <div style="width: 90%; background-color:#ecf0f1; margin: 0 auto;">
-        ${plotter.ontoplot(ontology="ontology", root_node=root_term, reference_node=ref_term,
-                                height=800, width=800, title=f"Profiles signature", dynamic = True)}
+        ${plotter.ontoplot(ontology="ontology", root_node=root_term, reference_node=ref_term, dpi = 300,
+                                height=800, width=800, title=f"Profiles signature", dynamic = True, freq_by="size", fix_alpha="none", guide_lines="ont")}                                                       
     </div>
     %if cluster_activated:
         <div style="overflow: hidden">

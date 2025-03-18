@@ -43,15 +43,21 @@ def _get_arc_degree_and_radius_values(self, ontology, term, level_linspace, leve
     level_current_index[term_level] += 1
     return arc_term_ont, term_level
 
+def _get_plot_points_params(self, hpo_stats_dict, guide_lines, freq_by, is_dynamic):
+    base_dist = 0.2 
+    dist_fact = 0.3 if guide_lines == "ont" else 0.2
+    max_freq = max(hpo_stats_dict.values())
+    ont_to_prof_dist = base_dist+(dist_fact*max_freq) if freq_by != "alpha" else base_dist
+    size_factor = 30 if is_dynamic else 100
+
+    ont_size=3 if is_dynamic else 2
+    ont_alpha=0.7
+    ont_freq=1
+    return ont_to_prof_dist, size_factor, ont_size, ont_alpha, ont_freq
+
 ## MAIN METHODS
 
 def prepare_ontoplot_data(self, ontology, hpo_stats_dict, root_node, reference_node, freq_by, is_dynamic, fix_alpha, guide_lines):
-    base_dist = 0.2
-    dist_fact = 0.3
-    max_freq = max(hpo_stats_dict.values())
-    ont_to_prof_dist = base_dist+(dist_fact*max_freq) if is_dynamic and freq_by=="size" else 0.2
-    size_factor = 20 if is_dynamic else 200
-
     level_terms = ontology.get_ontology_levels()
     hps_to_filter_in = set()
     root_level = 0
@@ -68,7 +74,6 @@ def prepare_ontoplot_data(self, ontology, hpo_stats_dict, root_node, reference_n
         if root_found: break
         levels_to_remove.append(level)
     for level in levels_to_remove: del level_terms[level]
-
 
     cleaned_level_terms = {(level - root_level): [term for term in terms if term in hps_to_filter_in] for level, terms in level_terms.items()}
     level_linspace = {level: np.linspace(0, 2*np.pi, len(terms)) for level, terms in cleaned_level_terms.items()}
@@ -89,9 +94,7 @@ def prepare_ontoplot_data(self, ontology, hpo_stats_dict, root_node, reference_n
     color_legend = {value: ontology.translate_id(key) for key, value in top_parental_colors.items()}
     color_legend.update({grey: "Ontology", black: "Others"})
 
-    ont_size=3
-    ont_alpha=0.7
-    ont_freq=1
+    ont_to_prof_dist, size_factor, ont_size, ont_alpha, ont_freq = self._get_plot_points_params(hpo_stats_dict, guide_lines, freq_by, is_dynamic)
     colors, sizes, radius_values, arc_values, hp_names, alphas, freqs = [grey], [ont_size], [0], [0], [ontology.translate_id(root_node)], [ont_alpha], [ont_freq]
     while len(terms_to_visit) > 0:
         term = terms_to_visit.pop(0)
@@ -99,7 +102,6 @@ def prepare_ontoplot_data(self, ontology, hpo_stats_dict, root_node, reference_n
         visited_terms.add(term)    
         childs = ontology.get_direct_descendants(term)
         if childs != None and len(childs) > 0: terms_to_visit = [term for term in childs if term  in hps_to_filter_in] + terms_to_visit
-
         arc_hp_ont, hp_level = self._get_arc_degree_and_radius_values(ontology, term, level_linspace, level_current_index, root_level)
 
         #ADDING THE POINT FOR THE ONTOLOGY TERM
@@ -109,8 +111,8 @@ def prepare_ontoplot_data(self, ontology, hpo_stats_dict, root_node, reference_n
         if hpo_stats_dict.get(term) != None: 
             freq = hpo_stats_dict[term]
             current_color = all_term_colors[term]
-            current_alpha = self._transform_value(freq, method = fix_alpha) if freq_by in ["alpha", "both"] else 1 #method = "bins"
-            current_size = ont_size + (freq*size_factor) if freq_by in ["size", "both"] else 4
+            current_alpha = self._transform_value(freq, method = fix_alpha) if freq_by in ["alpha", "both"] else 1 #method = "bins","cubic_root","none" or function
+            current_size = ont_size + (freq*size_factor) if freq_by in ["size", "both"] else ont_size + 2
             current_radius = hp_level + ont_to_prof_dist #Making the profile term point a bit further with respect to the ontology point
             self._append_values_to_arrays([colors, sizes, radius_values, arc_values, hp_names, alphas, freqs], [current_color, current_size, current_radius, arc_hp_ont, ontology.translate_id(term), current_alpha, freq])
     return [[colors, sizes, radius_values, arc_values, hp_names, alphas, freqs], color_legend]
@@ -196,6 +198,7 @@ def similarity_matrix_plot(self, **user_options):
     return self.renderize_child_template(self.get_internal_template('similarity_heatmap.txt'), **user_options)
 
 #### LOADING ALL MONKEYPATCHED METHODS
+Py_report_html._get_plot_points_params = _get_plot_points_params
 Py_report_html._transform_value = _transform_value
 Py_report_html._get_alpha_bin = _get_alpha_bin
 Py_report_html._append_values_to_arrays = _append_values_to_arrays
