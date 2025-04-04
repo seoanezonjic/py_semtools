@@ -32,6 +32,9 @@ class TextPubmedPaperParser(TextPubmedParser):
                 elif whole_content == "":
                     stats["no_abstract"] += 1
                     if logger != None: logger.warning(f"Warning: Article PDMID:{pmid} without abstract found in file {filename}")
+                elif len(whole_content) < 50: 
+                    stats["no_abstract"] += 1
+                    if logger != None: logger.warning(f"Warning: Article PDMID:{pmid} had short abstract content in file {filename}. Content:{whole_content}")
 
             except Exception as e:
                 stats['errors'] += 1
@@ -43,6 +46,7 @@ class TextPubmedPaperParser(TextPubmedParser):
     def parse_paper(cls, paper_xml_string, filename):
         whole_content = ""
         year = 0
+        year_text = None
         pmc = None
         pmid = None
         article_root = cls.parse_xml(paper_xml_string)
@@ -63,13 +67,14 @@ class TextPubmedPaperParser(TextPubmedParser):
 
         for date_fields in article_root.iter("date"):
             if date_fields.get("date-type") == "accepted":
-                year = int(date_fields.find("year").text)
-        if year == 0: #In case date-type is not available, we try getting year by using pmc-release field
+                year_text = cls.extract_year(date_fields.find("year").text)
+        if year_text == None: #In case date-type is not available, we try getting year by using pmc-release field
             for date_fields in article_root.iter("pub-date"):
                 if date_fields.get("pub-type") == "pmc-release":
-                    year = int(date_fields.find("year").text)
-                if date_fields.get("pub-type") != "pmc-release" and year == 0:
-                    year = int(date_fields.find("year").text)
+                    year_text = cls.extract_year(date_fields.find("year").text)
+                if date_fields.get("pub-type") != "pmc-release" and year_text == None:
+                    year_text = cls.extract_year(date_fields.find("year").text)
+        year = year_text if year_text != None else 0 
 
         #GETTING PAPER WHOLE CONTENT
         paper_root = article_root.find("body")

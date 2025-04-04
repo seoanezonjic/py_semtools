@@ -1,11 +1,6 @@
-import sys
-import os
-import glob
-import warnings
+import sys, os, glob, re, warnings, json, gzip
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from py_exp_calc.exp_calc import invert_nested_hash, flatten
-import json
-import gzip
 
 from py_cmdtabs import CmdTabs
 from py_semtools.parallelizer import Parallelizer
@@ -122,14 +117,11 @@ class TextIndexer:
 
             #If a blacklist word file is given, check to filter out documents whose title or article_category contains any of the words
             if options['filter_by_blacklist'] != None:
-                if os.path.exists(options['filter_by_blacklist']):
-                    blacklisted_words = [word.strip() for word in open(options['filter_by_blacklist']).readlines()]
-                    filtered_out, w, c, t = TextIndexer._check_to_filter_out(blacklisted_words, title, article_category, options['blacklisted_mode'])
-                    if filtered_out:
-                        if logger != None: logger.warning(f"Blacklisted PMID {pmid} for having word {w} in {c} with content: {t}")
-                        continue
-                else: 
-                    raise Exception("Blacklisted words filepath given does not exist")
+                blacklisted_words = [word.strip() for word in open(options['filter_by_blacklist']).readlines()]
+                filtered_out, w, c, t = TextIndexer._check_to_filter_out(blacklisted_words, title, article_category, options['blacklisted_mode'])
+                if filtered_out:
+                    if logger != None: logger.warning(f"Blacklisted PMID {pmid} for having word {w} in {c} with content: {t}")
+                    continue
 
             pmid_content_and_stats = cls.prepare_indexes(text, pmid, file, year, title, article_type, article_category, options)
             texts.append(pmid_content_and_stats)
@@ -228,6 +220,7 @@ class TextIndexer:
         title_l = title.lower()
         article_category_l = article_category.lower()
         for word in blacklisted_words:
+            if bool(re.fullmatch(r'\s*', word)): continue # Ignore empty lines
             word_l = word.lower()
             if mode == "exact":
                 if word_l == title_l: return True, word, "title", title

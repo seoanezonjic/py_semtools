@@ -28,6 +28,9 @@ class TextPubmedAbstractParser(TextPubmedParser):
             elif abstract_content == "":
                 stats["no_abstract"] += 1
                 if logger != None: logger.warning(f"Warning: Article PDMID:{pmid} without abstract found in file {file}")
+            elif len(abstract_content.split(" ")) < 10: 
+                stats["no_abstract"] += 1
+                if logger != None: logger.warning(f"Warning: Article PDMID:{pmid} had short abstract content in file {file}. Content:{abstract_content}")
         return texts, stats
 
     @classmethod
@@ -44,7 +47,9 @@ class TextPubmedAbstractParser(TextPubmedParser):
                 pmid = data.text
             if data.tag == 'DateCompleted':
                 for fields in data:
-                    if fields.tag == "Year": year = int(fields.text)                    
+                    if fields.tag == "Year": 
+                        year_text = cls.extract_year(fields.text)
+                        year = year_text if year_text != None else 0                      
             abstract = data.find('Abstract')
             if abstract != None:
                 for fields in abstract:     

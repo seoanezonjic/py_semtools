@@ -49,3 +49,8 @@ class TextBasicParser:
                 if logger != None: logger.error(f"There was a problem proccessing the file {filename} with the following error: {e}\n{traceback.format_exc()}")
         tar.close()
         return members, stats
+
+    @classmethod
+    def extract_year(cls, text):
+        match = re.search(r'.*(\d{4}).*', text)
+        return int(match.group(1)) if match else None
