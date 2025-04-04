@@ -7,7 +7,7 @@
                             height=800, width=800, title=f"Profiles signature", dynamic = {dyn}, 
                             freq_by="{freq}", fix_alpha={fix}, guide_lines="{guide}")</code>"""
     def get_ontoplot(dyn, freq, fix, guide, root, ref):
-        return plotter.ontoplot(ontology="ontology", root_node=root, reference_node=ref, dpi = 100,
+        return plotter.ontoplot(ontology="ontology", root_node=root, reference_node=ref,
                             height=800, width=800, title=f"Profiles signature", dynamic = dyn, 
                             freq_by=freq, fix_alpha=fix, guide_lines=guide)
 %>
@@ -67,7 +67,10 @@ ${ plotter.create_title(f'Ontoplot. Different calls examples', id='div_from',
     content += "Static ontoplot, frequency by opacity, no guide lines used" + "<br>"
     content += get_ontoplot_call(dyn=False, freq="alpha", fix="lambda x: x**(1/3)", guide="none", root=root_term, ref=ref_term) + "<br>"
     content += get_ontoplot(dyn=False, freq="alpha", fix=lambda x: x**(1/3), guide="none", root=root_term, ref=ref_term) + "<br>"
-    content += "</div>"
 
+    content += "Dynamic ontoplot centered in HP:0012443 (Abnormal brain morphology), using childs of HP:0012443 as main branches colors, frequency by size and opacity, opacity low values fixed by cubic root, guide lines set by ontology term points" + "<br>"
+    content += get_ontoplot_call(dyn=True, freq="both", fix="\"cubic_root\"", guide="ont", root="HP:0012443", ref="HP:0012443")
+    content += get_ontoplot(dyn=True, freq="both", fix="cubic_root", guide="ont", root="HP:0012443", ref="HP:0012443")
+    content += "</div>"
 %>
 ${ plotter.create_collapsable_container('div_to', content, display="visible") }

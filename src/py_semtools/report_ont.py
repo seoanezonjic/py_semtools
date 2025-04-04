@@ -3,6 +3,8 @@ from importlib.resources import files
 import numpy as np
 from collections import defaultdict
 from py_semtools.cons import Cons
+import py_exp_calc.exp_calc as pxc
+import networkx as nx
 
 ########################################
 ## Monkey Patching Methods
@@ -34,14 +36,13 @@ def _append_values_to_arrays(self, arrays, values):
     for idx, value in enumerate(values):
         arrays[idx].append(value)
 
-def _get_arc_degree_and_radius_values(self, ontology, term, level_linspace, level_current_index, root_level):
-    term_level = ontology.get_term_level(term) - root_level
+def _get_arc_degree_and_radius_values(self, ontology, term, level_linspace, level_current_index, term_level):
     current_level_idx = level_current_index[term_level]
     current_level_arc_array = level_linspace[term_level]
     arc_term_ont = float(current_level_arc_array[current_level_idx])
     
     level_current_index[term_level] += 1
-    return arc_term_ont, term_level
+    return arc_term_ont
 
 def _get_plot_points_params(self, hpo_stats_dict, guide_lines, freq_by, is_dynamic):
     base_dist = 0.2 
@@ -55,31 +56,46 @@ def _get_plot_points_params(self, hpo_stats_dict, guide_lines, freq_by, is_dynam
     ont_freq=1
     return ont_to_prof_dist, size_factor, ont_size, ont_alpha, ont_freq
 
+def _get_user_root_recalculated_levels(self, ontology, user_root):
+    # First step: we get terms levels and filter in only terms that are descendants from the user defined root
+    user_root_desc = ontology.get_descendants(user_root)
+    terms_to_filter_in = set([user_root]+user_root_desc)
+    terms_levels = { term: level[0] for term, level in pxc.invert_hash(ontology.get_ontology_levels()).items() if term in terms_to_filter_in }
+    user_root_lvl = terms_levels[user_root]
+    
+    # Second step: recalculate levels respect to the user_root
+    terms_levels = { term: [level - user_root_lvl] for term, level in terms_levels.items() }
+
+    # Third step: Iterate throught terms with level equal or less than user_root level
+    # (this means descendant terms of user_root but with a shortest path than goes through other terms)
+    # to recalculate shortest path with respect to user_root (and also to child terms of those terms)
+    terms_to_recalculate = [ term for term, level in terms_levels.items() if level[0] <= 0 ]
+    cached_levels = {}
+    while len(terms_to_recalculate) > 0:
+        term = terms_to_recalculate.pop(0)
+        if cached_levels.get(term): continue
+        cached_levels[term] = nx.shortest_path_length( ontology.dag, source = user_root, target = term )
+        child_terms = ontology.get_direct_descendants(term)
+        if child_terms: terms_to_recalculate.extend(child_terms) 
+    
+    # Fourth step: reasign the levels of conflicting terms
+    for term, level in cached_levels.items():
+        terms_levels[term] = [level]
+    
+    level_terms = pxc.invert_hash(terms_levels)
+    return level_terms, user_root_lvl, terms_to_filter_in, terms_levels
+
+
 ## MAIN METHODS
 
-def prepare_ontoplot_data(self, ontology, hpo_stats_dict, root_node, reference_node, freq_by, is_dynamic, fix_alpha, guide_lines):
-    level_terms = ontology.get_ontology_levels()
-    hps_to_filter_in = set()
-    root_level = 0
-    root_found = False
-    levels_to_remove = []
-
-    for level in sorted(level_terms.keys()): 
-        for term in level_terms[level]:
-            if term == root_node: 
-                hps_to_filter_in.update(ontology.get_descendants(term)+[term])
-                root_found = True
-                root_level = level
-
-        if root_found: break
-        levels_to_remove.append(level)
-    for level in levels_to_remove: del level_terms[level]
-
-    cleaned_level_terms = {(level - root_level): [term for term in terms if term in hps_to_filter_in] for level, terms in level_terms.items()}
-    level_linspace = {level: np.linspace(0, 2*np.pi, len(terms)) for level, terms in cleaned_level_terms.items()}
+def prepare_ontoplot_data(self, ontology, hpo_stats_dict, user_root, reference_node, freq_by, is_dynamic, fix_alpha, guide_lines):
+    root_centered_level_terms, user_root_lvl, hps_to_filter_in, terms_levels = self._get_user_root_recalculated_levels(ontology, user_root)
+    max_level = max(root_centered_level_terms.keys())
+    
+    level_linspace = {level: np.linspace(0, 2*np.pi, len(terms)) for level, terms in root_centered_level_terms.items()}
     level_current_index = {level: 0 for level in level_linspace.keys()}
-    visited_terms = set(root_node)
-    terms_to_visit = [term for term in ontology.get_direct_descendants(root_node) if term in hps_to_filter_in]
+    visited_terms = set(user_root)
+    terms_to_visit = [term for term in ontology.get_direct_descendants(user_root) if term in hps_to_filter_in]
 
     black = (0.0, 0.0, 0.0, 1.0)
     grey =  (0.5, 0.5, 0.5, 1.0)
@@ -93,16 +109,18 @@ def prepare_ontoplot_data(self, ontology, hpo_stats_dict, root_node, reference_n
 
     color_legend = {value: ontology.translate_id(key) for key, value in top_parental_colors.items()}
     color_legend.update({grey: "Ontology", black: "Others"})
+    root_legend = f"User root original level: {user_root_lvl}\Deepest level from user root:{max_level}"
 
     ont_to_prof_dist, size_factor, ont_size, ont_alpha, ont_freq = self._get_plot_points_params(hpo_stats_dict, guide_lines, freq_by, is_dynamic)
-    colors, sizes, radius_values, arc_values, hp_names, alphas, freqs = [grey], [ont_size], [0], [0], [ontology.translate_id(root_node)], [ont_alpha], [ont_freq]
+    colors, sizes, radius_values, arc_values, hp_names, alphas, freqs = [grey], [ont_size], [0], [0], [ontology.translate_id(user_root)], [ont_alpha], [ont_freq]
     while len(terms_to_visit) > 0:
         term = terms_to_visit.pop(0)
         if term in visited_terms: continue
         visited_terms.add(term)    
         childs = ontology.get_direct_descendants(term)
         if childs != None and len(childs) > 0: terms_to_visit = [term for term in childs if term  in hps_to_filter_in] + terms_to_visit
-        arc_hp_ont, hp_level = self._get_arc_degree_and_radius_values(ontology, term, level_linspace, level_current_index, root_level)
+        hp_level = terms_levels[term][0]
+        arc_hp_ont = self._get_arc_degree_and_radius_values(ontology, term, level_linspace, level_current_index, hp_level)
 
         #ADDING THE POINT FOR THE ONTOLOGY TERM
         if guide_lines == "ont":
@@ -115,7 +133,10 @@ def prepare_ontoplot_data(self, ontology, hpo_stats_dict, root_node, reference_n
             current_size = ont_size + (freq*size_factor) if freq_by in ["size", "both"] else ont_size + 2
             current_radius = hp_level + ont_to_prof_dist #Making the profile term point a bit further with respect to the ontology point
             self._append_values_to_arrays([colors, sizes, radius_values, arc_values, hp_names, alphas, freqs], [current_color, current_size, current_radius, arc_hp_ont, ontology.translate_id(term), current_alpha, freq])
-    return [[colors, sizes, radius_values, arc_values, hp_names, alphas, freqs], color_legend]
+
+    #Adding an invisible point at level 16 to keep the number of levels always the same (at the deepest level of the)
+    self._append_values_to_arrays([colors, sizes, radius_values, arc_values, hp_names, alphas, freqs], [grey, ont_size/100, max_level, np.pi/3, "depth", 0, 0])
+    return [[colors, sizes, radius_values, arc_values, hp_names, alphas, freqs], color_legend, root_legend]
 
 def ontoplot(self, **user_options):
   guide_lines = user_options.get('guide_lines', "ont")
@@ -127,9 +148,9 @@ def ontoplot(self, **user_options):
   ONT_NAME = ontology.ont_name.upper() if ontology.ont_name else 'Ontology'
   max_freq = 1  #max(ontology.dicts['term_stats'].values()) This would make a max scaling, not the desired behaviour, but leave it here for reference
   term_frequencies = {term: proportion/max_freq for term, proportion in ontology.dicts['term_stats'].items()}
-  root_node = user_options['root_node']
+  user_root = user_options['root_node']
   reference_node = user_options['reference_node']
-  prepared_data, color_legend = self.prepare_ontoplot_data(ontology, term_frequencies, root_node, reference_node, freq_by, is_dynamic, fix_alpha, guide_lines)
+  prepared_data, color_legend, root_legend = self.prepare_ontoplot_data(ontology, term_frequencies, user_root, reference_node, freq_by, is_dynamic, fix_alpha, guide_lines)
   colors, sizes, radius_values, arc_values, hp_names, alphas, freqs = prepared_data
 
   ontoplot_table_format = [["colors", "sizes", "radius_values", "arc_values", "hp_names", "alphas", "freqs"]]
@@ -139,7 +160,11 @@ def ontoplot(self, **user_options):
   user_options["dynamic"] = is_dynamic
   user_options["guide_lines"] = guide_lines
   user_options['ONT_NAME'] = ONT_NAME
-  return self.renderize_child_template(self.get_internal_template('ontoplot.txt'), color_legend=color_legend, **user_options)
+  user_options['dynamic_units_calc'] = user_options.get('dynamic_units_calc', True)
+  user_options['dpi'] = user_options.get("dpi", 100)
+  user_options['width'] = user_options.get("width", 800)
+  user_options['height'] = user_options.get("height", 800)
+  return self.renderize_child_template(self.get_internal_template('ontoplot.txt'), color_legend=color_legend, root_legend=root_legend, **user_options)
 
 def ontodist(self, **user_options):
     ontology = self.hash_vars[user_options['ontology']]
@@ -198,6 +223,7 @@ def similarity_matrix_plot(self, **user_options):
     return self.renderize_child_template(self.get_internal_template('similarity_heatmap.txt'), **user_options)
 
 #### LOADING ALL MONKEYPATCHED METHODS
+Py_report_html._get_user_root_recalculated_levels = _get_user_root_recalculated_levels
 Py_report_html._get_plot_points_params = _get_plot_points_params
 Py_report_html._transform_value = _transform_value
 Py_report_html._get_alpha_bin = _get_alpha_bin

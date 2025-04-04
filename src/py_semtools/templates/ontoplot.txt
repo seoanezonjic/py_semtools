@@ -21,12 +21,16 @@
 			d = data[data["colors"] == color]
 			scatter = ax.scatter(d["arc_values"], d["radius_values"], s=d["sizes"], color=color, label=color_legend[color], alpha=d["alphas"])
 		
+		#Legend customization
 		legend1 = plt.legend(fontsize="7", bbox_to_anchor=(1.04, 1), loc="upper left")
 		legend_point_size = 15
 		for lh in legend1.legend_handles:
 			alphas_len = len(lh.get_alpha())
 			lh.set_sizes(np.array([legend_point_size]))
 			lh.set_alpha(np.array([1]*alphas_len))
+
+		#If we want to add a textbox showing info about user root original level 
+		#ax.text(0.05, 0.05, root_legend, transform=ax.transAxes, fontsize=10, verticalalignment='top', bbox=dict(boxstyle='round', alpha=0.5))
 		
 		# Other customizations
 		ax.set_facecolor("white")
@@ -63,7 +67,9 @@
 						   				 itemsizing= 'constant',
         								 font = dict(family="Courier", size=12, color="black")), 
 						   polar = dict(angularaxis = dict(showticklabels = False, rotation = 90, direction = "clockwise"),
-						   				radialaxis = dict(dtick = 1))
+						   				radialaxis = dict(dtick = 1)),
+							#If we want to add a textbox showing info about user root original level 
+							#annotations = [dict(showarrow=False, text=root_legend.replace("\n","<br>"), x=0., y=0.15, xanchor='left', yanchor='bottom', font=dict(size=12 ))]
 						)
 		if guide_lines != "grid":
 			fig.update_polars(angularaxis_showgrid=False, angularaxis_showline=False, angularaxis_showticklabels=False,
@@ -87,6 +93,11 @@
   opacity: 1 !important;
 }
 </style>
+<% 
+mat_height = matplot_height if dynamic_units_calc == False else None
+mat_width = matplot_width if dynamic_units_calc == False else None
+%>
+
 ${plotter.static_plot_main(id="ontoplot_table_format_df", dynamic=dynamic, raw=True, header=True, row_names=False, 
-						   plotting_function = plotter_to_use, title=title, var_attr=[0], dynamic_units_calc= False,
-						   height=height, width=width, matplot_height=height/100, matplot_width=width/100, dpi = dpi)}
+						   plotting_function = plotter_to_use, title=title, var_attr=[0], dynamic_units_calc= dynamic_units_calc,
+						   height=height, width=width, matplot_height=mat_height, matplot_width=mat_width, dpi = dpi)}
