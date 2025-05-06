@@ -1079,7 +1079,11 @@ class Ontology:
         else:
             correct_terms, rejected_terms = self.check_ids(terms, substitute = substitute)
         if len(rejected_terms) > 0: warnings.warn(f"Given terms contains erroneus IDs: {','.join(rejected_terms)}. These IDs will be removed")
-        self.profiles[pr_id] = correct_terms              
+        
+        if len(correct_terms) == 0:
+            warnings.warn(f"Profile assigned to ID ({pr_id}) is empty after cleaning, so it won't be stored")
+        else:
+            self.profiles[pr_id] = correct_terms              
 
 
     # Includes as "observed_terms" all terms included into stored profiles
