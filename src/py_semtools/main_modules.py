@@ -307,7 +307,7 @@ def main_semtools(opts: argparse.Namespace) -> None:
       if options.get('similarity_cluster_plot'): 
         tmp_path = os.path.join(os.path.dirname(options['output_report']), "tmp", "clustermap_tmp")
         os.makedirs(tmp_path, exist_ok=True)
-        ontology.get_similarity_clusters(method_name=options['similarity_cluster_plot'], temp_folder=tmp_path, options={})
+        ontology.get_similarity_clusters(method_name=options['similarity_cluster_plot'], temp_folder=tmp_path, options=options)
       # Building report
       container = {"ontology": ontology, "root_term": options['root_term'], "ref_term":options['ref_term'], 'similarity_cluster_plot': options['similarity_cluster_plot']}
       template = open(REPORT_TEMPLATE).read()
