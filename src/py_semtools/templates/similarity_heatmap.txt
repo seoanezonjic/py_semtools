@@ -1,1 +1,1 @@
-${plotter.heatmap( id= id, header= True, row_names= True, x_label=x_label, title=title )}
+${plotter.heatmap( id= id, width=width, height=height, header= True, row_names= True, x_label=x_label, title=title )}
