@@ -173,17 +173,20 @@ def ontoplot(self, **user_options):
 def ontodist(self, **user_options):
     ontology = self.hash_vars[user_options['ontology']]
     ONT_NAME = ontology.ont_name.upper() if hasattr(ontology, 'ont_name') else 'Ontology'
+    default_opts = {"width": "600px", "height": "600px", "ONT_NAME": ONT_NAME}
+    default_opts.update(user_options)        
     ontology_levels, distribution_percentage = ontology.get_profile_ontology_distribution_tables()
     ontology_levels.insert(0, ["level", "ontology", "cohort"])
     distribution_percentage.insert(0, ["level", "ontology", "weighted cohort", "uniq terms cohort"])
     self.hash_vars['ontology_levels'] = ontology_levels
     self.hash_vars['distribution_percentage'] = distribution_percentage
-    user_options['ONT_NAME'] = ONT_NAME
-    return self.renderize_child_template(self.get_internal_template('ontodist.txt'), **user_options)
+    return self.renderize_child_template(self.get_internal_template('ontodist.txt'), **default_opts)
 
 def ontoICdist(self, **user_options):
     ontology = self.hash_vars[user_options['ontology']]
     ONT_NAME = ontology.ont_name.upper() if hasattr(ontology, 'ont_name') else 'Ontology'
+    default_opts = {"width": "600px", "height": "600px", "ONT_NAME": ONT_NAME}
+    default_opts.update(user_options)    
     term_IC_struct, term_IC_observed = ontology.get_observed_ics_by_onto_and_freq() # IC for TERMS
     prof_IC_struct = ontology.dicts['prof_IC_struct']
     prof_IC_observ = ontology.dicts['prof_IC_observ']
@@ -191,34 +194,36 @@ def ontoICdist(self, **user_options):
     profile_ics = [ list(p) for p in zip(list(prof_IC_struct.values()), list(prof_IC_observ.values())) ]
     self.hash_vars['term_ics'] = term_ics
     self.hash_vars['profile_ics'] = profile_ics
-    user_options['ONT_NAME'] = ONT_NAME
-    return self.renderize_child_template(self.get_internal_template('ontoICdist.txt'), **user_options)
+    return self.renderize_child_template(self.get_internal_template('ontoICdist.txt'), **default_opts)
 
 def plotProfRed(self, **user_options):
     ontology = self.hash_vars[user_options['ontology']]
     ONT_NAME = ontology.ont_name.upper() if hasattr(ontology, 'ont_name') else 'Ontology'
+    default_opts = {"width": "600px", "height": "600px", "ONT_NAME": ONT_NAME}
+    default_opts.update(user_options)
     term_redundancy = sorted(list(zip(ontology.profile_sizes, ontology.parental_terms_per_profile)), reverse=True, 
         key=lambda i: i[0])
     term_redundancy = [ list(i) for i in term_redundancy]
     self.hash_vars['term_redundancy'] = term_redundancy
-    user_options['ONT_NAME'] = ONT_NAME
-    return self.renderize_child_template(self.get_internal_template('plotProfRed.txt'), **user_options)
+    return self.renderize_child_template(self.get_internal_template('plotProfRed.txt'), **default_opts)
 
 def makeTermFreqTable(self, **user_options):
     ontology = self.hash_vars[user_options['ontology']]
     ONT_NAME = ontology.ont_name.upper() if hasattr(ontology, 'ont_name') else 'Ontology'
+    default_opts = {"width": "600px", "height": "600px", "ONT_NAME": ONT_NAME}    
+    default_opts.update(user_options)    
     term_stat_dict = ontology.dicts['term_stats']
     term_stats = [ [ontology.translate_id(term), freq * 100] for term, freq in term_stat_dict.items()] 
     self.hash_vars['term_stats'] = term_stats
-    user_options['ONT_NAME'] = ONT_NAME
-    return self.renderize_child_template(self.get_internal_template('makeTermFreqTable.txt'), **user_options)
+    return self.renderize_child_template(self.get_internal_template('makeTermFreqTable.txt'), **default_opts)
 
 def plotClust(self, **user_options):
     ontology = self.hash_vars[user_options['ontology']]
     ONT_NAME = ontology.ont_name.upper() if hasattr(ontology, 'ont_name') else 'Ontology'
+    default_opts = {"width": "600px", "height": "600px", "ONT_NAME": ONT_NAME}    
+    default_opts.update(user_options)
     self.hash_vars['semantic_clust'] = ontology.clustering[user_options['method_name']]
-    user_options['ONT_NAME'] = ONT_NAME
-    return self.renderize_child_template(self.get_internal_template('plotClust.txt'), **user_options)
+    return self.renderize_child_template(self.get_internal_template('plotClust.txt'), **default_opts)
 
 
 #### METHODS FOR SIMILARITY MATRIX HEATMAP
