@@ -229,7 +229,9 @@ def plotClust(self, **user_options):
 #### METHODS FOR SIMILARITY MATRIX HEATMAP
 
 def similarity_matrix_plot(self, **user_options):
-    return self.renderize_child_template(self.get_internal_template('similarity_heatmap.txt'), **user_options)
+    default_opts = {"width": "600px", "height": "600px", "x_label": "xaxis", "title": "title"}
+    default_opts.update(user_options)
+    return self.renderize_child_template(self.get_internal_template('similarity_heatmap.txt'), **default_opts)
 
 #### LOADING ALL MONKEYPATCHED METHODS
 Py_report_html._get_user_root_recalculated_levels = _get_user_root_recalculated_levels
