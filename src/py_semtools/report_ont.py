@@ -44,15 +44,14 @@ def _get_arc_degree_and_radius_values(self, ontology, term, level_linspace, leve
     level_current_index[term_level] += 1
     return arc_term_ont
 
-def _get_plot_points_params(self, hpo_stats_dict, guide_lines, freq_by, mode):
-    is_dynamic = True if mode == "dynamic" else False
+def _get_plot_points_params(self, hpo_stats_dict, guide_lines, freq_by, is_dynamic):
     base_dist = 0.2 
     dist_fact = 0.3 if guide_lines == "ont" else 0.2
     max_freq = max(hpo_stats_dict.values())
     ont_to_prof_dist = base_dist+(dist_fact*max_freq) if freq_by != "alpha" else base_dist
-    size_factor = 30 if is_dynamic else 100
+    size_factor = 4 if is_dynamic else 100
 
-    ont_size=3 if is_dynamic else 2
+    ont_size=2 if is_dynamic else 2
     ont_alpha=0.7
     ont_freq=1
     return ont_to_prof_dist, size_factor, ont_size, ont_alpha, ont_freq
@@ -89,7 +88,7 @@ def _get_user_root_recalculated_levels(self, ontology, user_root):
 
 ## MAIN METHODS
 
-def prepare_ontoplot_data(self, ontology, hpo_stats_dict, user_root, reference_node, freq_by, mode, fix_alpha, guide_lines):
+def prepare_ontoplot_data(self, ontology, hpo_stats_dict, user_root, reference_node, freq_by, is_dynamic, fix_alpha, guide_lines):
     root_centered_level_terms, user_root_lvl, hps_to_filter_in, terms_levels = self._get_user_root_recalculated_levels(ontology, user_root)
     max_level = max(root_centered_level_terms.keys())
     
@@ -112,9 +111,8 @@ def prepare_ontoplot_data(self, ontology, hpo_stats_dict, user_root, reference_n
     color_legend.update({grey: "Ontology", black: "Others"})
     root_legend = f"User root original level: {user_root_lvl}\Deepest level from user root:{max_level}"
 
-    ont_to_prof_dist, size_factor, ont_size, ont_alpha, ont_freq = self._get_plot_points_params(hpo_stats_dict, guide_lines, freq_by, mode)
-    ADD = 1 if guide_lines == "ont" else  0 #Previous logic did not had the option to remove ontology guide points, so I thought of this shorcut to take it into account without changing previous code
-    colors, sizes, radius_values, arc_values, hp_names, alphas, freqs = [grey]*ADD, [ont_size]*ADD, [0]*ADD, [0]*ADD, [ontology.translate_id(user_root)]*ADD, [ont_alpha]*ADD, [ont_freq]*ADD
+    ont_to_prof_dist, size_factor, ont_size, ont_alpha, ont_freq = self._get_plot_points_params(hpo_stats_dict, guide_lines, freq_by, is_dynamic)
+    colors, sizes, radius_values, arc_values, hp_names, alphas, freqs = [grey], [ont_size], [0], [0], [ontology.translate_id(user_root)], [ont_alpha], [ont_freq]
     while len(terms_to_visit) > 0:
         term = terms_to_visit.pop(0)
         if term in visited_terms: continue
@@ -137,13 +135,12 @@ def prepare_ontoplot_data(self, ontology, hpo_stats_dict, user_root, reference_n
             self._append_values_to_arrays([colors, sizes, radius_values, arc_values, hp_names, alphas, freqs], [current_color, current_size, current_radius, arc_hp_ont, ontology.translate_id(term), current_alpha, freq])
 
     #Adding an invisible point at level 16 to keep the number of levels always the same (at the deepest level of the)
-    if mode != "canvas":
-        self._append_values_to_arrays([colors, sizes, radius_values, arc_values, hp_names, alphas, freqs], [grey, ont_size/100, max_level, np.pi/3, "depth", 0, 0])
-    return [[colors, sizes, radius_values, arc_values, hp_names, alphas, freqs], color_legend, root_legend, max_level]
+    self._append_values_to_arrays([colors, sizes, radius_values, arc_values, hp_names, alphas, freqs], [grey, ont_size/100, max_level, np.pi/3, "depth", 0, 0])
+    return [[colors, sizes, radius_values, arc_values, hp_names, alphas, freqs], color_legend, root_legend]
 
 def ontoplot(self, **user_options):
   guide_lines = user_options.get('guide_lines', "ont")
-  mode = user_options.get('mode', "static")
+  is_dynamic = user_options.get('dynamic', False)
   freq_by = user_options.get('freq_by', 'size')
   fix_alpha = user_options.get('fix_alpha', 'none')
 
@@ -153,15 +150,14 @@ def ontoplot(self, **user_options):
   term_frequencies = {term: proportion/max_freq for term, proportion in ontology.dicts['term_stats'].items()}
   user_root = user_options['root_node']
   reference_node = user_options['reference_node']
-  prepared_data, color_legend, root_legend, max_level = self.prepare_ontoplot_data(ontology, term_frequencies, user_root, reference_node, freq_by, mode, fix_alpha, guide_lines)
+  prepared_data, color_legend, root_legend = self.prepare_ontoplot_data(ontology, term_frequencies, user_root, reference_node, freq_by, is_dynamic, fix_alpha, guide_lines)
   colors, sizes, radius_values, arc_values, hp_names, alphas, freqs = prepared_data
 
   ontoplot_table_format = [["colors", "sizes", "radius_values", "arc_values", "hp_names", "alphas", "freqs"]]
   ontoplot_table_format = ontoplot_table_format + [[colors[i], sizes[i], radius_values[i], arc_values[i], hp_names[i], alphas[i], freqs[i]] for i in range(len(colors))]
   
   self.hash_vars["ontoplot_table_format"] = ontoplot_table_format
-  user_options["mode"] = mode
-  user_options["max_level"] = max_level
+  user_options["dynamic"] = is_dynamic
   user_options["guide_lines"] = guide_lines
   user_options['ONT_NAME'] = ONT_NAME
   user_options['dynamic_units_calc'] = user_options.get('dynamic_units_calc', True)
