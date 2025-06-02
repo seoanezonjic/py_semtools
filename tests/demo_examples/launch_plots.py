@@ -46,7 +46,7 @@ ontology.get_profiles_terms_frequency(count_parentals = True, min_freq = 0.015)
 ontology.get_profile_redundancy()
 ontology.get_observed_ics_by_onto_and_freq()
 ontology.get_profiles_resnik_dual_ICs()
-ontology.get_similarity_clusters(method_name="lin", options={})
+ontology.get_similarity_clusters(method_name="lin", options={'cl_size_factor': 1})
 
 # Building report
 container = {"ontology": ontology}

@@ -62,10 +62,10 @@
 				hovertemplate = hover
 				))
 		fig.update_traces(mode="markers")
-		fig.update_layout( title = dict(text=title), width=width, height=height,
-		                   legend = dict(bordercolor="Black", borderwidth=2, bgcolor="LightSteelBlue",
+		fig.update_layout( title = dict(text=title), 
+		                   legend = dict(bordercolor="Black", borderwidth=2, title_font_family="Times New Roman", bgcolor="LightSteelBlue",
 						   				 itemsizing= 'constant',
-        								 font = dict(size=6, color="black")), 
+        								 font = dict(family="Courier", size=12, color="black")), 
 						   polar = dict(angularaxis = dict(showticklabels = False, rotation = 90, direction = "clockwise"),
 						   				radialaxis = dict(dtick = 1)),
 							#If we want to add a textbox showing info about user root original level 
@@ -76,16 +76,25 @@
 							  radialaxis_showgrid=False, radialaxis_showline=False, radialaxis_showticklabels=False) 
 							  
 		return fig
-
-	plotter.hash_vars["ontoplot_table_format_df"] = pd.DataFrame(plotter.hash_vars["ontoplot_table_format"][1:], columns=plotter.hash_vars["ontoplot_table_format"][0])
-	if dynamic:
-		plotter.hash_vars["ontoplot_table_format_df"]["arc_values"] = plotter.hash_vars["ontoplot_table_format_df"]["arc_values"] / (2*math.pi) * 360
-		plotter.hash_vars["ontoplot_table_format_df"]["colors"] = plotter.hash_vars["ontoplot_table_format_df"]["colors"].apply(lambda color: color_legend[color])
-		px_color_legend = {label: to_css_rgb(rgb) for rgb, label in color_legend.items()}
-		color_legend.clear()
-		color_legend.update(px_color_legend)
 	
-	plotter_to_use = draw_dynamic_rontoplot if dynamic else draw_static_rontoplot
+	px_color_legend = {label: to_css_rgb(rgb) for rgb, label in color_legend.items()}
+	#print(plotter.hash_vars["ontoplot_table_format"][:3])
+	if mode != "canvas":
+		plotter.hash_vars["ontoplot_table_format_df"] = pd.DataFrame(plotter.hash_vars["ontoplot_table_format"][1:], columns=plotter.hash_vars["ontoplot_table_format"][0])
+		if mode == "dynamic":
+			plotter.hash_vars["ontoplot_table_format_df"]["arc_values"] = plotter.hash_vars["ontoplot_table_format_df"]["arc_values"] / (2*math.pi) * 360
+			plotter.hash_vars["ontoplot_table_format_df"]["colors"] = plotter.hash_vars["ontoplot_table_format_df"]["colors"].apply(lambda color: color_legend[color])
+			color_legend.clear()
+			color_legend.update(px_color_legend)
+		
+		plot_modes = {"static": draw_static_rontoplot,
+					"dynamic": draw_dynamic_rontoplot}
+		plotter_to_use = plot_modes[mode]
+	elif mode == "canvas":
+		plotter.hash_vars["ontoplot_table_format"][0].append("level")
+		for row in plotter.hash_vars["ontoplot_table_format"][1:]: 
+			row[0] = color_legend[row[0]]
+			row.append(int(row[2]))
 %>
 
 <style>
@@ -98,6 +107,40 @@ mat_height = matplot_height if dynamic_units_calc == False else None
 mat_width = matplot_width if dynamic_units_calc == False else None
 %>
 
-${plotter.static_plot_main(id="ontoplot_table_format_df", dynamic=dynamic, raw=True, header=True, row_names=False, 
-						   plotting_function = plotter_to_use, title=title, var_attr=[0], dynamic_units_calc= dynamic_units_calc,
-						   height=height, width=width, matplot_height=mat_height, matplot_width=mat_width, dpi = dpi)}
+%if mode != "canvas":
+	<% is_dynamic = True if mode == "dynamic" else False %>
+	${plotter.static_plot_main(id="ontoplot_table_format_df", dynamic=is_dynamic, raw=True, header=True, row_names=False, 
+							   plotting_function = plotter_to_use, title=title, var_attr=[0], dynamic_units_calc= dynamic_units_calc,
+							   height=height, width=width, matplot_height=mat_height, matplot_width=mat_width, dpi = dpi)}
+
+%elif mode == "canvas":
+	${ plotter.scatter_polar(id="ontoplot_table_format", header=True, row_names=False, transpose=True,
+												title=title, height=height, width=width,
+                                                radialAxis="radius_values", circularAxis="arc_values",
+                                                smp_attr = [0,1,4,5,6,7],
+												after_render = [["drawCustomizer",["rAxisShow",False],{}, 1744282597486],],
+                                                config={
+                                                   "colorBy": "colors", 
+												   "colorLegendTitle": "Main branch",
+												   "legendTextScaleFontFact": 0.5,
+												   "legendTextScaleFontFactor": 0.5,
+                                                   "sizeBy": "sizes",
+												   "sizeByContinuous": True,
+												   "sizes": [0,2,4,6,8,10,12,14,16,18,20],
+												   "sizeLegendTitle": "Frequency",
+												   "rAxisShow": False,
+												   "setMaxY": max_level,
+												   "yAxisTicks": 1 if guide_lines != "grid" else max_level,
+												   "rAxisGridMajorColor": 'rgb(150,150,150)',
+												   "theme": "GGPlot",
+												   "legendOrder": { "colors": list(px_color_legend.keys()) },
+												   "colorKey": { "colors": px_color_legend },
+                                                    "hoverTemplate": """<strong>{hp_names}</strong> <br>
+																		Main branch: {colors} <br>
+                                                                        Frequency: {freqs} <br>
+																		level: {level}"""
+                                                }
+                                        )}
+%endif
+
+<% columnas = ["colors", "sizes", "radius_values", "arc_values", "hp_names", "alphas", "freqs"] %>
