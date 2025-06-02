@@ -237,6 +237,8 @@ def stEngine(args = None):
             help="Order of the semantic search. Options: 'corpus-query' or 'query-corpus'")
     parser.add_argument("--chunk_size", dest="chunk_size", default=10000, type=int,
             help="Size to be accumulating corpora until a threshold is reached before proceeding to embedd")
+    parser.add_argument("--print_relevant_pairs", dest="print_relevant_pairs", default= False, action='store_true',
+            help="Use it to print the relevant pairs of query-corpus with their scores")    
     opts =  parser.parse_args(args)
     main_stEngine(opts)
 

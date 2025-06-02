@@ -71,7 +71,7 @@ class STengine:
     def embed_save_corpus(self, options, corpus_basename, all_textIDs, all_corpus, total_papers):
         if options["verbose"]: print(f"---Embedding corpus of {corpus_basename} comprised by {total_papers} initial papers with {len(all_textIDs)} sentences, with {'GPU' if options.get('gpu_device') else 'CPU'}")
         corpus_embeddings = self.embedd_text(all_corpus, options)       
-        corpus_info = {'textIDs': all_textIDs, "embeddings": corpus_embeddings}
+        corpus_info = {'textIDs': all_textIDs, "all_corpus": all_corpus, "embeddings": corpus_embeddings}
         if options.get("corpus_embedded") != None:
             if options["verbose"]: print(f"---Saving embedded corpus in {corpus_basename}")
             with open(os.path.join(options["corpus_embedded"], corpus_basename) + '.pkl', "wb") as fOut:
@@ -82,8 +82,28 @@ class STengine:
         if options.get("output_file"):
           for query_basename, query_info in self.queries_content.items():
             best_matches = self.calculate_similarity(query_info, corpus_info, options)
+            if options['print_relevant_pairs']: self.print_similarities(query_info, corpus_info, best_matches, options)
             output_filename = os.path.join(options["output_file"],query_basename)
             self.save_similarities(output_filename, best_matches, options)
+
+    def print_similarities(self, query_info, corpus_info, best_matches, options):
+        term_related_sentences = {}
+        for textID, matches in best_matches.items():
+            textIDX = corpus_info["textIDs"].index(textID)
+            text = corpus_info["all_corpus"][textIDX]
+            for kwdID, score in matches.items():
+                if score >= options["threshold"]: 
+                    kwIDXs = (idx for idx, char in enumerate(query_info['query_ids']) if char == kwdID) 
+                    term = " -- ".join([query_info["queries"][kwIDX] for kwIDX in kwIDXs])
+                    if term not in term_related_sentences: term_related_sentences[term] = {"term_id": kwdID, "sentences": []}
+                    term_related_sentences[term]["sentences"].append((textID, text, score))
+        print("-"*30)
+        for term, data in term_related_sentences.items():
+            print(f"Term: {term} (ID: {data['term_id']}) has {len(data['sentences'])} related sentences:")
+            for textID, text, score in data["sentences"]:
+                print(f"  - Text ID: {textID}, Score: {score}")
+                print(f"    Text: {text}")
+            print("-"*30)
 
     def load_several_queries(self, options, embedded_queries_filenames, verbose = False):
         if verbose: print("\n-Loading embedded queries:")

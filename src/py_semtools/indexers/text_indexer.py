@@ -113,7 +113,7 @@ class TextIndexer:
         parsed_texts, stats = TextPubmedAbstractParser.parse(file, logger= logger)
         for parsed_text in parsed_texts:
             pmid, text, year, title, article_type, article_category = parsed_text
-            if pmid == None or text == "": continue
+            if pmid == None or text == "" or (len(text.split(" ")) < 10): continue
 
             #If a blacklist word file is given, check to filter out documents whose title or article_category contains any of the words
             if options['filter_by_blacklist'] != None:
@@ -158,7 +158,7 @@ class TextIndexer:
                 else: 
                     raise Exception("Blacklisted words filepath given does not exist")
 
-            if pmid != None and whole_content != "":
+            if pmid != None and whole_content != "" and len(whole_content) > 1000:
                 #pmid_content_and_stats = cls.prepare_indexes(whole_content, pmc+"-"+pmid, filename, year, options)
                 pmid_content_and_stats = cls.prepare_indexes(whole_content, pmid, filename, year, title, article_type, article_category, options)
                 texts.append(pmid_content_and_stats)
