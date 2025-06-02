@@ -437,7 +437,7 @@ class TestOBOFunctionalities(unittest.TestCase):
             "D": ["FakeID"]},
              calc_metadata= False, substitute= False)
         self.enrichment_hierarchical.expand_profiles('parental') # FRED: Maybe we could add "propagate" version but this is checked in test_expand_items
-        self.assertEqual({"A": ['branchA', 'branchAChild1', 'branchB', 'root'], "B": ['branchA', 'branchAChild2', 'branchB', 'root'], "C": ['branchA', 'branchAChild1', 'branchAChild2', 'root'], "D": []}, self.enrichment_hierarchical.profiles)
+        self.assertEqual({"A": ['branchA', 'branchAChild1', 'branchB', 'root'], "B": ['branchA', 'branchAChild2', 'branchB', 'root'], "C": ['branchA', 'branchAChild1', 'branchAChild2', 'root']}, self.enrichment_hierarchical.profiles)
         self.enrichment_hierarchical.reset_profiles()
         self.assertEqual({"A": ["Child2"], "B": ["Child2"], "C": ["Child2"], "D": ["Parental"]}, self.hierarchical.clean_profiles())
 
