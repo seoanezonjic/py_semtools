@@ -1,1 +1,6 @@
-${ plotter.scatter2D(id= 'term_redundancy', width=width, height=height, header=False, row_names=False, title = f'{ONT_NAME} term redundancy in patient profiles', x_label = 'ProfileSize', y_label = 'ParentTerms', alpha=0.6, add_densities=True, config={"dataPointSize":8} )}
+<%
+def add_header(table):
+    table.insert(0, ["id", "ProfileSize", "ParentTerms"])
+%>
+
+${ plotter.scatter2D(id= 'term_redundancy', width=width, height=height, header=True, row_names=True, func=add_header, title = f'{ONT_NAME} term redundancy in patient profiles', x_label = 'ProfileSize', y_label = 'ParentTerms', alpha=0.6, add_densities=True, config={"dataPointSize":8} )}

@@ -168,6 +168,8 @@ def ontoplot(self, **user_options):
   user_options['dpi'] = user_options.get("dpi", 100)
   user_options['width'] = user_options.get("width", 800)
   user_options['height'] = user_options.get("height", 800)
+  user_options['title'] = user_options.get("title", f"")
+  user_options['responsive'] = user_options.get("responsive", True)
   return self.renderize_child_template(self.get_internal_template('ontoplot.txt'), color_legend=color_legend, root_legend=root_legend, **user_options)
 
 def ontodist(self, **user_options):
@@ -201,8 +203,9 @@ def plotProfRed(self, **user_options):
     ONT_NAME = ontology.ont_name.upper() if hasattr(ontology, 'ont_name') else 'Ontology'
     default_opts = {"width": "600px", "height": "600px", "ONT_NAME": ONT_NAME}
     default_opts.update(user_options)
-    term_redundancy = sorted(list(zip(ontology.profile_sizes, ontology.parental_terms_per_profile)), reverse=True, 
-        key=lambda i: i[0])
+    profiles_ids = list(ontology.profiles.keys())
+    term_redundancy = sorted(list(zip(profiles_ids, ontology.profile_sizes, ontology.parental_terms_per_profile)), reverse=True, 
+        key=lambda i: i[1])
     term_redundancy = [ list(i) for i in term_redundancy]
     self.hash_vars['term_redundancy'] = term_redundancy
     return self.renderize_child_template(self.get_internal_template('plotProfRed.txt'), **default_opts)
