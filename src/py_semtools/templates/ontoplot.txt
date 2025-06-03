@@ -97,24 +97,25 @@
 			row.append(int(row[2]))
 %>
 
-<style>
-.legendpoints .scatterpts {
-  opacity: 1 !important;
-}
-</style>
 <% 
 mat_height = matplot_height if dynamic_units_calc == False else None
 mat_width = matplot_width if dynamic_units_calc == False else None
 %>
 
 %if mode != "canvas":
+	<style>
+	.legendpoints .scatterpts {
+	opacity: 1 !important;
+	}
+	</style>
+
 	<% is_dynamic = True if mode == "dynamic" else False %>
 	${plotter.static_plot_main(id="ontoplot_table_format_df", dynamic=is_dynamic, raw=True, header=True, row_names=False, 
 							   plotting_function = plotter_to_use, title=title, var_attr=[0], dynamic_units_calc= dynamic_units_calc,
 							   height=height, width=width, matplot_height=mat_height, matplot_width=mat_width, dpi = dpi)}
 
 %elif mode == "canvas":
-	${ plotter.scatter_polar(id="ontoplot_table_format", header=True, row_names=False, transpose=True,
+	${ plotter.scatter_polar(id="ontoplot_table_format", header=True, row_names=False, transpose=True, responsive=responsive,
 												title=title, height=height, width=width,
                                                 radialAxis="radius_values", circularAxis="arc_values",
                                                 smp_attr = [0,1,4,5,6,7],
@@ -135,10 +136,7 @@ mat_width = matplot_width if dynamic_units_calc == False else None
 												   "theme": "GGPlot",
 												   "legendOrder": { "colors": list(px_color_legend.keys()) },
 												   "colorKey": { "colors": px_color_legend },
-                                                    "hoverTemplate": """<strong>{hp_names}</strong> <br>
-																		Main branch: {colors} <br>
-                                                                        Frequency: {freqs} <br>
-																		level: {level}"""
+                                                    "hoverTemplate": "<strong>{hp_names}</strong> <br> Main branch: {colors} <br> Frequency: {freqs} <br> level: {level}"
                                                 }
                                         )}
 %endif
