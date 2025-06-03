@@ -155,7 +155,9 @@ def semtools(args = None):
     parser.add_argument("--ref_term", dest="ref_term", default=None,
               help="For the output report, it sets the term whose childs will be in the color legend to indicate the branches of descendants")
     parser.add_argument("--similarity_cluster_plot", dest="similarity_cluster_plot", default=None,
-              help="For output report, use to activate profiles clustering and clustermap plot with a similarity method (resnik', 'lin' or 'jiang_conrath). Not active by default")        
+              help="For output report, use to activate profiles clustering and clustermap plot with a similarity method (resnik', 'lin' or 'jiang_conrath). Not active by default")
+    parser.add_argument("--ontoplot_mode", dest="ontoplot_mode", default='static',
+              help="For the semtools report, it is used to set the mode of the ontoplot. Options: 'static','dynamic' or 'canvas'. Default is 'static'.")            
     parser.add_argument("--cl_size_factor", dest="cl_size_factor", default=1.0, type=float,
       help="When using dinamyc clustering weigths the contribution of the cluster size in tree cut. For smaller clusters use values > 1 for greater clusters use values < 1.")
     opts =  parser.parse_args(args)

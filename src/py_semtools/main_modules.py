@@ -309,7 +309,8 @@ def main_semtools(opts: argparse.Namespace) -> None:
         os.makedirs(tmp_path, exist_ok=True)
         ontology.get_similarity_clusters(method_name=options['similarity_cluster_plot'], temp_folder=tmp_path, options=options)
       # Building report
-      container = {"ontology": ontology, "root_term": options['root_term'], "ref_term":options['ref_term'], 'similarity_cluster_plot': options['similarity_cluster_plot']}
+      container = {"ontology": ontology, "root_term": options['root_term'], "ontoplot_mode": options['ontoplot_mode'],
+                   "ref_term":options['ref_term'], 'similarity_cluster_plot': options['similarity_cluster_plot']}
       template = open(REPORT_TEMPLATE).read()
       report = Py_report_html(container, os.path.basename(options["output_report"]), True)
       report.data_from_files = False # We are sending the a ontology object not a raw table file loaded with report_html's I/O methods
