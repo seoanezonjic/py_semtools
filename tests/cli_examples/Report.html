@@ -1,0 +1,528 @@
+<HTML>
+	<title>Report</title>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="CACHE-CONTROL" CONTENT="NO-CACHE">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta http-equiv="Content-Language" content="en-us" />
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+<link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"/>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"></script>
+<script type="text/javascript" src="https://code.jquery.com/jquery-3.7.1.js"></script>
+<style type="text/css">
+.py_accordion {
+  background-color: #eee;
+  color: #444;
+  cursor: pointer;
+  padding: 18px;
+  width: 100%;
+  border: none;
+  text-align: left;
+  outline: none;
+  font-size: 15px;
+  transition: 0.4s;
+}
+
+.active, .py_accordion:hover {
+  background-color: #ccc; 
+}
+
+#mynetwork {
+  width: 1000px;
+  height: 1000px;
+  background-color: #ffffff;
+  border: 1px solid lightgray;
+  position: relative;
+  float: left;
+}
+
+.resizable_img {  
+  width: 50vw; 
+  height: 50vh; 
+  overflow: hidden; 
+  resize: both; 
+  border: 1px solid black;
+}
+
+.resizable_img_regex {  
+  overflow: hidden; 
+  resize: both; 
+  border: 1px solid black;
+} 
+
+.fitting_img {
+  width: 100%;   
+  height: 100%;   
+  object-fit: contain;
+}
+
+#floating-menu {
+  position: fixed;
+  top: 0;
+  width: 100%;
+  background-color: rgba(255, 255, 255, 0.9); /* White background with transparency */
+  z-index: 1000;
+  text-align: center;
+}
+
+#floating-menu ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  display: inline-block;
+}
+
+#floating-menu li {
+  display: inline; 
+}
+#floating-menu li a {
+
+  display: inline-block;
+  color: black;
+  text-align: center;
+  padding: 14px 16px;
+  text-decoration: none;
+  border: 1px solid grey; 
+  border-radius: 8px; 
+  margin: 4px; 
+}
+
+#floating-menu li a:visited {
+  color: black; /* Ensure visited links are also blue */
+}
+#floating-menu li a:hover {
+  box-shadow: 5px 5px 5px grey;
+
+  background-color: rgba(0, 0, 0, 0.1); 
+}
+
+#top_skip {
+    margin-top: 100px; 
+}
+
+details.rep_html_det {
+  display: block;
+}
+
+details.rep_html_det::before {
+  display: none;
+}
+
+details.rep_html_det summary {
+  display: none;
+}
+</style>
+
+<script src="data:application/javascript;base64,ZG9jdW1lbnQuYWRkRXZlbnRMaXN0ZW5lcigiRE9NQ29udGVudExvYWRlZCIsIGZ1bmN0aW9uKCkgewogIGNvbnN0IG1lbnVMaW5rcyA9IGRvY3VtZW50LnF1ZXJ5U2VsZWN0b3JBbGwoJyNmbG9hdGluZy1tZW51IGEnKTsKICBjb25zdCBvZmZzZXQgPSA4MDsgLy8gQWRqdXN0IHRoaXMgdmFsdWUgdG8gbWF0Y2ggdGhlIGhlaWdodCBvZiB5b3VyIGZpeGVkIG1lbnUKCiAgbWVudUxpbmtzLmZvckVhY2gobGluayA9PiB7CiAgICAgIGxpbmsuYWRkRXZlbnRMaXN0ZW5lcignY2xpY2snLCBmdW5jdGlvbihldmVudCkgewogICAgICAgICAgZXZlbnQucHJldmVudERlZmF1bHQoKTsKICAgICAgICAgIGNvbnN0IHRhcmdldElkID0gdGhpcy5nZXRBdHRyaWJ1dGUoJ2hyZWYnKS5zdWJzdHJpbmcoMSk7CiAgICAgICAgICBjb25zdCB0YXJnZXRFbGVtZW50ID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQodGFyZ2V0SWQpOwoKICAgICAgICAgIHdpbmRvdy5zY3JvbGxUbyh7CiAgICAgICAgICAgICAgdG9wOiB0YXJnZXRFbGVtZW50Lm9mZnNldFRvcCAtIG9mZnNldCwKICAgICAgICAgICAgICBiZWhhdmlvcjogJ3Ntb290aCcKICAgICAgICAgIH0pOwogICAgICB9KTsKICB9KTsKfSk7CgpmdW5jdGlvbiBoaWRlX3Nob3dfZWxlbWVudChlbGVtZW50X2lkKSB7CiAgdmFyIGRldGFpbHNFbGVtZW50ID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoZWxlbWVudF9pZCk7CgogIGlmIChkZXRhaWxzRWxlbWVudC5oYXNBdHRyaWJ1dGUoIm9wZW4iKSkgewogICAgZGV0YWlsc0VsZW1lbnQucmVtb3ZlQXR0cmlidXRlKCJvcGVuIik7CiAgfSBlbHNlIHsKICAgIGRldGFpbHNFbGVtZW50LnNldEF0dHJpYnV0ZSgib3BlbiIsICIiKTsKICB9Cn0KCi8vIEFVVE9DT01QTEVURSBCT1ggQ09ERQpmdW5jdGlvbiBhdXRvY29tcGxldGUoaW5wLCBhcnIpIHsKICAgIC8qdGhlIGF1dG9jb21wbGV0ZSBmdW5jdGlvbiB0YWtlcyB0d28gYXJndW1lbnRzLAogICAgdGhlIHRleHQgZmllbGQgZWxlbWVudCBhbmQgYW4gYXJyYXkgb2YgcG9zc2libGUgYXV0b2NvbXBsZXRlZCB2YWx1ZXM6Ki8KICAgIHZhciBjdXJyZW50Rm9jdXM7CiAgICAvKmV4ZWN1dGUgYSBmdW5jdGlvbiB3aGVuIHNvbWVvbmUgd3JpdGVzIGluIHRoZSB0ZXh0IGZpZWxkOiovCiAgICBpbnAuYWRkRXZlbnRMaXN0ZW5lcigiaW5wdXQiLCBmdW5jdGlvbihlKSB7CiAgICAgICAgdmFyIGEsIGIsIGksIHZhbCA9IHRoaXMudmFsdWU7CiAgICAgICAgLypjbG9zZSBhbnkgYWxyZWFkeSBvcGVuIGxpc3RzIG9mIGF1dG9jb21wbGV0ZWQgdmFsdWVzKi8KICAgICAgICBjbG9zZUFsbExpc3RzKCk7CiAgICAgICAgaWYgKCF2YWwpIHsgcmV0dXJuIGZhbHNlO30KICAgICAgICBjdXJyZW50Rm9jdXMgPSAtMTsKICAgICAgICAvKmNyZWF0ZSBhIERJViBlbGVtZW50IHRoYXQgd2lsbCBjb250YWluIHRoZSBpdGVtcyAodmFsdWVzKToqLwogICAgICAgIGEgPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KCJESVYiKTsKICAgICAgICBhLnNldEF0dHJpYnV0ZSgiaWQiLCB0aGlzLmlkICsgImF1dG9jb21wbGV0ZS1saXN0Iik7CiAgICAgICAgYS5zZXRBdHRyaWJ1dGUoImNsYXNzIiwgImF1dG9jb21wbGV0ZS1pdGVtcyIpOwogICAgICAgIC8qYXBwZW5kIHRoZSBESVYgZWxlbWVudCBhcyBhIGNoaWxkIG9mIHRoZSBhdXRvY29tcGxldGUgY29udGFpbmVyOiovCiAgICAgICAgdGhpcy5wYXJlbnROb2RlLmFwcGVuZENoaWxkKGEpOwogICAgICAgIC8qZm9yIGVhY2ggaXRlbSBpbiB0aGUgYXJyYXkuLi4qLwogICAgICAgIGZvciAoaSA9IDA7IGkgPCBhcnIubGVuZ3RoOyBpKyspIHsKICAgICAgICAgIC8qY2hlY2sgaWYgdGhlIGl0ZW0gc3RhcnRzIHdpdGggdGhlIHNhbWUgbGV0dGVycyBhcyB0aGUgdGV4dCBmaWVsZCB2YWx1ZToqLwogICAgICAgICAgaWYgKGFycltpXS5zdWJzdHIoMCwgdmFsLmxlbmd0aCkudG9VcHBlckNhc2UoKSA9PSB2YWwudG9VcHBlckNhc2UoKSkgewogICAgICAgICAgICAvKmNyZWF0ZSBhIERJViBlbGVtZW50IGZvciBlYWNoIG1hdGNoaW5nIGVsZW1lbnQ6Ki8KICAgICAgICAgICAgYiA9IGRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoIkRJViIpOwogICAgICAgICAgICAvKm1ha2UgdGhlIG1hdGNoaW5nIGxldHRlcnMgYm9sZDoqLwogICAgICAgICAgICBiLmlubmVySFRNTCA9ICI8c3Ryb25nPiIgKyBhcnJbaV0uc3Vic3RyKDAsIHZhbC5sZW5ndGgpICsgIjwvc3Ryb25nPiI7CiAgICAgICAgICAgIGIuaW5uZXJIVE1MICs9IGFycltpXS5zdWJzdHIodmFsLmxlbmd0aCk7CiAgICAgICAgICAgIC8qaW5zZXJ0IGEgaW5wdXQgZmllbGQgdGhhdCB3aWxsIGhvbGQgdGhlIGN1cnJlbnQgYXJyYXkgaXRlbSdzIHZhbHVlOiovCiAgICAgICAgICAgIGIuaW5uZXJIVE1MICs9ICI8aW5wdXQgdHlwZT0naGlkZGVuJyB2YWx1ZT0nIiArIGFycltpXSArICInPiI7CiAgICAgICAgICAgIC8qZXhlY3V0ZSBhIGZ1bmN0aW9uIHdoZW4gc29tZW9uZSBjbGlja3Mgb24gdGhlIGl0ZW0gdmFsdWUgKERJViBlbGVtZW50KToqLwogICAgICAgICAgICAgICAgYi5hZGRFdmVudExpc3RlbmVyKCJjbGljayIsIGZ1bmN0aW9uKGUpIHsKICAgICAgICAgICAgICAgIC8qaW5zZXJ0IHRoZSB2YWx1ZSBmb3IgdGhlIGF1dG9jb21wbGV0ZSB0ZXh0IGZpZWxkOiovCiAgICAgICAgICAgICAgICBpbnAudmFsdWUgPSB0aGlzLmdldEVsZW1lbnRzQnlUYWdOYW1lKCJpbnB1dCIpWzBdLnZhbHVlOwogICAgICAgICAgICAgICAgLypjbG9zZSB0aGUgbGlzdCBvZiBhdXRvY29tcGxldGVkIHZhbHVlcywKICAgICAgICAgICAgICAgIChvciBhbnkgb3RoZXIgb3BlbiBsaXN0cyBvZiBhdXRvY29tcGxldGVkIHZhbHVlczoqLwogICAgICAgICAgICAgICAgY2xvc2VBbGxMaXN0cygpOwogICAgICAgICAgICB9KTsKICAgICAgICAgICAgYS5hcHBlbmRDaGlsZChiKTsKICAgICAgICAgIH0KICAgICAgICB9CiAgICB9KTsKICAgIC8qZXhlY3V0ZSBhIGZ1bmN0aW9uIHByZXNzZXMgYSBrZXkgb24gdGhlIGtleWJvYXJkOiovCiAgICBpbnAuYWRkRXZlbnRMaXN0ZW5lcigia2V5ZG93biIsIGZ1bmN0aW9uKGUpIHsKICAgICAgICB2YXIgeCA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKHRoaXMuaWQgKyAiYXV0b2NvbXBsZXRlLWxpc3QiKTsKICAgICAgICBpZiAoeCkgeCA9IHguZ2V0RWxlbWVudHNCeVRhZ05hbWUoImRpdiIpOwogICAgICAgIGlmIChlLmtleUNvZGUgPT0gNDApIHsKICAgICAgICAgIC8qSWYgdGhlIGFycm93IERPV04ga2V5IGlzIHByZXNzZWQsCiAgICAgICAgICBpbmNyZWFzZSB0aGUgY3VycmVudEZvY3VzIHZhcmlhYmxlOiovCiAgICAgICAgICBjdXJyZW50Rm9jdXMrKzsKICAgICAgICAgIC8qYW5kIGFuZCBtYWtlIHRoZSBjdXJyZW50IGl0ZW0gbW9yZSB2aXNpYmxlOiovCiAgICAgICAgICBhZGRBY3RpdmUoeCk7CiAgICAgICAgfSBlbHNlIGlmIChlLmtleUNvZGUgPT0gMzgpIHsgLy91cAogICAgICAgICAgLypJZiB0aGUgYXJyb3cgVVAga2V5IGlzIHByZXNzZWQsCiAgICAgICAgICBkZWNyZWFzZSB0aGUgY3VycmVudEZvY3VzIHZhcmlhYmxlOiovCiAgICAgICAgICBjdXJyZW50Rm9jdXMtLTsKICAgICAgICAgIC8qYW5kIGFuZCBtYWtlIHRoZSBjdXJyZW50IGl0ZW0gbW9yZSB2aXNpYmxlOiovCiAgICAgICAgICBhZGRBY3RpdmUoeCk7CiAgICAgICAgfSBlbHNlIGlmIChlLmtleUNvZGUgPT0gMTMpIHsKICAgICAgICAgIC8qSWYgdGhlIEVOVEVSIGtleSBpcyBwcmVzc2VkLCBwcmV2ZW50IHRoZSBmb3JtIGZyb20gYmVpbmcgc3VibWl0dGVkLCovCiAgICAgICAgICBlLnByZXZlbnREZWZhdWx0KCk7CiAgICAgICAgICBpZiAoY3VycmVudEZvY3VzID4gLTEpIHsKICAgICAgICAgICAgLyphbmQgc2ltdWxhdGUgYSBjbGljayBvbiB0aGUgImFjdGl2ZSIgaXRlbToqLwogICAgICAgICAgICBpZiAoeCkgeFtjdXJyZW50Rm9jdXNdLmNsaWNrKCk7CiAgICAgICAgICB9CiAgICAgICAgfQogICAgfSk7CiAgICBmdW5jdGlvbiBhZGRBY3RpdmUoeCkgewogICAgICAvKmEgZnVuY3Rpb24gdG8gY2xhc3NpZnkgYW4gaXRlbSBhcyAiYWN0aXZlIjoqLwogICAgICBpZiAoIXgpIHJldHVybiBmYWxzZTsKICAgICAgLypzdGFydCBieSByZW1vdmluZyB0aGUgImFjdGl2ZSIgY2xhc3Mgb24gYWxsIGl0ZW1zOiovCiAgICAgIHJlbW92ZUFjdGl2ZSh4KTsKICAgICAgaWYgKGN1cnJlbnRGb2N1cyA+PSB4Lmxlbmd0aCkgY3VycmVudEZvY3VzID0gMDsKICAgICAgaWYgKGN1cnJlbnRGb2N1cyA8IDApIGN1cnJlbnRGb2N1cyA9ICh4Lmxlbmd0aCAtIDEpOwogICAgICAvKmFkZCBjbGFzcyAiYXV0b2NvbXBsZXRlLWFjdGl2ZSI6Ki8KICAgICAgeFtjdXJyZW50Rm9jdXNdLmNsYXNzTGlzdC5hZGQoImF1dG9jb21wbGV0ZS1hY3RpdmUiKTsKICAgIH0KICAgIGZ1bmN0aW9uIHJlbW92ZUFjdGl2ZSh4KSB7CiAgICAgIC8qYSBmdW5jdGlvbiB0byByZW1vdmUgdGhlICJhY3RpdmUiIGNsYXNzIGZyb20gYWxsIGF1dG9jb21wbGV0ZSBpdGVtczoqLwogICAgICBmb3IgKHZhciBpID0gMDsgaSA8IHgubGVuZ3RoOyBpKyspIHsKICAgICAgICB4W2ldLmNsYXNzTGlzdC5yZW1vdmUoImF1dG9jb21wbGV0ZS1hY3RpdmUiKTsKICAgICAgfQogICAgfQogICAgZnVuY3Rpb24gY2xvc2VBbGxMaXN0cyhlbG1udCkgewogICAgICAvKmNsb3NlIGFsbCBhdXRvY29tcGxldGUgbGlzdHMgaW4gdGhlIGRvY3VtZW50LAogICAgICBleGNlcHQgdGhlIG9uZSBwYXNzZWQgYXMgYW4gYXJndW1lbnQ6Ki8KICAgICAgdmFyIHggPSBkb2N1bWVudC5nZXRFbGVtZW50c0J5Q2xhc3NOYW1lKCJhdXRvY29tcGxldGUtaXRlbXMiKTsKICAgICAgZm9yICh2YXIgaSA9IDA7IGkgPCB4Lmxlbmd0aDsgaSsrKSB7CiAgICAgICAgaWYgKGVsbW50ICE9IHhbaV0gJiYgZWxtbnQgIT0gaW5wKSB7CiAgICAgICAgeFtpXS5wYXJlbnROb2RlLnJlbW92ZUNoaWxkKHhbaV0pOwogICAgICB9CiAgICB9CiAgfQogIC8qZXhlY3V0ZSBhIGZ1bmN0aW9uIHdoZW4gc29tZW9uZSBjbGlja3MgaW4gdGhlIGRvY3VtZW50OiovCiAgZG9jdW1lbnQuYWRkRXZlbnRMaXN0ZW5lcigiY2xpY2siLCBmdW5jdGlvbiAoZSkgewogICAgICBjbG9zZUFsbExpc3RzKGUudGFyZ2V0KTsKICB9KTsKfQ==" type="application/javascript"></script>
+
+<script>
+
+</script>
+</head>
+<body>
+
+ 
+
+<div style="width: 95%; padding:20px;">
+	<h1> semtools </h1>
+	<h3> Translate term lists </h3>	
+		<h4>Take a list of code terms and pas to name terms</h4>
+		<p> <b>Input</b> </p>
+		
+		<table id="table_0" border="1" class= "table table-striped" >
+   <tr>
+                    <td  >GO:0005499 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0005502 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0016918 </td>
+    </tr>
+</table>
+
+		<p> The script takes a input file with one code term per line and translates the list to term names </p>
+
+		
+		<p><code> semtools -O GO -i terms.txt -l names </code></p>
+		<details>
+			<summary style="background-color:lightgray;"> Click to see results</summary>
+			
+			<table id="table_1" border="1" class= "table table-striped" >
+   <tr>
+                    <td  >GO:0005499 </td>
+                    <td  >vitamin D binding </td>
+    </tr>
+   <tr>
+                    <td  >GO:0005502 </td>
+                    <td  >11-cis retinal binding </td>
+    </tr>
+   <tr>
+                    <td  >GO:0016918 </td>
+                    <td  >retinal binding </td>
+    </tr>
+</table>
+		</details>		
+
+	<h3> Get children terms </h3>
+		<h4>Use a list of parent terms to obtain a list of child terms</h4>
+		<p> We use -C to specify whic terms use as parents to obtain all childs (from the next level to the finale leafs in the ontology). Then, all childs for the specified parents are unified in one list. </p>
+		
+		
+		<p><code> semtools -C GO:0019842,GO:0002060 -O GO </code></p>
+		<details>
+			<summary style="background-color:lightgray;"> Click to see results</summary>
+			
+			<table id="table_2" border="1" class= "table table-striped" >
+   <tr>
+                    <td  >GO:0005499 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0005502 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0016918 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0005503 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0005542 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0008431 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0009374 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0019841 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0030170 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0070279 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0030975 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0030976 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0031177 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0031418 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0031419 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0070280 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0070281 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0070282 </td>
+    </tr>
+   <tr>
+                    <td  >GO:1902098 </td>
+    </tr>
+   <tr>
+                    <td  >GO:1902271 </td>
+    </tr>
+   <tr>
+                    <td  >GO:1902118 </td>
+    </tr>
+   <tr>
+                    <td  >GO:1904768 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0002055 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0002057 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0160050 </td>
+    </tr>
+</table>
+		</details>
+
+		<h4>Use a list of parent terms to obtain a list of parent-child term names</h4>
+		<p> With '/' character previous to the term list specified with -C flag we an use modificators such 'r' to obtain pairs parent-child and 'n' to translate term codes to term names. </p>
+		
+		
+		<p><code> semtools -C 'rn/GO:0019842,GO:0002060' -O GO </code></p>
+		<details>
+			<summary style="background-color:lightgray;"> Click to see results</summary>
+			
+			<table id="table_3" border="1" class= "table table-striped" >
+   <tr>
+                    <td  >vitamin D binding </td>
+                    <td  >D3 vitamins binding </td>
+    </tr>
+   <tr>
+                    <td  >retinal binding </td>
+                    <td  >11-cis retinal binding </td>
+    </tr>
+   <tr>
+                    <td  >retinal binding </td>
+                    <td  >all-trans retinal binding </td>
+    </tr>
+   <tr>
+                    <td  >retinol binding </td>
+                    <td  >all-trans-retinol binding </td>
+    </tr>
+   <tr>
+                    <td  >vitamin B6 binding </td>
+                    <td  >pyridoxal phosphate binding </td>
+    </tr>
+   <tr>
+                    <td  >vitamin B6 binding </td>
+                    <td  >pyridoxal binding </td>
+    </tr>
+   <tr>
+                    <td  >vitamin B6 binding </td>
+                    <td  >pyridoxamine binding </td>
+    </tr>
+   <tr>
+                    <td  >vitamin B6 binding </td>
+                    <td  >pyridoxine binding </td>
+    </tr>
+   <tr>
+                    <td  >D3 vitamins binding </td>
+                    <td  >calcitriol binding </td>
+    </tr>
+   <tr>
+                    <td  >D3 vitamins binding </td>
+                    <td  >calcidiol binding </td>
+    </tr>
+   <tr>
+                    <td  >vitamin binding </td>
+                    <td  >vitamin D binding </td>
+    </tr>
+   <tr>
+                    <td  >vitamin binding </td>
+                    <td  >folic acid binding </td>
+    </tr>
+   <tr>
+                    <td  >vitamin binding </td>
+                    <td  >vitamin E binding </td>
+    </tr>
+   <tr>
+                    <td  >vitamin binding </td>
+                    <td  >biotin binding </td>
+    </tr>
+   <tr>
+                    <td  >vitamin binding </td>
+                    <td  >retinal binding </td>
+    </tr>
+   <tr>
+                    <td  >vitamin binding </td>
+                    <td  >retinol binding </td>
+    </tr>
+   <tr>
+                    <td  >vitamin binding </td>
+                    <td  >thiamine binding </td>
+    </tr>
+   <tr>
+                    <td  >vitamin binding </td>
+                    <td  >thiamine pyrophosphate binding </td>
+    </tr>
+   <tr>
+                    <td  >vitamin binding </td>
+                    <td  >phosphopantetheine binding </td>
+    </tr>
+   <tr>
+                    <td  >vitamin binding </td>
+                    <td  >L-ascorbic acid binding </td>
+    </tr>
+   <tr>
+                    <td  >vitamin binding </td>
+                    <td  >cobalamin binding </td>
+    </tr>
+   <tr>
+                    <td  >vitamin binding </td>
+                    <td  >vitamin B6 binding </td>
+    </tr>
+   <tr>
+                    <td  >purine nucleobase binding </td>
+                    <td  >adenine binding </td>
+    </tr>
+   <tr>
+                    <td  >purine nucleobase binding </td>
+                    <td  >guanine binding </td>
+    </tr>
+   <tr>
+                    <td  >purine nucleobase binding </td>
+                    <td  >xanthine binding </td>
+    </tr>
+</table>
+		</details>
+
+		<h4>Use a list of child terms to obtain a list of parent-child term names limiting the levels</h4>
+		<p> Others -C modificators are 'a' which assumes that the given terms are childs and that the user desires the parent terms of these childs. 
+		The numbers of levels checked (parents or childs without 'a' or not) could be controlled with 'hN' where N must be an integrate with the number of hops (i.e. 'h2' means that the command only must check the next/previous two levels of the ontology) </p>
+		
+		
+		<p><code> semtools -C 'rah2n/GO:0019842,GO:0002060' -O GO </code></p>
+		<details>
+			<summary style="background-color:lightgray;"> Click to see results</summary>
+			
+			<table id="table_4" border="1" class= "table table-striped" >
+   <tr>
+                    <td  >nucleobase binding </td>
+                    <td  >purine nucleobase binding </td>
+    </tr>
+   <tr>
+                    <td  >small molecule binding </td>
+                    <td  >heterocyclic compound binding </td>
+    </tr>
+   <tr>
+                    <td  >organic cyclic compound binding </td>
+                    <td  >nucleobase binding </td>
+    </tr>
+   <tr>
+                    <td  >heterocyclic compound binding </td>
+                    <td  >nucleobase binding </td>
+    </tr>
+   <tr>
+                    <td  >small molecule binding </td>
+                    <td  >vitamin binding </td>
+    </tr>
+   <tr>
+                    <td  >binding </td>
+                    <td  >small molecule binding </td>
+    </tr>
+   <tr>
+                    <td  >binding </td>
+                    <td  >organic cyclic compound binding </td>
+    </tr>
+</table>
+		</details>				
+
+		<h4>Take a list of code terms and remove whose terms with a given parent</h4>
+		<p> <b>Input</b> </p>
+		<details>
+			<summary style="background-color:lightgray;"> Show imput data</summary>
+			
+			<table id="table_5" border="1" class= "table table-striped" >
+   <tr>
+                    <td  >GO:0005499 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0005502 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0016918 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0005503 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0005542 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0008431 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0009374 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0019841 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0030170 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0070279 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0030975 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0030976 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0031177 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0031418 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0031419 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0070280 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0070281 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0070282 </td>
+    </tr>
+</table>
+		</details>
+
+		<p> To filter a list of code terms the -F flag must be used with a string that with specifices white lists (p, to keep terms with a given parent) or black list (n, to remove terms with a given parent). Parents are listed as comma separated term list flanked by '(' and ')'. The string can include several especifications of this estructure. The flag '--list' specifies that the input file is one item per line list.</p>
+		
+		
+		<p><code> semtools -i terms.txt -F 'n(GO:0070279)' --list -O GO </code></p>
+		<details>
+			<summary style="background-color:lightgray;"> Click to see results</summary>
+			
+			<table id="table_6" border="1" class= "table table-striped" >
+   <tr>
+                    <td  >GO:0005499 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0005502 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0016918 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0005503 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0005542 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0008431 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0009374 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0019841 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0070279 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0030975 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0030976 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0031177 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0031418 </td>
+    </tr>
+   <tr>
+                    <td  >GO:0031419 </td>
+    </tr>
+</table>
+		</details>
+</div>
+
+</body>
+
+</HTML>

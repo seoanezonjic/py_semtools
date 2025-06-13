@@ -162,7 +162,6 @@ def main_semtools(opts: argparse.Namespace) -> None:
             elif options['list_translate'] == 'codes':
                 translation, untranslated = ontology.translate_names(term)
             print(f"{term[0]}\t{ '-' if len(translation) == 0 else translation[0]}")
-        sys.exit(0)
     if options.get('filter_list') != None:
         negated_parentals = []
         afirmed_parentals = []
@@ -172,8 +171,6 @@ def main_semtools(opts: argparse.Namespace) -> None:
         data = [ t[0] for t in data]        
         filt_data = ontology.filter_list(data, whitelist=afirmed_parentals, blacklist=negated_parentals)
         for term in filt_data: print(term)
-        #sys.exit(0)
-        #return 0        
 
     if options.get('translate') == 'codes':
         profiles = {}

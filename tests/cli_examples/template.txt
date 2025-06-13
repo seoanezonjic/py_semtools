@@ -1,0 +1,119 @@
+ <%
+import sys
+import os
+import re
+import gzip
+import io 
+from io import StringIO, BytesIO
+from contextlib import redirect_stdout
+import py_semtools.cli_manager as cli_manager
+def capture_stdout(func):
+    def wrapper(*args, **kwargs):
+        original_stdout = sys.stdout
+        tmpfile = StringIO()
+        sys.stdout = tmpfile
+        returned = func(*args, **kwargs)
+        printed = sys.stdout.getvalue()
+        sys.stdout = original_stdout
+        return returned, printed
+    return wrapper
+
+def strng2table(strng, fs="\t", rs="\n"):
+	table = [row.split(fs) for row in strng.split(rs)][0:-1]
+	return table
+
+def execute_command(args, script, name='results'):
+	@capture_stdout
+	def script2test(lsargs):
+		func = getattr(cli_manager, script)
+		return func(lsargs)
+	_, printed = script2test(re.sub("'", '', args).split(" "))
+	test_result = strng2table(printed)
+	plotter.hash_vars[name] = test_result
+%>
+
+<div style="width: 95%; padding:20px;">
+	<h1> semtools </h1>
+	<h3> Translate term lists </h3>	
+		<h4>Take a list of code terms and pas to name terms</h4>
+		<p> <b>Input</b> </p>
+		<%
+		    table = [['GO:0005499'], ['GO:0005502'], ['GO:0016918']]
+		    plotter.hash_vars['terms'] = table
+
+		    input_file = 'terms.txt'
+		    with open(input_file, 'w') as f:
+		            for r in table: f.write("\t".join(r) + "\n")
+		%>
+		${ plotter.table(id='terms', text=True, header=False, row_names=False, styled='bs', attrib = {'class' : 'table table-striped'})}
+
+		<p> The script takes a input file with one code term per line and translates the list to term names </p>
+
+		<% args = f"-O GO -i {input_file} -l names" %>
+		<p><code> ${f"semtools {args}"} </code></p>
+		<details>
+			<summary style="background-color:lightgray;"> Click to see results</summary>
+			<% execute_command(args, 'semtools') %>
+			${ plotter.table(id='results', text=True, header=False, row_names=False, styled='bs', attrib = {'class' : 'table table-striped'} )}
+		</details>		
+
+	<h3> Get children terms </h3>
+		<h4>Use a list of parent terms to obtain a list of child terms</h4>
+		<p> We use -C to specify whic terms use as parents to obtain all childs (from the next level to the finale leafs in the ontology). Then, all childs for the specified parents are unified in one list. </p>
+		
+		<% args = f"-C GO:0019842,GO:0002060 -O GO" %>
+		<p><code> ${f"semtools {args}"} </code></p>
+		<details>
+			<summary style="background-color:lightgray;"> Click to see results</summary>
+			<% execute_command(args, 'semtools') %>
+			${ plotter.table(id='results', text=True, header=False, row_names=False, styled='bs', attrib = {'class' : 'table table-striped'} )}
+		</details>
+
+		<h4>Use a list of parent terms to obtain a list of parent-child term names</h4>
+		<p> With '/' character previous to the term list specified with -C flag we an use modificators such 'r' to obtain pairs parent-child and 'n' to translate term codes to term names. </p>
+		
+		<% args = f"-C 'rn/GO:0019842,GO:0002060' -O GO" %>
+		<p><code> ${f"semtools {args}"} </code></p>
+		<details>
+			<summary style="background-color:lightgray;"> Click to see results</summary>
+			<% execute_command(args, 'semtools') %>
+			${ plotter.table(id='results', text=True, header=False, row_names=False, styled='bs', attrib = {'class' : 'table table-striped'} )}
+		</details>
+
+		<h4>Use a list of child terms to obtain a list of parent-child term names limiting the levels</h4>
+		<p> Others -C modificators are 'a' which assumes that the given terms are childs and that the user desires the parent terms of these childs. 
+		The numbers of levels checked (parents or childs without 'a' or not) could be controlled with 'hN' where N must be an integrate with the number of hops (i.e. 'h2' means that the command only must check the next/previous two levels of the ontology) </p>
+		
+		<% args = f"-C 'rah2n/GO:0019842,GO:0002060' -O GO"%>
+		<p><code> ${f"semtools {args}"} </code></p>
+		<details>
+			<summary style="background-color:lightgray;"> Click to see results</summary>
+			<% execute_command(args, 'semtools') %>
+			${ plotter.table(id='results', text=True, header=False, row_names=False, styled='bs', attrib = {'class' : 'table table-striped'} )}
+		</details>				
+
+		<h4>Take a list of code terms and remove whose terms with a given parent</h4>
+		<p> <b>Input</b> </p>
+		<details>
+			<summary style="background-color:lightgray;"> Show imput data</summary>
+			<%
+			    table = [['GO:0005499'],['GO:0005502'],['GO:0016918'],['GO:0005503'],['GO:0005542'],['GO:0008431'],['GO:0009374'],['GO:0019841'],['GO:0030170'],['GO:0070279'],['GO:0030975'],['GO:0030976'],['GO:0031177'],['GO:0031418'],['GO:0031419'],['GO:0070280'],['GO:0070281'],['GO:0070282'] ]
+			    plotter.hash_vars['terms'] = table
+
+			    input_file = 'terms.txt'
+			    with open(input_file, 'w') as f:
+			            for r in table: f.write("\t".join(r) + "\n")
+			%>
+			${ plotter.table(id='terms', text=True, header=False, row_names=False, styled='bs', attrib = {'class' : 'table table-striped'})}
+		</details>
+
+		<p> To filter a list of code terms the -F flag must be used with a string that with specifices white lists (p, to keep terms with a given parent) or black list (n, to remove terms with a given parent). Parents are listed as comma separated term list flanked by '(' and ')'. The string can include several especifications of this estructure. The flag '--list' specifies that the input file is one item per line list.</p>
+		
+		<% args = f"-i {input_file} -F 'n(GO:0070279)' --list -O GO"%>
+		<p><code> ${f"semtools {args}"} </code></p>
+		<details>
+			<summary style="background-color:lightgray;"> Click to see results</summary>
+			<% execute_command(args, 'semtools') %>
+			${ plotter.table(id='results', text=True, header=False, row_names=False, styled='bs', attrib = {'class' : 'table table-striped'} )}
+		</details>
+</div>
