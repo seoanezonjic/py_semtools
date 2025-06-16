@@ -167,27 +167,25 @@ def get_sorted_suggestions(args = None):
     if args is None:
         args = sys.argv[1:]
 
-    parser = argparse.ArgumentParser(description='Perform Ontology driven analysis ')
+    parser = argparse.ArgumentParser(description='Perform Ontology driven analysis with a network of relationships between terms')
 
     parser.add_argument('-q', "--query_terms", dest="query_terms", default= None,
             help="Path to the input file with 1 column format (each term in a new row) to be used as the query")
-    parser.add_argument('-r', "--term_relations", dest="term_relations", default= None,
-            help="Path to the term-term pairs file. Expected three files (1º term, 2º term, relationship value)")
-    parser.add_argument("-b", "--black_list", dest="black_list", default= None, 
-            help="Path to a file with a list of target terms to be excluded from the analysis (one column format)")
-    parser.add_argument("-o", "--output_file", dest="output_file", default= None, 
-            help="Path to the output table")
-    parser.add_argument("-d", "--deleted_terms", dest="deleted_terms", default= None, 
-            help="Path to the folder to write the different deleted term files")
-
     parser.add_argument("-O", "--ontology_file", dest="ontology_file", default= None, 
             help="Path to ontology file")
+    parser.add_argument('-r', "--term_relations", dest="term_relations", default= None,
+            help="Path to the term-term pairs file. Expected three files (1º term, 2º term, relationship value)")
+    parser.add_argument("-o", "--output_file", dest="output_file", default= None, 
+            help="Path to the output table")
 
     parser.add_argument("-m", "--max_targets", dest="max_targets", default= 0, type = int, 
             help="Parameter to set the limit of targets terms to retrieve")
-
     parser.add_argument("-t", "--translate", dest="translate", default="c",
             help="Use if you want to be returned human readable names (use n), codes (use c), or both (use cn or nc depending on the order you want them to be returned)")
+    parser.add_argument("-b", "--black_list", dest="black_list", default= None, 
+            help="Path to a file with a list of target terms to be excluded from the analysis (one column format)")
+    parser.add_argument("-d", "--deleted_terms", dest="deleted_terms", default= None, 
+            help="Path to the folder to write the different deleted term files")
 
     parser.add_argument("-f", "--filter_parental_targets", dest="filter_parental_targets", default=False, action="store_true",
             help="Use if you want to filter out parental terms of the query terms present in the targets")
@@ -196,7 +194,11 @@ def get_sorted_suggestions(args = None):
 
     parser.add_argument("-T", "--transform_rel_values", dest="transform_rel_values", default= "no",
             help="Use to apply a transformation to relation values. Currently accepted arguments: no (no transformation), log10 (-log10 transformation), exp (log-inverse exponential transformation, 10^(-x))")
-
+    
+    parser.add_argument("--output_report", dest="output_report", default= None, 
+            help="Path to the output report file. If not used, no report will be generated")
+    parser.add_argument("--heatmap_color_preset", dest="heatmap_color_preset", default= "1",
+            help="Use to set the color preset for the heatmap. Options: '1' (default) or '2'. Each preset has a different color scheme.")
 
     opts =  parser.parse_args(args)
     main_get_sorted_suggestions(opts)
@@ -243,6 +245,43 @@ def stEngine(args = None):
             help="Use it to print the relevant pairs of query-corpus with their scores")    
     opts =  parser.parse_args(args)
     main_stEngine(opts)
+
+def stEngine_report(args = None):
+    if args is None:
+        args = sys.argv[1:]
+
+    parser = argparse.ArgumentParser(description='Perform Ontology driven analysis with Sentence Transformer')
+    parser.add_argument("-O", "--ontology", dest="ontology", default= None,
+                        help="Path to ontology file")
+    parser.add_argument("-r", "--ref_profile", dest="ref_prof", default= None, 
+                        type = lambda file: [line.strip() for line in open(file).readlines()],
+                        help="Path to reference profile. One term code per line")
+    parser.add_argument("-i", "--input_file", dest="input_file", default= None,
+                        help="Input file with ids and profiles to compare with the reference profile")
+    parser.add_argument("-d", "--id_col", dest="id_col", default= 0, type=int,
+                        help="0-based position of the column with the id")
+    parser.add_argument("-p", "--profiles_col", dest="ont_col", default= 1, type=int,
+                        help="0-based position of the column with the Ontology terms")
+    parser.add_argument("-S", "--separator", dest="separator", default='|',
+                        help="Set which character must be used to split the terms profile. Default '|'")
+    parser.add_argument("-o", "--output_file", dest="output_file", default= 'report.html',
+                        help="Output report")
+    parser.add_argument("-L", "--matrix_limits", dest="matrix_limits", default= [20, 40], type= lambda data: [int(i) for i in data.split(",")],
+                        help="Number of rows and columns to show in heatmap defined as 'Nrows,Ncols'. Default 20,40")
+    parser.add_argument("-N", "--neg_matrix_limits", dest="neg_matrix_limits", default= [20, 40], type= lambda data: [int(i) for i in data.split(",")],
+                        help="Number of rows and columns to show in the negative heatmap defined as 'Nrows,Ncols'. Default 20,40")
+    parser.add_argument("--hard_check", dest="hard_check", default= True, action="store_false",
+                        help="Set to disable hard check cleaning. Default true") 
+    parser.add_argument("--pubmed_ids_and_titles", dest="pubmed_ids_and_titles", default= None,
+                        help="Path to pubmed_ids_and_titles file")
+    parser.add_argument("--sim", dest="sim", default= None,
+                        help="Similarity method to use")
+    parser.add_argument("--use_pickle", dest="use_pickle", default= False, action="store_true",
+                        help="Use it if you want to save (if first time)/use the cached version (if executed before) and just launch the report")                                        
+    parser.add_argument("--get_full_sim_sorted_list", dest="get_full_sim_sorted_list", default= False, action="store_true",
+                        help="Use it to get the full sorted list of similarities between the reference profile and the input profiles")      
+    opts = parser.parse_args()
+    main_stEngine_report(opts)
 
 def get_corpus_index(args = None):
     if args is None:

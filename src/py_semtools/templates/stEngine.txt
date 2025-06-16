@@ -1,0 +1,73 @@
+<%
+    import pandas as pd
+    def replace_empties(value): 
+        if value:
+            return value 
+        else: 
+            return 0
+
+    def recover_empty_values(value):
+        if value == 0:
+            return None
+        else:
+            return value
+
+    def replace_and_show(data):
+        plotter.fill(data, recover_empty_values)
+        #print(data)
+
+    ont_sim_method = plotter.hash_vars['ont_sim_method']
+    #print(plotter.hash_vars['similarity_matrix'])
+%>
+
+<%  disease_div = f"<h1> stEngine Report. Ontological similarity method used: {ont_sim_method}</h1>"   %>
+${plotter.prettify_div(disease_div)}
+
+<div class="container-fluid row-offcanvas nopadding">
+    <div class="col-sm-7 nopadding">
+        <div style="width: 90%; background-color:#ecf0f1; margin: 0 auto;"> 
+            <h1 style="text-align: center; background-color:#d6eaf8">Similarity matrix</h1>
+            ${plotter.prettify_div(
+                plotter.heatmap( id= "similarity_matrix", header= True, row_names= True, 
+                                prefill = replace_empties, func = replace_and_show,
+                                x_label="Ontological Similarity", title = f"Top 50 documents more related to the input phenotypic profile",
+                                extra_data={'id': 'stEngine_sims_table', 'header': True, 'row_names':  True, 'prefill': replace_empties, 'func' : replace_and_show},
+                                config = {'sizeLegendTitle': 'Textual Similarity',
+                                          #'setMaxX': 1,
+                                          'sizes': [3,8,9,11,13,15,16],
+                                          'saveFilename': f'heatmap',
+                                          'percentAspectRatioPlotArea': 0.65,
+                                          'varTextScaleFontFactor': 1,
+                                          'smpTextScaleFontFactor': 1,
+                                          "maxSmpStringLen": 60,
+                                          #'printMagnification': 4
+                                          } )
+            )}
+        </div>
+
+        <div style="width: 90%; background-color:#ecf0f1; margin: 0 auto;"> 
+            <h1 style="text-align: center; background-color:#d6eaf8">Negative terms matrix</h1>
+            ${plotter.prettify_div(
+                plotter.heatmap( id= "negative_matrix", header= True, row_names= True,
+                                 width = 700, height = 600,
+                                 title= f"Most recurrent negative terms found in top 50 document",
+                                 x_label= "Counts",
+                                 config = {'saveFilename': f'neg_heatmap',
+                                            #'percentAspectRatioPlotArea': 0.98,
+                                            'varTextScaleFontFactor': 0.7,
+                                            'smpTextScaleFontFactor': 0.7,
+                                            'varTextRotate': 45,
+                                            "maxSmpStringLen": 60,
+                                            #'printMagnification': 4
+                                            } )
+            )}
+        </div>
+    </div>
+
+    <div class="col-sm-5 nopadding">
+        ${plotter.prettify_div(
+            plotter.table(id="supp_info", styled="dt", text=True, header=True, attrib = {'class' : 'table'}, 
+                custom_buttons = ['copyHtml5', 'excelHtml5', 'csvHtml5', 'pdfHtml5'])
+        )}
+    </div>
+</div>

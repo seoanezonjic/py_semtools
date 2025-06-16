@@ -1,6 +1,8 @@
 import sys, os, glob, math, re, subprocess, warnings, time, requests, site, copy, argparse
 from collections import defaultdict
 from importlib.resources import files
+import pickle
+import pandas as pd
 
 from py_semtools.ontology import Ontology
 from py_semtools.indexers.text_indexer import TextIndexer
@@ -56,6 +58,109 @@ def main_stEngine(opts: argparse.Namespace) -> None:
     stEngine.process_corpus_get_similarities(corpus_filenames, options, options['verbose'])
 
     if options.get("gpu_device"): stEngine.show_gpu_information(verbose= options['verbose']) #A final check to GPU information
+
+def main_stEngine_report(options: argparse.Namespace) -> None: 
+  opts = vars(options)
+  pickle_path = os.path.join(opts['output_file'].replace(".html", ""), 'tmp')
+  pickle_filename = os.path.join(pickle_path, 'similitudes.pckl')
+  if os.path.exists(pickle_filename) and opts['use_pickle']:
+      print("Pickle does exist, skipping calculations and only generating report")
+      file = open(pickle_filename, 'rb')
+      data = pickle.load(file)
+      file.close()
+      similarities = data['similarities']
+      pubmed_ids_and_titles_dict = data['pubmed_ids_and_titles_dict']
+      container = data['container']
+
+  else:
+      print("Pickle does not exist or --use_pickle not used, so doing similarity calculations")
+      papers_hpo_sims = read_and_aggregate_sims(opts['input_file'], aggregation = max)
+      with open(opts["pubmed_ids_and_titles"]) as f: pubmed_ids_and_titles = [line.rstrip().split("\t") for line in f]
+
+      # Load ontology and precompute it
+      opts['ontology'] = get_ontology_file(opts['ontology'], ONTOLOGY_INDEX, ONTOLOGIES)
+      hpo = Ontology(file = opts['ontology'], load_file = True)
+      hpo.precompute()
+
+      # Load and clean documents profiles
+      documents_profiles = read_stEngine_profiles(opts['input_file'], opts['id_col'], opts['ont_col'], opts['separator'])
+      clean_hard = not opts['hard_check']
+      for doc_id, terms in documents_profiles.items():
+        hpo.add_profile(doc_id, terms=terms, clean_hard=clean_hard)
+      clean_profiles = copy.deepcopy(hpo.profiles)
+
+      #Load and clean reference profile
+      ref_profile = hpo.clean_profile_hard(opts["ref_prof"])
+      hpo.load_profiles({"ref": ref_profile}, reset_stored= True)
+
+      candidate_sim_matrix, _, candidates_ids, similarities, candidate_pr_cd_term_matches, candidate_terms_all_sims = hpo.calc_sim_term2term_similarity_matrix(ref_profile, "ref", clean_profiles, 
+              term_limit = opts["matrix_limits"][0], candidate_limit = opts["matrix_limits"][-1], sim_type = opts['sim'], bidirectional = False,
+              string_format = True, header_id = "HP")
+
+      candidate_terms_all_sims = {candidates_ids[candidate_idx]:canditate_terms_sims for candidate_idx, canditate_terms_sims in candidate_terms_all_sims.items()}
+      negative_matrix, _ = hpo.get_negative_terms_matrix(candidate_terms_all_sims, string_format = True, header_id = "HP",
+              term_limit = opts["neg_matrix_limits"][0], candidate_limit = opts["neg_matrix_limits"][-1])
+
+      candidates_sims = [[str(candidate), str(value)] for candidate, value in similarities["ref"].items()]
+
+
+      ref_profile_phenIDX_and_code = list(enumerate([hpo.translate_name(row[0]) for row in candidate_sim_matrix[1:]]))
+      stEngine_sims_table = [[0] * (len(row)-1) for row in candidate_sim_matrix[1:]]
+
+      for paper_index in candidate_pr_cd_term_matches.keys():
+          paper_id = candidates_ids[paper_index]
+          for prof_phen_idx, profile_phen_code in ref_profile_phenIDX_and_code:
+              paper_matched_hpo = candidate_pr_cd_term_matches[paper_index].get(profile_phen_code, None)
+              hpo_stengine_sim_raw = papers_hpo_sims[paper_id].get(paper_matched_hpo)
+              hpo_stengine_sim = round(hpo_stengine_sim_raw, 2) if hpo_stengine_sim_raw else ""
+              stEngine_sims_table[prof_phen_idx][paper_index] = hpo_stengine_sim
+
+      stEngine_sims_table.insert(0, candidates_ids)
+      for prof_phen_idx, row in enumerate(stEngine_sims_table): row.insert(0, candidate_sim_matrix[prof_phen_idx][0])
+
+      # Sort candidates by similarity and optionally save the full sorted list
+      candidates_sims.sort(key=lambda row: float(row[1]), reverse=True)
+      if opts['get_full_sim_sorted_list']:
+        with open(opts["output_file"].replace(".html", "_sims.txt"), 'w') as f:
+          for candidate, value in sorted(similarities["ref"].items(), key=lambda pair: pair[1], reverse=True):
+            f.write("\t".join([str(candidate), str(value)])+"\n") 
+      
+      ##### DOING SOME ADDITIONAL PREPROCESSING TO MAKE TOP50 TABLE BEFORE ADDING THE DATA TO CONTAINER
+      upper_limit = opts["matrix_limits"][-1]
+      candidates_sims = candidates_sims[0:upper_limit]    
+      pubmed_ids_and_sims_df = pd.DataFrame(candidates_sims, columns=["pubmed_id", "similarity"])
+      pubmed_ids_and_titles_df = pd.DataFrame(pubmed_ids_and_titles, columns=["pubmed_id", "title", "article-type", "article-category"])
+
+      pubmed_ids_sims_and_titles = pd.merge(pubmed_ids_and_sims_df, pubmed_ids_and_titles_df, on="pubmed_id", how="inner")
+      pubmed_ids_sims_and_titles.drop(columns=["article-type", "article-category"], inplace=True) #convert back to a list of lists and add the header back
+      pubmed_ids_sims_and_titles["similarity"] = pubmed_ids_sims_and_titles["similarity"].astype(float).round(2)
+      pubmed_ids_sims_and_titles["pubmed_id"] = pubmed_ids_sims_and_titles["pubmed_id"].apply(lambda pmid: f"<a href=https://pubmed.ncbi.nlm.nih.gov/{pmid}>{pmid}</a>")
+      supp_info = pubmed_ids_sims_and_titles.values.tolist()
+      supp_info.insert(0, ["pubmed_id", "similarity", "title"])
+
+      pubmed_ids_and_titles_dict = {row[0]: row[1] for row in pubmed_ids_and_titles}
+
+      container = { "similarity_matrix": candidate_sim_matrix, 
+                  "negative_matrix": negative_matrix, 
+                  "stEngine_sims_table": stEngine_sims_table,
+                  "ont_sim_method": opts['sim'],
+                  "supp_info": supp_info}
+      
+      pickle_obj = {'container': container,
+                    'similarities': similarities,
+                    'pubmed_ids_and_titles_dict': pubmed_ids_and_titles_dict}
+      
+      if opts['use_pickle']:
+        os.makedirs(pickle_path, exist_ok = True)
+        file = open(pickle_filename, 'wb')
+        pickle.dump(pickle_obj, file)
+        file.close()
+
+  #MAKING REPORT
+  template = open(str(files('py_semtools.templates').joinpath('stEngine.txt'))).read()
+  report = Py_report_html(container, f'stEngine report', data_from_files=True)
+  report.build(template)
+  report.write(opts["output_file"])
 
 
 def main_get_sorted_profs(opts: argparse.Namespace) -> None: 
@@ -459,18 +564,36 @@ def main_get_sorted_suggestions(opts: argparse.Namespace) -> None:
                           [ontology.translate_ids([target])[0][0], target, target_number_of_hits[target]] for target in unfiltered_targets_heatmap_sort_list]
     targets_and_n_hits += [[ontology.translate_ids([target])[0][0], target, blacklisted_terms_hits[target]] for target in blacklisted_terms_hits.keys()]
 
-    #Writting output files
+    #Writting output files and making report 
     output_file_dir = os.path.dirname(options["output_file"])
     sample_name = os.path.basename(options["output_file"]).replace(".txt", "")
     
     CmdTabs.write_output_data(report_table_format, options["output_file"])
     CmdTabs.write_output_data(targets_and_n_hits, os.path.join(output_file_dir, "targets_number_of_hits.txt"))
+
+    if options["output_report"] != None:
+      blacklisted_terms_and_names = [["Code", "Term"]] + sorted([[term, ontology.translate_id(term)] for term in black_list])
+      deleted_empty_query_terms_and_names = [["Code", "Term"]] + sorted([[term, ontology.translate_id(term)] for term in deleted_empty_query_terms])
+      removed_queries_self_parentals_and_names = [["Code", "Term"]] + sorted([[term, ontology.translate_id(term)] for term in removed_queries_self_parentals])
+      deleted_query_parental_targets_terms_and_names = [["Code", "Term"]] + sorted([[term, ontology.translate_id(term)] for term in deleted_query_parental_targets_terms])
+      container = {'suggs_table': report_table_format,
+                  'targets_and_n_hits': targets_and_n_hits,
+                  'blacklisted_terms': blacklisted_terms_and_names,
+                  'deleted_empty_query_terms': deleted_empty_query_terms_and_names,
+                  'removed_queries_self_parentals': removed_queries_self_parentals_and_names,
+                  'deleted_query_parental_targets_terms': deleted_query_parental_targets_terms_and_names,
+                  'filter_parental_targets': options["filter_parental_targets"],
+                  'clean_query_terms': options["clean_query_terms"],
+                  'heatmap_color_preset': options["heatmap_color_preset"]}
+      template = open(str(files('py_semtools.templates').joinpath('comorb_sugg.txt'))).read()
+      report = Py_report_html(container, f'stEngine report', data_from_files=True)
+      report.build(template)
+      report.write(options["output_report"])
     
     if options["deleted_terms"] != None:
       CmdTabs.write_output_data([[ontology.translate_ids([term])[0][0]+f" ({term})"] for term in deleted_empty_query_terms], os.path.join(options["deleted_terms"], f"{sample_name}_deleted_empty_query_terms.txt"))
       CmdTabs.write_output_data([[ontology.translate_ids([term])[0][0]+f" ({term})"] for term in removed_queries_self_parentals], os.path.join(options["deleted_terms"], f"{sample_name}_deleted_query_self_parentals.txt"))
       CmdTabs.write_output_data([[ontology.translate_ids([term])[0][0]+f" ({term})"] for term in deleted_query_parental_targets_terms], os.path.join(options["deleted_terms"], f"{sample_name}_deleted_query_parental_targets.txt"))
-
 #########################################################################
 # FUNCTIONS
 #########################################################################
@@ -682,3 +805,27 @@ def custom_mean(values, target_terms_subset):
 def custom_mean_and_filter(items, target_terms_subset):
    values_to_calc = [values for keys, values in items if keys in target_terms_subset]
    return custom_mean(values_to_calc, target_terms_subset)
+
+def read_and_aggregate_sims(input_filename, aggregation=max):
+	data = {}
+	with open(input_filename, 'r') as file:
+		for line in file:
+			row = line.strip().split('\t')
+			paper_id = row[0]
+			phenotypes = row[1].split(',')
+			similarities = [list(map(float, sim.split(';'))) for sim in row[2].split(',')]
+
+			data[paper_id] = {}
+			for phenotype, similarity_list in zip(phenotypes, similarities):
+				data[paper_id][phenotype] = aggregation(similarity_list)
+	return data
+
+def read_stEngine_profiles(input_filename, id_col, profile_col, terms_sep=","):
+    profiles = {}
+    with open(input_filename, 'r') as file:
+        for line in file:
+            row = line.strip().split('\t')
+            profile_id = row[id_col]
+            terms = row[profile_col].split(terms_sep)
+            profiles[profile_id] = terms
+    return profiles

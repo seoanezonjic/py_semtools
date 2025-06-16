@@ -1,0 +1,64 @@
+<% 
+hsize = 20
+wsize = 20
+
+#custom_cmap = ['#ffffff', '#fffdf4', '#fefbee', '#fdf9e9', '#fcf7e4', '#fbf5e1', '#faf2dd', '#f9f0d9', '#f8eed6', '#f7ecd3', '#f6e9d0', '#f5e7cd', '#f4e5ca', '#f3e2c7', '#f2e0c4', '#f1dec2', '#f0dbbf', '#efd9bc', '#eed7ba', '#edd4b8', '#ecd2b5', '#ebd0b3', '#eacdb0', '#e9cbae', '#e8c9ac', '#e7c7a9', '#e6c4a7', '#e4c2a6', '#e1c0a6', '#debea7', '#dcbca7', '#d9baa7', '#d6b9a7', '#d3b7a7', '#d1b5a7', '#ceb3a7', '#cbb1a7', '#c9afa7', '#c6ada7', '#c3aba7', '#c1aaa7', '#bea8a7', '#bba6a7', '#b9a4a7', '#b6a2a6', '#b3a0a6', '#b19ea6', '#ae9da6', '#ac9ba5', '#a999a5', '#a697a5', '#a495a4', '#a193a4', '#9f92a3', '#9c90a3', '#998ea2', '#978ca2', '#948aa1', '#9289a1', '#8f87a0', '#8c859f', '#8a839f', '#87819e', '#85809d', '#827e9c', '#807c9c', '#7d7a9b', '#7b799a', '#787799', '#767598', '#737397', '#717297', '#6e7096', '#6c6e95', '#696d94', '#676b93', '#656992', '#626791', '#60668f', '#5d648e', '#5b628d', '#58618c', '#565f8b', '#545d8a', '#515c89', '#4f5a87', '#4c5886', '#4a5785', '#485584', '#455382', '#435281', '#415080', '#3e4e7e', '#3c4d7d', '#3a4b7b', '#37497a', '#354878', '#334677', '#304576', '#2e4374']
+custom_cmap = ["white", "yellow", "red"][::-1]
+heatmaps_config = {"legendTextScaleFontFactor":0.8, "autoScaleFont": False}
+if plotter.hash_vars['heatmap_color_preset'] == "2": heatmaps_config.update({"colorSpectrum": custom_cmap})
+%>
+
+<h1> Comorbidity suggestions report </h1>
+<p> All query HPs are shown as rows and target HPs as columns (the first ${ len(plotter.hash_vars["suggs_table"][0])-1 } most representative targets found). <br>
+Queries order is determined by the median association score (hypergeometric) with target HPs. <br>
+Targets order is determined by the number of queries associated with them. <br>
+The value of each field is the association score between the query and target HPs, measured by hypergeometric score. <br>
+</p>
+
+% if len(plotter.hash_vars["blacklisted_terms"]) > 0:
+    <p> Some query HPs were blacklisted from the analysis for visualization purposes. Click to see list <br>
+    <details>
+        ${plotter.table(id="blacklisted_terms", header=True, styled='bs', attrib = {'class' : 'table table-striped'}, text=True)}
+    </details><br><br>
+% endif
+
+% if len(plotter.hash_vars["deleted_empty_query_terms"]) > 0:
+    <p> The following ${len(plotter.hash_vars.get("deleted_empty_query_terms"))} query HPs were discarded from the analysis because they had no hits with target HPs:<br>
+    <details>
+        ${plotter.table(id="deleted_empty_query_terms", header=True, styled='bs', attrib = {'class' : 'table table-striped'}, text=True)}
+    </details><br><br>
+% else:
+        <p> No query HPs were discarded from the analysis because they had no hits with target HPs.</p>
+% endif
+
+% if len(plotter.hash_vars["removed_queries_self_parentals"]) > 0:
+    <p> The following ${len(plotter.hash_vars.get("removed_queries_self_parentals"))} query HPs were discarded from the analysis because they were parental terms of other input query HPs:<br>
+    <details>
+         ${plotter.table(id="removed_queries_self_parentals", header=True, styled='bs', attrib = {'class' : 'table table-striped'}, text=True)}
+    </details><br><br>
+% elif plotter.hash_vars['clean_query_terms']:
+    <p> No query HPs were discarded from the analysis because they were parental terms of other input query HPs.</p>
+% endif
+
+% if len(plotter.hash_vars["deleted_query_parental_targets_terms"]) > 0:
+    <p> The following ${len(plotter.hash_vars.get("deleted_query_parental_targets_terms"))} target HPs were discarded from the analysis because they were parental terms of some of the input query HPs:<br>
+    <details>
+         ${plotter.table(id="deleted_query_parental_targets_terms", header=True, styled='bs', attrib = {'class' : 'table table-striped'}, text=True)}
+    </details><br><br>
+% elif plotter.hash_vars['filter_parental_targets']:
+    <p> No target HPs were discarded from the analysis because they were parental terms of some of the input query HPs.</p>
+% endif
+${ plotter.heatmap( id="suggs_table", header=True, row_names=True, title="Association values between query and target HPOs", text=True,
+                            x_label = "score",
+                            width = len(plotter.hash_vars["suggs_table"][0])*wsize, 
+                            height = len(plotter.hash_vars["suggs_table"])*hsize,
+                            config=heatmaps_config )}
+
+</div>
+
+<div width='95%' style="padding:20px;">
+<h2> Supplementary </h2>
+The following table shows all targets HPs (with at least 1 hit to a query target) and the number of hits. <br>
+No filter has been applied to this table and no blacklist terms have been omitted. <br>
+${plotter.table(id= "targets_and_n_hits",  header=True, styled='dt', attrib =  {'class' : 'table'}, text=True)}
+</div>
