@@ -59,11 +59,11 @@ def main_stEngine(opts: argparse.Namespace) -> None:
 
     if options.get("gpu_device"): stEngine.show_gpu_information(verbose= options['verbose']) #A final check to GPU information
 
-def main_stEngine_report(options: argparse.Namespace) -> None: 
-  opts = vars(options)
-  pickle_path = os.path.join(opts['output_file'].replace(".html", ""), 'tmp')
+def main_stEngine_report(opts: argparse.Namespace) -> None: 
+  options = vars(opts)
+  pickle_path = os.path.join(options['output_file'].replace(".html", ""), 'tmp')
   pickle_filename = os.path.join(pickle_path, 'similitudes.pckl')
-  if os.path.exists(pickle_filename) and opts['use_pickle']:
+  if os.path.exists(pickle_filename) and options['use_pickle']:
       print("Pickle does exist, skipping calculations and only generating report")
       file = open(pickle_filename, 'rb')
       data = pickle.load(file)
@@ -74,32 +74,32 @@ def main_stEngine_report(options: argparse.Namespace) -> None:
 
   else:
       print("Pickle does not exist or --use_pickle not used, so doing similarity calculations")
-      papers_hpo_sims = read_and_aggregate_sims(opts['input_file'], aggregation = max)
-      with open(opts["pubmed_ids_and_titles"]) as f: pubmed_ids_and_titles = [line.rstrip().split("\t") for line in f]
+      papers_hpo_sims = read_and_aggregate_sims(options['input_file'], aggregation = max)
+      with open(options["pubmed_ids_and_titles"]) as f: pubmed_ids_and_titles = [line.rstrip().split("\t") for line in f]
 
       # Load ontology and precompute it
-      opts['ontology'] = get_ontology_file(opts['ontology'], ONTOLOGY_INDEX, ONTOLOGIES)
-      hpo = Ontology(file = opts['ontology'], load_file = True)
+      options['ontology'] = get_ontology_file(options['ontology'], ONTOLOGY_INDEX, ONTOLOGIES)
+      hpo = Ontology(file = options['ontology'], load_file = True)
       hpo.precompute()
 
       # Load and clean documents profiles
-      documents_profiles = read_stEngine_profiles(opts['input_file'], opts['id_col'], opts['ont_col'], opts['separator'])
-      clean_hard = not opts['hard_check']
+      documents_profiles = read_stEngine_profiles(options['input_file'], options['id_col'], options['ont_col'], options['separator'])
+      clean_hard = not options['hard_check']
       for doc_id, terms in documents_profiles.items():
         hpo.add_profile(doc_id, terms=terms, clean_hard=clean_hard)
       clean_profiles = copy.deepcopy(hpo.profiles)
 
       #Load and clean reference profile
-      ref_profile = hpo.clean_profile_hard(opts["ref_prof"])
+      ref_profile = hpo.clean_profile_hard(options["ref_prof"])
       hpo.load_profiles({"ref": ref_profile}, reset_stored= True)
 
       candidate_sim_matrix, _, candidates_ids, similarities, candidate_pr_cd_term_matches, candidate_terms_all_sims = hpo.calc_sim_term2term_similarity_matrix(ref_profile, "ref", clean_profiles, 
-              term_limit = opts["matrix_limits"][0], candidate_limit = opts["matrix_limits"][-1], sim_type = opts['sim'], bidirectional = False,
+              term_limit = options["matrix_limits"][0], candidate_limit = options["matrix_limits"][-1], sim_type = options['sim'], bidirectional = False,
               string_format = True, header_id = "HP")
 
       candidate_terms_all_sims = {candidates_ids[candidate_idx]:canditate_terms_sims for candidate_idx, canditate_terms_sims in candidate_terms_all_sims.items()}
       negative_matrix, _ = hpo.get_negative_terms_matrix(candidate_terms_all_sims, string_format = True, header_id = "HP",
-              term_limit = opts["neg_matrix_limits"][0], candidate_limit = opts["neg_matrix_limits"][-1])
+              term_limit = options["neg_matrix_limits"][0], candidate_limit = options["neg_matrix_limits"][-1])
 
       candidates_sims = [[str(candidate), str(value)] for candidate, value in similarities["ref"].items()]
 
@@ -120,13 +120,13 @@ def main_stEngine_report(options: argparse.Namespace) -> None:
 
       # Sort candidates by similarity and optionally save the full sorted list
       candidates_sims.sort(key=lambda row: float(row[1]), reverse=True)
-      if opts['get_full_sim_sorted_list']:
-        with open(opts["output_file"].replace(".html", "_sims.txt"), 'w') as f:
+      if options['get_full_sim_sorted_list']:
+        with open(options["output_file"].replace(".html", "_sims.txt"), 'w') as f:
           for candidate, value in sorted(similarities["ref"].items(), key=lambda pair: pair[1], reverse=True):
             f.write("\t".join([str(candidate), str(value)])+"\n") 
       
       ##### DOING SOME ADDITIONAL PREPROCESSING TO MAKE TOP50 TABLE BEFORE ADDING THE DATA TO CONTAINER
-      upper_limit = opts["matrix_limits"][-1]
+      upper_limit = options["matrix_limits"][-1]
       candidates_sims = candidates_sims[0:upper_limit]    
       pubmed_ids_and_sims_df = pd.DataFrame(candidates_sims, columns=["pubmed_id", "similarity"])
       pubmed_ids_and_titles_df = pd.DataFrame(pubmed_ids_and_titles, columns=["pubmed_id", "title", "article-type", "article-category"])
@@ -143,14 +143,14 @@ def main_stEngine_report(options: argparse.Namespace) -> None:
       container = { "similarity_matrix": candidate_sim_matrix, 
                   "negative_matrix": negative_matrix, 
                   "stEngine_sims_table": stEngine_sims_table,
-                  "ont_sim_method": opts['sim'],
+                  "ont_sim_method": options['sim'],
                   "supp_info": supp_info}
       
       pickle_obj = {'container': container,
                     'similarities': similarities,
                     'pubmed_ids_and_titles_dict': pubmed_ids_and_titles_dict}
       
-      if opts['use_pickle']:
+      if options['use_pickle']:
         os.makedirs(pickle_path, exist_ok = True)
         file = open(pickle_filename, 'wb')
         pickle.dump(pickle_obj, file)
@@ -160,7 +160,7 @@ def main_stEngine_report(options: argparse.Namespace) -> None:
   template = open(str(files('py_semtools.templates').joinpath('stEngine.txt'))).read()
   report = Py_report_html(container, f'stEngine report', data_from_files=True)
   report.build(template)
-  report.write(opts["output_file"])
+  report.write(options["output_file"])
 
 
 def main_get_sorted_profs(opts: argparse.Namespace) -> None: 
