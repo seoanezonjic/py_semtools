@@ -1,9 +1,9 @@
 <div style="width: 90%; background-color:#ecf0f1; margin: 0 auto;"> 
 	<h1 style="text-align: center; background-color:#d6eaf8">Similarity matrix</h1>
-	${plotter.similarity_matrix_plot( id= "similarity_matrix", width=width, height=height, header= True, row_names= True, x_label="Similarity", title="Profiles comparison")}
+	${plotter.similarity_matrix_plot( id= "similarity_matrix", header= True, row_names= True, x_label="Similarity", title="Profiles comparison")}
 </div>
 
 <div style="width: 90%; background-color:#ecf0f1; margin: 0 auto;"> 
 	<h1 style="text-align: center; background-color:#d6eaf8">Negative terms matrix</h1>
-	${plotter.similarity_matrix_plot( id= "negative_matrix", width=width, height=height, header= True, row_names= True, x_label="Counts", title="Negative matrix terms" )}
+	${plotter.similarity_matrix_plot( id= "negative_matrix", header= True, row_names= True, x_label="Counts", title="Negative matrix terms" )}
 </div>
