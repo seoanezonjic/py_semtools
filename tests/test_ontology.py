@@ -638,7 +638,7 @@ class TestOBOFunctionalities(unittest.TestCase):
         tmp_folder = os.path.join(ROOT_PATH, "tmp", "similarity_cluster")
         os.makedirs(tmp_folder, exist_ok=True)
 
-        options = {"sim_thr": 0.3}
+        options = {"sim_thr": 0.3, "cl_size_factor": 1}
         method_name = "resnik"
         profiles = {"A": ["ChildA1", "ChildA2"], "B": ["ChildB1", "ChildB2"], "C": ["ChildA1", "Parental"], "D": ["ChildB1","Parental"], "E": ["Parental"], "F": ["ChildA1"]}
         self.branched.precompute()

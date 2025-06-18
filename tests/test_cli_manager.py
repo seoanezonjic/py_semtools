@@ -9,6 +9,7 @@ DATA_TEST_PATH = os.path.join(ONTOLOGY_PATH, 'input_scripts')
 REF_DATA_PATH=os.path.join(ONTOLOGY_PATH ,'ref_output_scripts')
 GET_SORTED_SUGG_PATH = os.path.join(ROOT_PATH, 'data', 'get_sorted_suggestions')
 GET_SORTED_PROFS_PATH = os.path.join(ROOT_PATH, 'data', 'get_sorted_profs')
+ST_ENGINE_REPORT_PATH = os.path.join(ROOT_PATH, 'data', 'st_engine_report')
 
 #THIS IS NOT THE PROPER WAY TO DO IT, BUT SOMETHING IS FAILING AT TRYING TO GET site.USER_BASE ontologies from the group, ask PSZ later
 HPO="/mnt/home/soft/soft_bio_267/programs/x86_64/python_cache/semtools/ontologies/HPO.obo" 
@@ -33,6 +34,14 @@ def profiles():
 @pytest.fixture
 def omim_profiles():
     return os.path.join(ROOT_PATH, "demo_examples", "data", "profiles.txt")
+
+@pytest.fixture
+def abs_profiles():
+    return os.path.join(ST_ENGINE_REPORT_PATH, "abs_profiles.txt")
+
+@pytest.fixture
+def pmids_and_titles():
+    return os.path.join(ST_ENGINE_REPORT_PATH, "pmids_and_titles.txt")
 
 @pytest.fixture
 def ref_profile():
@@ -163,12 +172,7 @@ def test_profile_expansion(tmp_dir,enrichment_ontology,profiles):
     expected_result =  CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'expanded_profiles'))
     assert expected_result == test_result
 
-def test_translate(tmp_dir,enrichment_ontology,profiles): 
-    @capture_stdout
-    def script2test(lsargs):
-        with pytest.raises(SystemExit):
-            return py_semtools.semtools(lsargs)
-        
+def test_translate(tmp_dir,enrichment_ontology,profiles):         
     input_file_terms = os.path.join(DATA_TEST_PATH, 'terms')
     output_file = os.path.join(tmp_dir, 'translated_profiles')
     output_file_codes = os.path.join(tmp_dir, 'translated_profiles_codes')
@@ -186,7 +190,7 @@ def test_translate(tmp_dir,enrichment_ontology,profiles):
     assert expected_result == test_result
 
     args = f"-i {input_file_terms} -O {enrichment_ontology} -l codes".split(" ")
-    _, printed = script2test(args)
+    _, printed = pysemtools(args)
     test_result = strng2table(printed)
     expected_result =  CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'translated_terms_codes'))
     assert expected_result == test_result
@@ -388,6 +392,18 @@ def test_get_sorted_suggestions():
     returned = CmdTabs.load_input_data(returned_file_filter_both_parentals)
     assert expected == returned
 
+    #Asserting that html report is generated when using the --ouput_report option
+    tmp_dir = "./tests/tmp"
+    os.makedirs(tmp_dir, exist_ok=True)
+    output_file = os.path.join(tmp_dir, 'sugg_report.html')
+    
+    returned_file_filter_both_parentals = os.path.join(GET_SORTED_SUGG_PATH, 'returned', 'filter_target_and_query_parentals.txt')
+    args6 = f"-q {query_hps_file} -r {relations_file} -O {ontology_file} -o {returned_file_filter_both_parentals} -f -c --output_report {output_file}"
+    args_list6 = args6.split(" ")
+    py_semtools.get_sorted_suggestions(args_list6)
+    assert os.path.exists(output_file)
+    shutil.rmtree(tmp_dir, ignore_errors=True)
+
     #Remove the returned files
     path_to_remove_files = os.path.join(GET_SORTED_SUGG_PATH, 'returned')
     for file in os.listdir(path_to_remove_files):
@@ -410,3 +426,23 @@ def test_get_sorted_profs(omim_profiles, ref_profile):
     assert os.path.exists(f"{os.path.join(GET_SORTED_PROFS_PATH, 'report.txt')}")
 
     shutil.rmtree(f"{os.path.join(GET_SORTED_PROFS_PATH)}")
+
+
+################################################## TESTING ST_ENGINE_REPORT BINARY #######################################################
+
+def test_stEngine_report(abs_profiles, pmids_and_titles, ref_profile):
+    tmp_dir = "./tests/tmp"
+    os.makedirs(tmp_dir, exist_ok=True)
+    output_file = os.path.join(tmp_dir, 'report.html')
+    args = f"-r {ref_profile} -i {abs_profiles} -d 0 -p 1 -S , -O {HPO} -L 35,50 -N 20,50 -o {output_file} --pubmed_ids_and_titles {pmids_and_titles} --sim nweric --get_full_sim_sorted_list --use_pickle"
+    list_of_args = args.split(" ")
+    print(list_of_args)
+
+    #Testing to check if calculations can be executed and report done without errors. Just checking that file exist
+    py_semtools.stEngine_report(list_of_args)
+
+    assert os.path.exists(output_file)
+    assert os.path.exists(output_file.replace('.html', '_sims.txt'))
+    assert os.path.exists(output_file.replace('.html', '/tmp/similitudes.pckl'))
+
+    shutil.rmtree(tmp_dir, ignore_errors=True)
