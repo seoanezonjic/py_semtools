@@ -280,7 +280,7 @@ def stEngine_report(args = None):
                         help="Use it if you want to save (if first time)/use the cached version (if executed before) and just launch the report")                                        
     parser.add_argument("--get_full_sim_sorted_list", dest="get_full_sim_sorted_list", default= False, action="store_true",
                         help="Use it to get the full sorted list of similarities between the reference profile and the input profiles")      
-    opts = parser.parse_args()
+    opts = parser.parse_args(args)
     main_stEngine_report(opts)
 
 def get_corpus_index(args = None):
