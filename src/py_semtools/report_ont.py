@@ -1,16 +1,15 @@
+import sys
 from py_report_html import Py_report_html
 from importlib.resources import files
 import numpy as np
 from collections import defaultdict
-from py_semtools.cons import Cons
 import py_exp_calc.exp_calc as pxc
 import networkx as nx
 
 ########################################
 ## Monkey Patching Methods
 ########################################
-
-Py_report_html.additional_templates.append(str(files(Cons.TEMPLATES).joinpath('')))
+Py_report_html.additional_templates.append(str(files('py_semtools').joinpath('templates'))) # https://github.com/python/cpython/issues/106614
 
 ##### METHODS FOR ONTOPLOT
 
