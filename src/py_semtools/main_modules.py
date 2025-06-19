@@ -18,8 +18,6 @@ from py_report_html import Py_report_html
 #For get_pubmed_index
 import numpy as np
 
-from py_semtools.cons import Cons
-
 ONTOLOGY_INDEX = str(files('py_semtools.external_data').joinpath('ontologies.txt'))
 REPORT_TEMPLATE = str(files('py_semtools.templates').joinpath('report.txt'))
 #https://pypi.org/project/platformdirs/
