@@ -1,10 +1,12 @@
 import sys
-from py_report_html import Py_report_html
-from importlib.resources import files
-import numpy as np
 from collections import defaultdict
-import py_exp_calc.exp_calc as pxc
+from importlib.resources import files
+
+import numpy as np
 import networkx as nx
+
+import py_exp_calc.exp_calc as pxc
+from py_report_html import Py_report_html
 
 ########################################
 ## Monkey Patching Methods

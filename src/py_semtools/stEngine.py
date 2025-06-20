@@ -1,9 +1,6 @@
 import os
 import time
-import torch
-from torch import cuda
 import gc
-from sentence_transformers import SentenceTransformer, util
 import gzip, pickle
 import json
 import numpy as np
@@ -19,50 +16,52 @@ class STengine:
         
 
     def show_gpu_information(self, verbose = False):
+        import torch # Moving import here to avoid long import time
         devices = [int(device.replace("cuda:","")) for device in self.gpu_devices]
         if verbose:
           print("-"*30+"\nGeneral information about all the available GPUs:")
-          self.show_general_global_gpu_information()
+          self.show_general_global_gpu_information(torch)
           print("Specific information about each GPU device:")
           for device_number in devices:
-              self.show_gpu_type_specific_information(device_number)
+              self.show_gpu_type_specific_information(device_number, torch)
           print("-"*30)
 
-    def show_general_global_gpu_information(self):
+    def show_general_global_gpu_information(self, torch):
         print(f"LOG: Are there any GPU available: {torch.cuda.is_available()}")
         print(f"LOG: Number of GPUs available: {torch.cuda.device_count()}")
         print(f"LOG: GPUs UUIDs: {torch.cuda._raw_device_uuid_nvml()}")
         print(f"LOG: CUDA version: {torch.version.cuda}")
         print(f"LOG: Current CUDA device: {torch.cuda.current_device()}")
 
-    def show_gpu_type_specific_information(self, device_number):
+    def show_gpu_type_specific_information(self, device_number, torch):
         print(f"LOG: CUDA device Number: {device_number}")
         print(f"LOG: CUDA device ID: {torch.cuda._get_device_index(device_number)}")
         print(f"LOG: CUDA device name: {torch.cuda.get_device_name(device_number)}")
         print(f"LOG: CUDA device object: {torch.cuda.device(device_number)}")
         print(f"LOG: CUDA device properties: {torch.cuda.get_device_properties(device_number)}")
-        self.show_gpu_specific_stats(device_number)
-        self.show_gpu_specific_memory_summary(device_number)
+        self.show_gpu_specific_stats(device_number, torch)
+        self.show_gpu_specific_memory_summary(device_number, torch)
 
-    def show_gpu_specific_stats(self, device_number):        
-        self.show_gpu_specific_memory_stats(device_number) 
-        self.show_gpu_specific_usage(device_number)
+    def show_gpu_specific_stats(self, device_number, torch):        
+        self.show_gpu_specific_memory_stats(device_number, torch) 
+        self.show_gpu_specific_usage(device_number, torch)
 
-    def show_gpu_specific_usage(self, device_number):
+    def show_gpu_specific_usage(self, device_number, torch):
         print(f"LOG: GPU computation percentage: {torch.cuda.utilization(device_number)}")
         print(f"LOG: GPU currently active processes: {torch.cuda.list_gpu_processes(device_number)}")    
 
-    def show_gpu_specific_memory_stats(self, device_number):
+    def show_gpu_specific_memory_stats(self, device_number, torch):
         print(f"LOG: GPU memory usage: {torch.cuda.memory_usage(device_number)}")
         print(f"LOG: GPU memory allocated: {torch.cuda.memory_allocated(device_number)}")
         print(f"LOG: GPU memory reserved: {torch.cuda.memory_reserved(device_number)}")
         print(f"LOG: GPU memory max memory allocated: {torch.cuda.max_memory_allocated(device_number)}")
         print(f"LOG: GPU memory max memory reserved: {torch.cuda.max_memory_reserved(device_number)}")
 
-    def show_gpu_specific_memory_summary(self, device_number):
+    def show_gpu_specific_memory_summary(self, device_number, torch):
         print(f"LOG: GPU memory summary:\n{torch.cuda.memory_summary(device_number)}\n")
 
     def init_model(self, model_name, cache_folder = None, verbose = False):
+        from sentence_transformers import SentenceTransformer #Moving import here due to long import time
         if model_name != None and cache_folder != None:
             if verbose: print(f"\n-Downloading or loading model {model_name} inside path {cache_folder}")
             self.model_name = model_name
@@ -79,9 +78,10 @@ class STengine:
         return corpus_info
 
     def calculate_similarities(self, options, corpus_info):
+        from sentence_transformers import util # Moving import here to avoid long import time
         if options.get("output_file"):
           for query_basename, query_info in self.queries_content.items():
-            best_matches = self.calculate_similarity(query_info, corpus_info, options)
+            best_matches = self.calculate_similarity(query_info, corpus_info, options, util=util)
             if options['print_relevant_pairs']: self.print_similarities(query_info, corpus_info, best_matches, options)
             output_filename = os.path.join(options["output_file"],query_basename)
             self.save_similarities(output_filename, best_matches, options)
@@ -206,7 +206,7 @@ class STengine:
                 warnings.warn(f"Error reading line in file {os.path.basename(file)}: {line}")
       return pubmed_index, n_papers
 
-    def calculate_similarity(self, query_info, corpus_info, options):
+    def calculate_similarity(self, query_info, corpus_info, options, util):
         corpus_ids = corpus_info["textIDs"]
         corpus_embeddings = corpus_info["embeddings"]
 
@@ -214,9 +214,9 @@ class STengine:
         query_embeddings = query_info["embeddings"]
 
         if options["gpu_device"] != None and options["use_gpu_for_sim_calculation"]:
-            search = self.calculate_similarity_gpu(query_embeddings, corpus_embeddings, options["top_k"], options["verbose"], options["order"])
+            search = self.calculate_similarity_gpu(query_embeddings, corpus_embeddings, options["top_k"], util, options['cuda'], options['from_numpy'], options["verbose"], options["order"])
         else:
-            search = self.calculate_similarity_cpu(query_embeddings, corpus_embeddings, options["top_k"], options["verbose"], options["order"])
+            search = self.calculate_similarity_cpu(query_embeddings, corpus_embeddings, options["top_k"], util, options["verbose"], options["order"])
 
         if options["order"] == "corpus-query":
             matches = self.find_best_matches(corpus_ids, query_ids, search)
@@ -224,26 +224,26 @@ class STengine:
             matches = self.find_best_matches(query_ids, corpus_ids, search)
         return matches
 
-    def calculate_similarity_cpu(self, query_embeddings, corpus_embeddings, top_k, verbose=False, order="corpus-query"):
+    def calculate_similarity_cpu(self, query_embeddings, corpus_embeddings, top_k, util, verbose=False, order="corpus-query"):
       if verbose: print(f"----Calculating similarities using {os.environ.get('MKL_NUM_THREADS') or os.environ.get('OMP_NUM_THREADS') or 1} CPUs")
       start = time.time()
-      results = self.make_single_similarity_calculation(corpus_embeddings, query_embeddings, top_k=top_k, gpu_calc=False, order=order)
+      results = self.make_single_similarity_calculation(corpus_embeddings, query_embeddings, top_k=top_k, util=util, gpu_calc=False, order=order)
       if verbose: print(f"----Time to calculate similarities with CPU: {time.time() - start} seconds")
       return results
 
-    def calculate_similarity_gpu(self, query_embeddings, corpus_embeddings, top_k, verbose=False, order="corpus-query"):
+    def calculate_similarity_gpu(self, query_embeddings, corpus_embeddings, top_k, util, cuda, from_numpy, verbose=False, order="corpus-query"):
       if verbose: print("----Calculating similarities with GPU")
       start = time.time()
-      corpus_embeddings = torch.from_numpy(corpus_embeddings).to("cuda")
+      corpus_embeddings = from_numpy(corpus_embeddings).to("cuda")
       corpus_embeddings = util.normalize_embeddings(corpus_embeddings)
-      query_embeddings = torch.from_numpy(query_embeddings).to("cuda")
+      query_embeddings = from_numpy(query_embeddings).to("cuda")
       query_embeddings = util.normalize_embeddings(query_embeddings)
-      results = self.make_single_similarity_calculation(corpus_embeddings, query_embeddings, top_k=top_k, gpu_calc=True, order=order)
+      results = self.make_single_similarity_calculation(corpus_embeddings, query_embeddings, top_k=top_k, util=util, gpu_calc=True, order=order)
       del corpus_embeddings; del query_embeddings; gc.collect(); cuda.empty_cache()
       if verbose: print(f"----Time to calculate similarities with GPU: {time.time() - start} seconds")
       return results
 
-    def make_single_similarity_calculation(self, corpus_embeddings, query_embeddings, top_k, gpu_calc=False, order="corpus-query"):
+    def make_single_similarity_calculation(self, corpus_embeddings, query_embeddings, top_k, util, gpu_calc=False, order="corpus-query"):
       sim_function = util.dot_score if gpu_calc else util.cos_sim
 
       if order == "query-corpus":
@@ -284,6 +284,9 @@ class STengine:
                   f.write(f"{kwdID}\t{textID}\t{score}\n")
 
     def process_corpus_get_similarities(self, corpus_filenames, options, verbose=False):
+        from torch import cuda, from_numpy # Moving import here to avoid long import time
+        options['cuda'] = cuda
+        options['from_numpy'] = from_numpy
         count = 0
         corpus_info = None
         all_textIDs = []; all_corpus = []; total_papers = 0 # Text accumulation variables
