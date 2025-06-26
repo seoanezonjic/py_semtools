@@ -9,7 +9,8 @@ import numpy as np
 from collections import defaultdict, Counter
 import networkx as nx
 import entrezpy.esearch.esearcher
-from concurrent.futures import ProcessPoolExecutor as PoolExecutor
+from py_semtools.parallelizer import Parallelizer
+
 from functools import partial
 from collections import defaultdict, deque
 import time
@@ -30,7 +31,7 @@ class Ontology:
     allowed_calcs = {'ics': ['resnik', 'resnik_observed', 'seco', 'zhou', 'sanchez'], 'sims': ['resnik', 'lin', 'jiang_conrath', 'eric', 'neric', 'nweric', 'erlin']}
     
     def __init__(self, file= None, load_file= False, removable_terms= [], build= True, file_format= None, extra_dicts= []):
-        self.threads = 2
+        self.threads = 1
         self.terms = {}
         self.ancestors_index = {}
         self.descendants_index = {}
@@ -506,6 +507,9 @@ class Ontology:
     def get_MICA_from_pair(self, pair, ic_type = 'resnik'):
         mica = self.compute_MICA(self.compute_LCA(*pair, docopy = False), ic_type = ic_type)
         return mica
+
+    def get_MICA_from_pairs(self, pairs, ic_type = 'resnik'):
+        return [[pair, self.get_MICA_from_pair(pair, ic_type = ic_type)] for pair in pairs]
 
     # Find the IC of the Most Index Content shared Ancestor (MICA) of two given terms
     # ===== Parameters
@@ -1335,16 +1339,30 @@ class Ontology:
         return pair_index
 
     def get_mica_index_from_profiles(self, pair_index, ic_type = 'resnik', sim_type = 'resnik'):
-        for pair in pair_index.keys():
-            value = self.get_MICA_from_pair(pair, ic_type = ic_type)
-            #if term == None: value = False  # We use False to save that the operation was made but there is not mica value
-            tA, tB = pair
-            self.add2nestHashDef(self.mica_index, tA, tB, value)
-            self.add2nestHashDef(self.mica_index, tB, tA, value)
-            value = self.get_similarity(tA, tB, sim_type = sim_type, ic_type = ic_type, mica_index = False)
-            if value == None: value = 0
-            self.add2nestHashDef(self.sim_index, tA, tB, value)
-            self.add2nestHashDef(self.sim_index, tB, tA, value)
+        if self.threads > 1:
+            manager = Parallelizer(self.threads, 300000) #threads, chunk size 45 000
+            chunks = manager.get_chunks(list(pair_index.keys()))
+            print(len(chunks))
+            items = [[self.get_MICA_from_pairs, [[chunk], {'ic_type': ic_type}]] for chunk in chunks]
+            for chunk_results in manager.execute(items):
+                for res in chunk_results:
+                    pair, value = res
+                    self.calculateNpopulate_MICA_sim_indexes(pair, value, ic_type, sim_type)
+        else:
+            for pair in pair_index.keys():
+                value = self.get_MICA_from_pair(pair, ic_type = ic_type)
+                #if term == None: value = False  # We use False to save that the operation was made but there is not mica value
+                self.calculateNpopulate_MICA_sim_indexes(pair, value, ic_type, sim_type)
+
+    def calculateNpopulate_MICA_sim_indexes(self, pair, value, ic_type, sim_type):
+        tA, tB = pair
+        self.add2nestHashDef(self.mica_index, tA, tB, value)
+        self.add2nestHashDef(self.mica_index, tB, tA, value)
+        value = self.get_similarity(tA, tB, sim_type = sim_type, ic_type = ic_type, mica_index = False)
+        if value == None: value = 0
+        self.add2nestHashDef(self.sim_index, tA, tB, value)
+        self.add2nestHashDef(self.sim_index, tB, tA, value)
+
 
     # Compare internal stored profiles against another set of profiles. If an external set is not provided, internal profiles will be compared with itself 
     # ===== Parameters

@@ -1,6 +1,8 @@
 import sys
-from concurrent.futures import ProcessPoolExecutor
+#from concurrent.futures import ProcessPoolExecutor
+from loky import get_reusable_executor
 from os import getpid
+import inspect
 from loguru import logger
 logger.remove(0)
 
@@ -77,11 +79,13 @@ class Parallelizer:
         else:
             child_logger = self.workers_logger[pID]
 
-        kwargs['logger'] = child_logger       
-        task(*args, **kwargs)         
-
+        if 'logger' in inspect.getfullargspec(task).args:
+            kwargs['logger'] = child_logger # check if method arguments include the logger argument to pass the object
+        res = task(*args, **kwargs)         
         child_logger.success("Chunk finished succesfully")
+        return res
     
     def execute(self, items):
-        with ProcessPoolExecutor(max_workers=self.n_processes) as executor:
-            for result in executor.map(self.worker, items): return result
+        executor = get_reusable_executor(max_workers=self.n_processes)
+        results = executor.map(self.worker, items)
+        return results
