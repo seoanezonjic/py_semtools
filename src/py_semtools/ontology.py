@@ -1322,16 +1322,11 @@ class Ontology:
         pair_index = {}
         if same_profiles: # in this way we can save time for one half of the comparations
             profiles = list(profiles_A.values())
-            dropped_profile = []
-            while len(profiles) > 0:
-                profile_A = profiles[-1]
-                if len(profiles) > 1:
-                    for profile_B in profiles:
-                        for pair in itertools.product(profile_A, profile_B):
-                            pair_index[tuple(sorted(pair))] = True
-                dropped_profile = profiles.pop()
-            for pair in itertools.product(dropped_profile, dropped_profile):
-                pair_index[tuple(sorted(pair))] = True                
+            total = len(profiles)
+            for i, profile_A in enumerate(profiles):
+                for j in range(i, total): # get profile to compare with itself and with the others. When a profile is used is not checked again
+                    for pair in itertools.product(profile_A, profiles[j]):
+                        pair_index[tuple(sorted(pair))] = True
         else:
             for profile_A in  profiles_A.values():
                 for profile_B in profiles_B.values():
