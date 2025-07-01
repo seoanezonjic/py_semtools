@@ -10,7 +10,6 @@ class Parallelizer:
     def __init__(self, n_processes, chunk_size):
         self.n_processes = n_processes
         self.chunk_size = chunk_size
-        self.workers_logger = {}
 
     def get_chunks(self, items, workload_balance = None, workload_function = None):
         one_worker_round = False
@@ -71,18 +70,24 @@ class Parallelizer:
         task, all_args = arguments
         args, kwargs = all_args
         pID = getpid()
-        if self.workers_logger.get(pID) == None: 
-            logger.add(f"./logs/{pID}.log", format="{level} : {time} : {message}: {process}", filter=lambda record: record["extra"]["task"] == f"{pID}")
-            child_logger = logger.bind(task=f"{pID}")
-            child_logger.info("Starting chunk process")
-            self.workers_logger[pID] = child_logger
-        else:
-            child_logger = self.workers_logger[pID]
+        logger_id = logger.add(f"./logs/{pID}.log", 
+                format="{level} : {time} : {message}: {process}", 
+                filter=lambda record: record["extra"]["task"] == f"{pID}"
+            )
+        child_logger = logger.bind(task=f"{pID}")
+        child_logger.info("Starting chunk process")
+        child_logger.info(f"N elements to process {len(args[0])}")
 
+        # check if method arguments include the logger argument to pass the object
         if 'logger' in inspect.getfullargspec(task).args:
-            kwargs['logger'] = child_logger # check if method arguments include the logger argument to pass the object
+            child_logger.info("Injecting logger in task")
+            kwargs['logger'] = child_logger
+
         res = task(*args, **kwargs)         
         child_logger.success("Chunk finished succesfully")
+        # We create and remove a logger instance to remove all logged 
+        # records and avoid that they are written when a worker is used several times 
+        logger.remove(logger_id) 
         return res
     
     def execute(self, items):
