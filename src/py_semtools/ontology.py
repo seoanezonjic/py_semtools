@@ -13,7 +13,6 @@ from py_semtools.parallelizer import Parallelizer
 
 from functools import partial
 from collections import defaultdict, deque
-import time
 import itertools
 import re
 import py_exp_calc.exp_calc as pxc
@@ -43,6 +42,10 @@ class Ontology:
         self.meta = {}
         self.max_freqs = {'struct_freq' : -1.0, 'observed_freq' : -1.0, 'max_depth': -1.0}
         self.dicts = {}
+        self.dicts['prof_IC_struct'] = {}
+        self.dicts['prof_IC_observ'] = {}
+        self.dicts['string2code'] = {}
+        self.dicts['code2string'] = {}
         self.profiles = {}
         self.items = {}
         self.term_paths = {}
@@ -66,8 +69,6 @@ class Ontology:
             elif fformat != None:
                 warnings.warn('Format not allowed. Loading process will not be performed')
             if build: self.precompute()
-        self.dicts['prof_IC_struct'] = {}
-        self.dicts['prof_IC_observ'] = {}
         self.clustering = {}
 
     #############################################
@@ -75,9 +76,19 @@ class Ontology:
     #############################################
 
     def precompute(self):
+        self.get_index_ids()
         self.get_dag()
         self.get_index_frequencies()
         self.calc_term_levels(calc_paths = True)
+
+    def get_index_ids(self):
+        string2code = self.dicts['string2code']
+        code2string = self.dicts['code2string']
+        for t_id in self.each():
+            ont_name, code = t_id.split(":")
+            code = int(code)
+            string2code[t_id] = code
+            code2string[code] = t_id
 
     def get_dag(self):
         relations = []
@@ -508,8 +519,12 @@ class Ontology:
         mica = self.compute_MICA(self.compute_LCA(*pair, docopy = False), ic_type = ic_type)
         return mica
 
-    def get_MICA_from_pairs(self, pairs, ic_type = 'resnik'):
-        return [[pair, self.get_MICA_from_pair(pair, ic_type = ic_type)] for pair in pairs]
+    def get_MICA_from_pairs(self, pairs, ic_type = 'resnik', indexed = False):
+        if indexed:             
+            c2s = self.dicts['code2string']
+            pairs = [(c2s[a], c2s[b]) for a, b in pairs ]
+        results = [[pair, self.get_MICA_from_pair(pair, ic_type = ic_type)] for pair in pairs]
+        return results
 
     # Find the IC of the Most Index Content shared Ancestor (MICA) of two given terms
     # ===== Parameters
@@ -1340,14 +1355,18 @@ class Ontology:
 
     def get_mica_index_from_profiles(self, pair_index, ic_type = 'resnik', sim_type = 'resnik'):
         if self.threads > 1:
-            manager = Parallelizer(self.threads, 300000) #threads, chunk size 45 000
-            chunks = manager.get_chunks(list(pair_index.keys()))
-            print(len(chunks))
-            items = [[self.get_MICA_from_pairs, [[chunk], {'ic_type': ic_type}]] for chunk in chunks]
-            for chunk_results in manager.execute(items):
+            manager = Parallelizer(self.threads, 5000000) #threads, chunk size 0 to split all the tasks in one worker round
+            pairs = list(pair_index.keys())
+            s2c = self.dicts['string2code']
+            pairs = [(s2c[a], s2c[b]) for a, b in pairs ]
+            chunks = manager.get_chunks(pairs)
+            items = [[[chunk], {'ic_type': ic_type, 'indexed': True}] for chunk in chunks]
+            #start = time.time()  
+            for chunk_results in manager.execute(items, self.get_MICA_from_pairs):
                 for res in chunk_results:
                     pair, value = res
                     self.calculateNpopulate_MICA_sim_indexes(pair, value, ic_type, sim_type)
+            #print(f"Parallel {time.time() - start}")
         else:
             for pair in pair_index.keys():
                 value = self.get_MICA_from_pair(pair, ic_type = ic_type)

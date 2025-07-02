@@ -238,6 +238,7 @@ def main_semtools(opts: argparse.Namespace) -> None:
         extra_dicts.append(['xref', {'select_regex': eval('r"'+options['keyword']+'"'), 'store_tag': 'tag', 'multiterm': True}]) 
     ontology = Ontology(file = options['ontology_file'], load_file = True, extra_dicts = extra_dicts)
     ontology.precompute()
+
     ontology.threads = options['processes']
 
     if options['root'] != None:

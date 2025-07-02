@@ -1,6 +1,8 @@
 import sys
+import time
 #from concurrent.futures import ProcessPoolExecutor
 from loky import get_reusable_executor
+import loky
 from os import getpid
 import inspect
 from loguru import logger
@@ -67,8 +69,10 @@ class Parallelizer:
         return item_workload
 
     def worker(self, arguments):
-        task, all_args = arguments
-        args, kwargs = all_args
+        #task, all_args = arguments
+        #args, kwargs = all_args
+        task = getattr(loky, "task_func")
+        args, kwargs = arguments
         pID = getpid()
         logger_id = logger.add(f"./logs/{pID}.log", 
                 format="{level} : {time} : {message}: {process}", 
@@ -83,14 +87,38 @@ class Parallelizer:
             child_logger.info("Injecting logger in task")
             kwargs['logger'] = child_logger
 
+        start = time.time()  
         res = task(*args, **kwargs)         
-        child_logger.success("Chunk finished succesfully")
+        elapsed = time.time() - start
+        child_logger.success(f"Chunk finished succesfully. Time(s): {elapsed}")
         # We create and remove a logger instance to remove all logged 
         # records and avoid that they are written when a worker is used several times 
         logger.remove(logger_id) 
         return res
     
-    def execute(self, items):
-        executor = get_reusable_executor(max_workers=self.n_processes)
+
+    def execute(self, items, task):
+        pID = getpid()
+        logger_id = logger.add("./logs/manager.log", 
+            format="{level} : {time} : {message}: {process}", 
+            filter=lambda record: record["extra"]["task"] == 'manager'
+        )
+        child_logger = logger.bind(task="manager")
+        child_logger.info("Starting manager")      
+
+        def initializer(t):
+            loky.task_func = t
+
+        executor = get_reusable_executor(
+            max_workers=self.n_processes,
+            initializer=initializer,
+            initargs=(task,), # The extra comma is needed in order to keep a tuple with a single element, otherwise python removes de tuple container
+            context="loky",
+            reuse=True
+        )
+        child_logger.info("Pool executor initialized")
+        start = time.time()  
         results = executor.map(self.worker, items)
+        elapsed = time.time() - start
+        child_logger.info(f"Pool executor processing finished. Time(s): {elapsed}")      
         return results

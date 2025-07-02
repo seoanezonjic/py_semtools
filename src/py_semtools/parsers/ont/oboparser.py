@@ -190,7 +190,7 @@ class OboParser(FileParser):
         ontology.descendants_index = cls.descendants_index
         ontology.reroot = cls.reroot
         ontology.structureType = cls.structureType
-        ontology.dicts = cls.dicts
+        ontology.dicts.update(cls.dicts)
 
     @classmethod
     def remove_obsoletes_in_terms(cls): # once alternative and obsolete indexes are loaded, use this to keep only working terms

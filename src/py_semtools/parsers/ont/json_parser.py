@@ -28,7 +28,7 @@ class JsonParser(FileParser):
         ontology.ics = jsonInfo['ics']
         ontology.meta = jsonInfo['meta']
         ontology.max_freqs = jsonInfo['max_freqs']
-        ontology.dicts = jsonInfo['dicts']
+        ontology.dicts.update(jsonInfo['dicts'])
         ontology.profiles = jsonInfo['profiles']
         ontology.items = jsonInfo['items']
         ontology.term_paths = jsonInfo['term_paths']
