@@ -2,14 +2,14 @@
     root_term = "HP:0000118"
     ref_term = "HP:0000118"
 
-    def get_ontoplot_call(dyn, freq, fix, guide, root, ref, height=800, width=800):
+    def get_ontoplot_call(dyn, freq, fix, guide, root, ref, height=800, width=800, others=""):
         return f"""<code>plotter.ontoplot(ontology="ontology", root_node="{root}", reference_node="{ref}", dpi = 300,
                             height={height}, width={width}, title=f"Profiles signature", mode = "{dyn}", 
-                            freq_by="{freq}", fix_alpha={fix}, guide_lines="{guide}")</code>"""
-    def get_ontoplot(dyn, freq, fix, guide, root, ref, height=800, width=800):
+                            freq_by="{freq}", fix_alpha={fix}, guide_lines="{guide}"{others})</code>"""
+    def get_ontoplot(dyn, freq, fix, guide, root, ref, height=800, width=800, **kwargs):
         return plotter.ontoplot(ontology="ontology", root_node=root, reference_node=ref,
                             height=height, width=width, title=f"Profiles signature", mode = dyn, 
-                            freq_by=freq, fix_alpha=fix, guide_lines=guide)
+                            freq_by=freq, fix_alpha=fix, guide_lines=guide , **kwargs)
 %>
 
 <div style="width: 90%; background-color:#ecf0f1; margin: 0 auto;"> 
@@ -82,5 +82,29 @@ ${ plotter.create_title(f'Ontoplot. Different calls examples', id='div_from',
     block2 += get_ontoplot_call(dyn="canvas", freq="size", fix="\"none\"", guide="grid", root=root_term, ref=ref_term, height=cv_height, width=cv_width) + "<br>"
     content += plotter.prettify_div(block2) + "<br>"
     content += plotter.prettify_div(get_ontoplot(dyn="canvas", freq="size", fix="none", guide="grid", root=root_term, ref=ref_term, height=cv_height, width=cv_width) + "<br>")
+
+    block2 = "Canvasxpress ontoplot. Adding a config as an argument to change any canvas configuration parameter"+ "<br>"
+    block2 += get_ontoplot_call(dyn="canvas", freq="size", fix="\"none\"", guide="grid", root=root_term, ref=ref_term, height=cv_height, width=cv_width, others=', config={"sizeStep": 5}') + "<br>"
+    content += plotter.prettify_div(block2) + "<br>"
+    content += plotter.prettify_div(get_ontoplot(dyn="canvas", freq="size", fix="none", guide="grid", root=root_term, ref=ref_term, height=cv_height, width=cv_width, config={"sizeStep": 5}) + "<br>")
+
+
+    px_height, px_width = 1800, 2400
+    content += "<div style=\"width: 90%; background-color:#ecf0f1; margin: 0 auto;\">"
+    content += "Dynamic ontoplot. Defining custom config and layout for plotly (dict can also be expressed as { } form) and point sizes (base size and scaling factors to frequency)"+ "<br>"
+    
+    layout_str = "plotly_layout=dict(legend=dict(font=dict(size=24)), polar=dict(radialaxis=dict(tickfont=dict(size=24))))"
+    layout = dict(legend=dict(font=dict(size=24)), polar=dict(radialaxis=dict(tickfont=dict(size=24))))
+    
+    config_str = "config={'toImageButtonOptions': {'format': 'png', 'height': 1800, 'width': 2400, 'scale': 5}}"
+    config = {'toImageButtonOptions': {'format': 'png', 'height': 1800, 'width': 2400, 'scale': 5}}
+    
+    user_sizes_str = "user_sizes={'ont_size': 3, 'prof_base_size': 5, 'prof_size_factor': 40}"
+    user_sizes = {'ont_size': 3, 'prof_base_size': 5, 'prof_size_factor': 40}
+
+    content += get_ontoplot_call(dyn="dynamic", freq="both", fix="\"none\"", guide="ont", root=root_term, ref=ref_term, height=px_height, width=px_width, others=f", {layout_str}, {config_str}, {user_sizes_str}") + "<br>"
+    content += get_ontoplot(dyn="dynamic", freq="both", fix="none", guide="ont", root=root_term, ref=ref_term, height=px_height, width=px_width, config=config, plotly_layout=layout, user_sizes=user_sizes) + "<br>"
+
+    content += "</div>"    
 %>
 ${ plotter.create_collapsable_container('div_to', content, display="visible") }

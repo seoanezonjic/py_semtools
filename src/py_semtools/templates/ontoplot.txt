@@ -6,13 +6,66 @@
 	import matplotlib.pyplot as plt
 	import warnings
 	import math
+	from py_exp_calc.exp_calc import update_innermost
 
-	gridlines, gridlabels = tuple(range(0,13)), tuple([str(num) for num in range(0,13)])
-	
 	def to_css_rgb(color):
 		red, green, blue, *alpha = list(map(lambda channel: round(channel*255), color))
 		return f"rgb({red},{green},{blue})"
+	
+	#Defining default configuration for plotly and canvas ontoplots
+	px_color_legend = {label: to_css_rgb(rgb) for rgb, label in color_legend.items()}
 
+	cvx_def_conf = {
+					"colorBy": "colors", 
+					"colorLegendTitle": "Main branch",
+					"legendTextScaleFontFact": 0.5,
+					"legendTextScaleFontFactor": 0.5,
+					"sizeBy": "sizes",
+					"sizeByContinuous": True,
+					"initialSize": 0,
+					"sizeStep": 2,
+					"sizeLegendTitle": "Frequency",
+					"rAxisShow": False,
+					"setMaxY": max_level,
+					"yAxisTicks": 1 if guide_lines != "grid" else max_level,
+					"rAxisGridMajorColor": 'rgb(150,150,150)',
+					"theme": "GGPlot",
+					"legendOrder": { "colors": list(px_color_legend.keys()) },
+					"colorKey": { "colors": px_color_legend },
+					"hoverTemplate": "<strong>{hp_names}</strong> <br> Main branch: {colors} <br> Frequency: {freqs} <br> level: {level}"
+				}
+
+	plotly_def_conf = {'toImageButtonOptions': {'format': 'svg', 'height': 800, 'width': 800, 'scale': 1}}
+	
+	if mode == "canvas": update_innermost(cvx_def_conf, config)
+	if mode == "dynamic": update_innermost(plotly_def_conf, config)
+
+	#Defining default layout for plotly ontoplots
+	plotly_def_layout = dict(title = dict(text=title, font=dict(family="Courier", size=12, color="black")), 
+		                   	 legend = dict(bordercolor="Black", 
+						   				 borderwidth=2, 
+										 title_font_family="Times New Roman", 
+										 bgcolor="LightSteelBlue",
+						   				 itemsizing= 'constant',
+        								 font = dict(family="Courier", 
+										 			 size=12,
+										 			 weight = "bold", 
+										 			 color="black")), 
+						   	 polar = dict(angularaxis = dict(showticklabels = False, 
+						   								   rotation = 90, 
+														   direction = "clockwise"),
+						   	   			  radialaxis = dict(dtick = 1, 
+														  tickfont= dict(size = 12,
+														  				 weight = "bold")))
+							)
+
+	update_innermost(plotly_def_layout, plotly_layout)
+%>
+
+
+<%
+	gridlines, gridlabels = tuple(range(0,13)), tuple([str(num) for num in range(0,13)])
+	
 	def draw_static_rontoplot(data, plotter_list):
 		fig = plotter_list['plt'].figure(figsize=(height/100,width/100), dpi=dpi)
 		ax = fig.add_subplot(projection='polar')
@@ -51,7 +104,7 @@
 		#hover_debug="%{customdata}<br>radius_values: %{r:.2f}<br>arc_values: %{theta:.2f}<br>size: %{marker.size:.2f}<br>alpha: %{marker.opacity}"
 		hover="%{customdata[0]}<br>Frequency in profiles: %{customdata[1]:.5f}"
 		
-		fig = plotter_list['go'].Figure()
+		fig = plotter_list['go'].Figure(layout=plotter_list['go'].Layout(height=height, width=width))
 		for branch, phens in data.groupby("colors", sort=False): 
 			fig.add_trace(plotter_list['go'].Scatterpolargl(
 				r = phens.radius_values,
@@ -62,22 +115,15 @@
 				hovertemplate = hover
 				))
 		fig.update_traces(mode="markers")
-		fig.update_layout( title = dict(text=title), 
-		                   legend = dict(bordercolor="Black", borderwidth=2, title_font_family="Times New Roman", bgcolor="LightSteelBlue",
-						   				 itemsizing= 'constant',
-        								 font = dict(family="Courier", size=12, color="black")), 
-						   polar = dict(angularaxis = dict(showticklabels = False, rotation = 90, direction = "clockwise"),
-						   				radialaxis = dict(dtick = 1)),
-							#If we want to add a textbox showing info about user root original level 
-							#annotations = [dict(showarrow=False, text=root_legend.replace("\n","<br>"), x=0., y=0.15, xanchor='left', yanchor='bottom', font=dict(size=12 ))]
-						)
+		#If we want to add a textbox showing info about user root original level add to layout the following line:
+		#annotations = [dict(showarrow=False, text=root_legend.replace("\n","<br>"), x=0., y=0.15, xanchor='left', yanchor='bottom', font=dict(size=12 ))]
+		fig.update_layout( plotly_def_layout )
 		if guide_lines != "grid":
 			fig.update_polars(angularaxis_showgrid=False, angularaxis_showline=False, angularaxis_showticklabels=False,
 							  radialaxis_showgrid=False, radialaxis_showline=False, radialaxis_showticklabels=False) 
 							  
 		return fig
 	
-	px_color_legend = {label: to_css_rgb(rgb) for rgb, label in color_legend.items()}
 	#print(plotter.hash_vars["ontoplot_table_format"][:3])
 	if mode != "canvas":
 		plotter.hash_vars["ontoplot_table_format_df"] = pd.DataFrame(plotter.hash_vars["ontoplot_table_format"][1:], columns=plotter.hash_vars["ontoplot_table_format"][0])
@@ -112,7 +158,7 @@ mat_width = matplot_width if dynamic_units_calc == False else None
 	<% is_dynamic = True if mode == "dynamic" else False %>
 	${plotter.static_plot_main(id="ontoplot_table_format_df", dynamic=is_dynamic, raw=True, header=True, row_names=False, 
 							   plotting_function = plotter_to_use, title=title, var_attr=[0], dynamic_units_calc= dynamic_units_calc,
-							   height=height, width=width, matplot_height=mat_height, matplot_width=mat_width, dpi = dpi)}
+							   height=height, width=width, matplot_height=mat_height, matplot_width=mat_width, dpi = dpi, config=plotly_def_conf)}
 
 %elif mode == "canvas":
 	${ plotter.scatter_polar(id="ontoplot_table_format", header=True, row_names=False, transpose=True, responsive=responsive,
@@ -120,26 +166,6 @@ mat_width = matplot_width if dynamic_units_calc == False else None
                                                 radialAxis="radius_values", circularAxis="arc_values",
                                                 smp_attr = [0,1,4,5,6,7],
 												after_render = [["drawCustomizer",["rAxisShow",False],{}, 1744282597486],],
-                                                config={
-                                                   "colorBy": "colors", 
-												   "colorLegendTitle": "Main branch",
-												   "legendTextScaleFontFact": 0.5,
-												   "legendTextScaleFontFactor": 0.5,
-                                                   "sizeBy": "sizes",
-												   "sizeByContinuous": True,
-												   "initialSize": 0,
-												   "sizeStep": 2,
-												   "sizeLegendTitle": "Frequency",
-												   "rAxisShow": False,
-												   "setMaxY": max_level,
-												   "yAxisTicks": 1 if guide_lines != "grid" else max_level,
-												   "rAxisGridMajorColor": 'rgb(150,150,150)',
-												   "theme": "GGPlot",
-												   "legendOrder": { "colors": list(px_color_legend.keys()) },
-												   "colorKey": { "colors": px_color_legend },
-                                                    "hoverTemplate": "<strong>{hp_names}</strong> <br> Main branch: {colors} <br> Frequency: {freqs} <br> level: {level}"
-                                                }
+                                                config=cvx_def_conf
                                         )}
 %endif
-
-<% columnas = ["colors", "sizes", "radius_values", "arc_values", "hp_names", "alphas", "freqs"] %>
