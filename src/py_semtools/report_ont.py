@@ -45,18 +45,29 @@ def _get_arc_degree_and_radius_values(self, ontology, term, level_linspace, leve
     level_current_index[term_level] += 1
     return arc_term_ont
 
-def _get_plot_points_params(self, hpo_stats_dict, guide_lines, freq_by, mode):
+def _get_plot_points_params(self, hpo_stats_dict, guide_lines, freq_by, mode, user_sizes={}):
     is_dynamic = True if mode == "dynamic" else False
+    
+    #Defining the distance of profile term points from their circle level (ont_to_prof_dist) according to the maximum frequency of a term
+    #in the profiles (as that point will be the biggest one in the plot)
     base_dist = 0.2 
     dist_fact = 0.3 if guide_lines == "ont" else 0.2
     max_freq = max(hpo_stats_dict.values())
     ont_to_prof_dist = base_dist+(dist_fact*max_freq) if freq_by != "alpha" else base_dist
-    size_factor =  4 if is_dynamic else 100
-
-    ont_size=3 if is_dynamic else 2
+    
+    # Defining point sizes for the ontology terms and profile terms (the latter will be calculated according to the frequency of the term 
+    # in the profiles if freq_by is "size" or "both"). If custom_sizes is provided, it will be used to define the sizes of the points.
+    ont_size= user_sizes.get('ont_size') or (3 if is_dynamic else 2)
+    
+    prof_base_size = 3 if is_dynamic else 2
+    if freq_by not in ["size", "both"]: prof_base_size = user_sizes.get('prof_base_size') or (prof_base_size + ont_size)  
+    prof_size_factor = user_sizes.get('prof_size_factor') or (10 if is_dynamic else 100)
+    
+    # Defining the alpha and frequency of the ontology terms points
     ont_alpha=0.7
     ont_freq=1
-    return ont_to_prof_dist, size_factor, ont_size, ont_alpha, ont_freq
+
+    return ont_to_prof_dist, prof_base_size, prof_size_factor, ont_size, ont_alpha, ont_freq
 
 def _get_user_root_recalculated_levels(self, ontology, user_root):
     # First step: we get terms levels and filter in only terms that are descendants from the user defined root
@@ -87,12 +98,21 @@ def _get_user_root_recalculated_levels(self, ontology, user_root):
     level_terms = pxc.invert_hash(terms_levels)
     return level_terms, user_root_lvl, terms_to_filter_in, terms_levels
 
+def _get_user_ontology_root_and_reference_nodes(self, ontology_name, user_opts):
+    default_root_and_ref = {"hp": "HP:0000118", "go": "GO:0008150", "mondo": "MONDO:0000001", "doid": "DOID:4", "efo": "EFO:0000001"}
+    try:
+        user_opts['root_node'] = user_opts['root_node'] if user_opts.get('root_node') else default_root_and_ref[ontology_name]
+        user_opts['reference_node'] = user_opts['reference_node'] if user_opts.get('reference_node') else default_root_and_ref[ontology_name]
+    except Exception:
+        if ontology_name == "Ontology": raise ValueError("Ontology name is not defined in the obo file and no root and ref terms were provided")
+        raise ValueError(f"Ontology name {ontology_name} has no default root and ref terms defined (and no root and ref terms were provided by user)")
 
 ## MAIN METHODS
 
-def prepare_ontoplot_data(self, ontology, hpo_stats_dict, user_root, reference_node, freq_by, mode, fix_alpha, guide_lines):
+def prepare_ontoplot_data(self, ontology, hpo_stats_dict, user_root, reference_node, freq_by, mode, fix_alpha, guide_lines, user_sizes):
     root_centered_level_terms, user_root_lvl, hps_to_filter_in, terms_levels = self._get_user_root_recalculated_levels(ontology, user_root)
     max_level = max(root_centered_level_terms.keys())
+    #print(f"User root: {user_root} with level {user_root_lvl}, max level in the ontology: {max_level}")
     
     level_linspace = {level: np.linspace(0, 2*np.pi, len(terms)) for level, terms in root_centered_level_terms.items()}
     level_current_index = {level: 0 for level in level_linspace.keys()}
@@ -111,10 +131,10 @@ def prepare_ontoplot_data(self, ontology, hpo_stats_dict, user_root, reference_n
 
     color_legend = {value: ontology.translate_id(key) for key, value in top_parental_colors.items()}
     color_legend.update({grey: "Ontology", black: "Others"})
-    root_legend = f"User root original level: {user_root_lvl}\Deepest level from user root:{max_level}"
+    root_legend = f"User root original level: {user_root_lvl}\nDeepest level from user root:{max_level}"
 
-    ont_to_prof_dist, size_factor, ont_size, ont_alpha, ont_freq = self._get_plot_points_params(hpo_stats_dict, guide_lines, freq_by, mode)
-    ADD = 1 if guide_lines == "ont" else  0 #Previous logic did not had the option to remove ontology guide points, so I thought of this shorcut to take it into account without changing previous code
+    ont_to_prof_dist, base_size, size_factor, ont_size, ont_alpha, ont_freq = self._get_plot_points_params(hpo_stats_dict, guide_lines, freq_by, mode, user_sizes)
+    ADD = 1 ##COMENTED BECAUSE IT ADDS A WEIRD BEHAVIOUR TO LEGEND ORDER, TODO fix later #if guide_lines == "ont" else  0 #Previous logic did not had the option to remove ontology guide points, so I thought of this shorcut to take it into account without changing previous code
     colors, sizes, radius_values, arc_values, hp_names, alphas, freqs = [grey]*ADD, [ont_size]*ADD, [0]*ADD, [0]*ADD, [ontology.translate_id(user_root)]*ADD, [ont_alpha]*ADD, [ont_freq]*ADD
     while len(terms_to_visit) > 0:
         term = terms_to_visit.pop(0)
@@ -133,7 +153,7 @@ def prepare_ontoplot_data(self, ontology, hpo_stats_dict, user_root, reference_n
             freq = hpo_stats_dict[term]
             current_color = all_term_colors[term]
             current_alpha = self._transform_value(freq, method = fix_alpha) if freq_by in ["alpha", "both"] else 1 #method = "bins","cubic_root","none" or function
-            current_size = ont_size + (freq*size_factor) if freq_by in ["size", "both"] else ont_size + 2
+            current_size = base_size + (freq*size_factor) if freq_by in ["size", "both"] else base_size
             current_radius = hp_level + ont_to_prof_dist #Making the profile term point a bit further with respect to the ontology point
             self._append_values_to_arrays([colors, sizes, radius_values, arc_values, hp_names, alphas, freqs], [current_color, current_size, current_radius, arc_hp_ont, ontology.translate_id(term), current_alpha, freq])
 
@@ -143,35 +163,27 @@ def prepare_ontoplot_data(self, ontology, hpo_stats_dict, user_root, reference_n
     return [[colors, sizes, radius_values, arc_values, hp_names, alphas, freqs], color_legend, root_legend, max_level]
 
 def ontoplot(self, **user_options):
-  guide_lines = user_options.get('guide_lines', "ont")
-  mode = user_options.get('mode', "static")
-  freq_by = user_options.get('freq_by', 'size')
-  fix_alpha = user_options.get('fix_alpha', 'none')
-
   ontology = self.hash_vars[user_options['ontology']]
   ONT_NAME = ontology.ont_name.upper() if hasattr(ontology, 'ont_name') else 'Ontology'
+  self._get_user_ontology_root_and_reference_nodes(ONT_NAME, user_options)
+  default_opts = {"width": 800, "height": 800, "ONT_NAME": ONT_NAME, "mode": "static", "freq_by": "size", "fix_alpha": "none", 'guide_lines': "ont", 'title': f"",
+                  "responsive": True, "dynamic_units_calc": True, "dpi": 100, 'plotly_layout': {}, 'config': {}, 'user_sizes': {}}
+  default_opts.update(user_options)
+  freq_by, mode, fix_alpha, guide_lines, user_sizes = default_opts['freq_by'], default_opts['mode'], default_opts['fix_alpha'], default_opts['guide_lines'], default_opts['user_sizes']
+
   max_freq = 1  #max(ontology.dicts['term_stats'].values()) This would make a max scaling, not the desired behaviour, but leave it here for reference
   term_frequencies = {term: proportion/max_freq for term, proportion in ontology.dicts['term_stats'].items()}
-  user_root = user_options['root_node']
-  reference_node = user_options['reference_node']
-  prepared_data, color_legend, root_legend, max_level = self.prepare_ontoplot_data(ontology, term_frequencies, user_root, reference_node, freq_by, mode, fix_alpha, guide_lines)
+  user_root = default_opts['root_node']
+  reference_node = default_opts['reference_node']
+  prepared_data, color_legend, root_legend, max_level = self.prepare_ontoplot_data(ontology, term_frequencies, user_root, reference_node, freq_by, mode, fix_alpha, guide_lines, user_sizes)
   colors, sizes, radius_values, arc_values, hp_names, alphas, freqs = prepared_data
 
   ontoplot_table_format = [["colors", "sizes", "radius_values", "arc_values", "hp_names", "alphas", "freqs"]]
   ontoplot_table_format = ontoplot_table_format + [[colors[i], sizes[i], radius_values[i], arc_values[i], hp_names[i], alphas[i], freqs[i]] for i in range(len(colors))]
   
   self.hash_vars["ontoplot_table_format"] = ontoplot_table_format
-  user_options["mode"] = mode
-  user_options["max_level"] = max_level
-  user_options["guide_lines"] = guide_lines
-  user_options['ONT_NAME'] = ONT_NAME
-  user_options['dynamic_units_calc'] = user_options.get('dynamic_units_calc', True)
-  user_options['dpi'] = user_options.get("dpi", 100)
-  user_options['width'] = user_options.get("width", 800)
-  user_options['height'] = user_options.get("height", 800)
-  user_options['title'] = user_options.get("title", f"")
-  user_options['responsive'] = user_options.get("responsive", True)
-  return self.renderize_child_template(self.get_internal_template('ontoplot.txt'), color_legend=color_legend, root_legend=root_legend, **user_options)
+  default_opts["max_level"] = max_level
+  return self.renderize_child_template(self.get_internal_template('ontoplot.txt'), color_legend=color_legend, root_legend=root_legend, **default_opts)
 
 def ontodist(self, **user_options):
     ontology = self.hash_vars[user_options['ontology']]
@@ -238,6 +250,7 @@ def similarity_matrix_plot(self, **user_options):
     return self.renderize_child_template(self.get_internal_template('similarity_heatmap.txt'), **default_opts)
 
 #### LOADING ALL MONKEYPATCHED METHODS
+Py_report_html._get_user_ontology_root_and_reference_nodes = _get_user_ontology_root_and_reference_nodes
 Py_report_html._get_user_root_recalculated_levels = _get_user_root_recalculated_levels
 Py_report_html._get_plot_points_params = _get_plot_points_params
 Py_report_html._transform_value = _transform_value
