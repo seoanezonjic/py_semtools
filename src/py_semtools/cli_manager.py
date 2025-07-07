@@ -54,6 +54,9 @@ def strsimnet(args = None):
               help="Chars to be excluded from comparissons.")
     parser.add_argument("-o", "--output_file", dest="output_file", default= None, 
               help="Output similitudes file.")
+    parser.add_argument("--sim_algorithm", dest="sim_algorithm", default= 'white',
+              help="Similarity algorithm")
+
     opts =  parser.parse_args(args)
     main_strsimnet(opts)
 

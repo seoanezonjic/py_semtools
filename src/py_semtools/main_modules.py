@@ -425,7 +425,7 @@ def main_strsimnet(options: argparse.Namespace) -> None:
                                  filterCol = options.findex,
                                  filterValue = options.filter_value)
     # Obtain all Vs all if 1 column was given, or A vs B if 2 columns were given
-    similitudes = similitude_network(texts2compare, charsToRemove = options.rm_char)
+    similitudes = similitude_network(texts2compare, charsToRemove = options.rm_char, algorithm = options.sim_algorithm)
     # Iter and store
     with open(options.output_file, "w") as f:
         for item, item2, sim in similitudes:
