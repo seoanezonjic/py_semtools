@@ -84,11 +84,11 @@ class Ontology:
     def get_index_ids(self):
         string2code = self.dicts['string2code']
         code2string = self.dicts['code2string']
+        count = 0
         for t_id in self.each():
-            ont_name, code = t_id.split(":")
-            code = int(code)
-            string2code[t_id] = code
-            code2string[code] = t_id
+            string2code[t_id] = count
+            code2string[count] = t_id
+            count += 1
 
     def get_dag(self):
         relations = []
