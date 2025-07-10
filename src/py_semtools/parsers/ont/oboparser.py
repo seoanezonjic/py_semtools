@@ -74,58 +74,50 @@ class OboParser(FileParser):
     @classmethod
     def load_obo(cls, file, zipped=False):
         if file == None: raise Exception("File is not defined") 
-        # Data variables
         header = ''
         stanzas = {'terms': {}, 'typedefs': {}, 'instances': {}}
-        # Auxiliar variables
         infoType = 'Header'
         currInfo = []
         stanzas_flags = ['[Term]', '[Typedef]', '[Instance]']
-        # Read file
         opener = gzip.open(file, 'rt') if zipped else open(file, 'r')
         with opener as f:
             for line in f:
                 line = line.rstrip()
                 if len(line) == 0: continue
                 fields = line.split(':', 1)
-                # Check if new instance is found
-                if line in stanzas_flags:
-                    header = cls.process_entity(header, infoType, stanzas, currInfo)
-                    # Update info variables
+                if line in stanzas_flags: # Check if new instance is found
+                    if infoType == 'Header':
+                        header = cls.info2hash(currInfo)
+                    else:
+                        cls.process_entity(infoType, stanzas, currInfo)
                     currInfo = []
                     infoType = re.sub("\[|\]", '', line)
-                    continue
-                # Concat info
-                currInfo.append(fields)
-        # Store last loaded info
-        if len(currInfo) > 0: header = cls.process_entity(header, infoType, stanzas, currInfo)
-        # Prepare to return
+                else: 
+                    currInfo.append(fields)
+        
+        if len(currInfo) > 0: 
+            if infoType == 'Header': raise Exception('OBO file has only header, no terms')
+            cls.process_entity(infoType, stanzas, currInfo) # Store last loaded info
         finfo = {'file' : file, 'name' : os.path.basename(os.path.splitext(file)[0])}
         return finfo, header, stanzas
 
     # Handle OBO loaded info and stores it into correct container and format
     # ===== Parameters
-    # +header+:: container
     # +infoType+:: current ontology item type detected
     # +stanzas+:: container
     # +currInfo+:: info to be stored
     # ===== Returns 
     # header newly/already stored
     @classmethod
-    def process_entity(cls, header, infoType, stanzas, currInfo):
+    def process_entity(cls, infoType, stanzas, currInfo):
         info = cls.info2hash(currInfo)
-        # Store current info
-        if infoType == 'Header':
-            header = info
-        else:
-            entity_id = info['id']
-            if infoType == 'Term':
-                stanzas['terms'][entity_id] = info
-            elif infoType == 'Typedef':
-                stanzas['typedefs'][entity_id] = info
-            elif infoType == 'Instance':
-                stanzas['instances'][entity_id] = info
-        return header
+        entity_id = info['id']
+        if infoType == 'Term':
+            stanzas['terms'][entity_id] = info
+        elif infoType == 'Typedef':
+            stanzas['typedefs'][entity_id] = info
+        elif infoType == 'Instance':
+            stanzas['instances'][entity_id] = info
 
     # Class method to transform string with <tag : info> into hash structure
     # ===== Parameters
@@ -143,7 +135,7 @@ class OboParser(FileParser):
             tag, value = attr
             tag = tag.lstrip()
             value = value.lstrip()
-            if tag == 'is_a': value = re.sub('{[\\\":A-Za-z0-9\/\.\-, =?&_]+} ', '', value)  # To delete extra attributes (source, xref) in is_a tag of MONDO ontology
+            if tag == 'is_a' or tag == 'is_obsolete': value = re.sub('{[\\\":A-Za-z0-9\/\.\-, =?&_]+}', '', value).strip()  # To delete extra attributes (source, xref) in is_a tag of MONDO ontology or is_obsolete tag in UBERON ontology 
             attr[1] = value #update data after string cleaning
             
             if tag in cls.tags_with_trailing_modifiers: value = value.split(split_char)[selected_field] 

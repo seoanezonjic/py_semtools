@@ -154,7 +154,8 @@ class OBOParserTestCase(unittest.TestCase):
         self.parentals_Sparse = ("sparse", {"B": ["A"], "C": ["A"]})
     
     def test_load_file(self):
-        self.assertEqual(self.load_Header, OboParser.load_obo(self.file_Header["file"])) # Only header
+        with self.assertRaises(Exception):
+            OboParser.load_obo(self.file_Header["file"])
         self.assertEqual(self.load_Hierarchical_WithoutIndex, OboParser.load_obo(self.file_Hierarchical["file"])) # Hierarchical
         self.assertEqual(self.load_Circular, OboParser.load_obo(self.file_Circular["file"])) # Circular
         self.assertEqual(self.load_Atomic, OboParser.load_obo(self.file_Atomic["file"])) # Sparsed
