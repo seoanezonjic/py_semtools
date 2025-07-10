@@ -648,21 +648,22 @@ def download(source, key, output, ontologies_folder):
   if key == 'list':
     for f in glob.glob(os.path.join(ontologies_folder,'*.obo')): print(f)
   else:
-    url = source_list[key]
-    if output != None:
-      output_path = output
-    else:
-      file_name = key + '.obo'
-      try:
-        with open(os.path.join(ontologies_folder, file_name), 'w') as file:
-          file.write('')
-          file.close()
-        output_path = os.path.join(ontologies_folder, file_name)
-      except IOError as error: 
-        output_path = file_name
-    if url != None:
-      r = requests.get(url, allow_redirects=True)
-      open(output_path, 'wb').write(r.content)
+    urls = list(source_list.values()) if key == 'all' else [source_list[key]]
+    for url in urls: 
+      if output != None:
+        output_path = output
+      else:
+        file_name = key + '.obo'
+        try:
+          with open(os.path.join(ontologies_folder, file_name), 'w') as file:
+            file.write('')
+            file.close()
+          output_path = os.path.join(ontologies_folder, file_name)
+        except IOError as error: 
+          output_path = file_name
+      if url != None:
+        r = requests.get(url, allow_redirects=True)
+        open(output_path, 'wb').write(r.content)
 
 def get_ontology_file(path, source, ontologies_folder):
   if not os.path.exists(path):

@@ -82,7 +82,7 @@ def semtools(args = None):
     parser.add_argument('-p', "--processes", dest="processes", default=2, type=int,
                         help="Number of processes to parallelize calculations. Applied to: semantic similarity.")
     parser.add_argument("-d", "--download", dest="download", default=None,
-                        help="Download obo file from an official resource. MONDO, GO, HPO, EFO and DO are possible values.")
+                        help="Download obo file from an official resource. MONDO, GO, HPO, EFO, DO, CL and UBERON are possible values. Use 'all' to download all. Use 'list' to list available ontologies.")
     parser.add_argument("-i", "--input_file", dest="input_file", default=None,
                         help="Filepath of profile data")
     parser.add_argument("--load_hard_cleaned_profiles", dest="load_hard_cleaned_profiles", default=False, action='store_true',
