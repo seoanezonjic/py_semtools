@@ -130,7 +130,7 @@ def semtools(args = None):
     parser.add_argument('-a', "--annotations_column", dest="annotations_column", default= 1, type=int,
               help="The number of the column for the annotation ids.")
     parser.add_argument("--list_term_attributes", dest="list_term_attributes", default= False, action='store_true', 
-              help="Set to give a list of term attributes: term, translation and level in the ontology, from a list of terms.")
+              help="Set to give a list of term attributes: term, translation, level and synonymns, for all terms of an ontology.")
     parser.add_argument('-R', "--root", dest="root", default= None, 
               help="Term id to be considered the new root of the ontology.")
     parser.add_argument("--xref_sense", dest="xref_sense", default= 'byValue', action='store_const', const='byTerm',  

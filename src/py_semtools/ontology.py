@@ -1715,7 +1715,7 @@ class Ontology:
         return roots
 
     def list_term_attributes(self):
-        terms = [ [term, self.translate_id(term), self.get_term_level(term)] for term in self.each()]
+        terms = [ [term, self.translate_id(term), self.get_term_level(term), '|'.join(self.get_synonims(term))] for term in self.each()]
         return terms
 
     def return_terms_by_keyword_match(self, keyword, fields = ['name', 'synonym', 'def']):

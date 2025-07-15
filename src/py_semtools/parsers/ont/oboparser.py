@@ -135,7 +135,7 @@ class OboParser(FileParser):
             tag, value = attr
             tag = tag.lstrip()
             value = value.lstrip()
-            if tag == 'is_a' or tag == 'is_obsolete': value = re.sub('{[\\\":A-Za-z0-9\/\.\-, =?&_]+}', '', value).strip()  # To delete extra attributes (source, xref) in is_a tag of MONDO ontology or is_obsolete tag in UBERON ontology 
+            if tag == 'is_a' or tag == 'is_obsolete': value = re.sub('{[\\\":A-Za-z0-9\/\.\-, =?&_]+} ?', '', value).strip()  # To delete extra attributes (source, xref) in is_a tag of MONDO ontology or is_obsolete tag in UBERON ontology 
             attr[1] = value #update data after string cleaning
             
             if tag in cls.tags_with_trailing_modifiers: value = value.split(split_char)[selected_field] 
