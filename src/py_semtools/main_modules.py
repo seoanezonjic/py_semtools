@@ -648,12 +648,12 @@ def download(source, key, output, ontologies_folder):
   if key == 'list':
     for f in glob.glob(os.path.join(ontologies_folder,'*.obo')): print(f)
   else:
-    urls = list(source_list.values()) if key == 'all' else [source_list[key]]
-    for url in urls: 
+    ontname_and_urls = source_list.items() if key == "all" else [[key, source_list[key]]]
+    for ont_name, url in ontname_and_urls: 
       if output != None:
         output_path = output
       else:
-        file_name = key + '.obo'
+        file_name = ont_name + '.obo'
         try:
           with open(os.path.join(ontologies_folder, file_name), 'w') as file:
             file.write('')
@@ -726,7 +726,7 @@ def get_childs(ontology, terms, modifiers):
   elif 'n' in modifiers:
     all_childs = [ ontology.translate_id(c) for c in all_childs ]
   elif 'CNS' in modifiers:
-    all_childs = [ [c, ontology.translate_id(c), ','.join(ontology.get_synonims(c))] for c in all_childs ]    
+    all_childs = [ [c, ontology.translate_id(c), '|'.join(ontology.get_synonims(c))] for c in all_childs ]    
   return all_childs
 
 def format_data(data, options):
