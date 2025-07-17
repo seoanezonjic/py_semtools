@@ -35,6 +35,7 @@ class OboParser(FileParser):
     def reset(cls):
         cls.header = None
         cls.stanzas = {'terms': {}, 'typedefs': {}, 'instances': {}}
+        cls.ontology_name = None
         cls.removable_terms = []
         cls.alternatives_index = {}
         cls.obsoletes = {}
@@ -58,10 +59,9 @@ class OboParser(FileParser):
     def load(cls, ontology, file, build = True, black_list = [], extra_dicts = [], zipped=False):
         cls.reset() # Clean class variables to avoid the mix of several obo loads
         cls.removable_terms = black_list
-        _, header, stanzas = cls.load_obo(file, zipped)
-        cls.header = header
-        cls.stanzas = stanzas
-        ontology.ont_name = header['ontology'].split("/")[-1].split(".")[0] if header.get('ontology') else None
+        cls.load_obo(file, zipped)
+
+        ontology.ont_name = cls.ontology_name
         if len(cls.removable_terms) > 0 : cls.remove_black_list_terms() 
         if build: cls.build_index(ontology, extra_dicts = extra_dicts) 
 
@@ -74,8 +74,6 @@ class OboParser(FileParser):
     @classmethod
     def load_obo(cls, file, zipped=False):
         if file == None: raise Exception("File is not defined") 
-        header = ''
-        stanzas = {'terms': {}, 'typedefs': {}, 'instances': {}}
         infoType = 'Header'
         currInfo = []
         stanzas_flags = ['[Term]', '[Typedef]', '[Instance]']
@@ -87,9 +85,11 @@ class OboParser(FileParser):
                 fields = line.split(':', 1)
                 if line in stanzas_flags: # Check if new instance is found
                     if infoType == 'Header':
-                        header = cls.info2hash(currInfo)
+                        cls.header = cls.info2hash(currInfo)
+                        if cls.header.get('ontology'):
+                            cls.ontology_name = cls.header['ontology'].split("/")[0].split(".")[0].upper() if 'efo' not in cls.header['ontology'] else 'efo'
                     else:
-                        cls.process_entity(infoType, stanzas, currInfo)
+                        cls.process_entity(infoType, cls.stanzas, currInfo)
                     currInfo = []
                     infoType = re.sub("\[|\]", '', line)
                 else: 
@@ -97,9 +97,7 @@ class OboParser(FileParser):
         
         if len(currInfo) > 0: 
             if infoType == 'Header': raise Exception('OBO file has only header, no terms')
-            cls.process_entity(infoType, stanzas, currInfo) # Store last loaded info
-        finfo = {'file' : file, 'name' : os.path.basename(os.path.splitext(file)[0])}
-        return finfo, header, stanzas
+            cls.process_entity(infoType, cls.stanzas, currInfo) # Store last loaded info
 
     # Handle OBO loaded info and stores it into correct container and format
     # ===== Parameters
@@ -112,7 +110,7 @@ class OboParser(FileParser):
     def process_entity(cls, infoType, stanzas, currInfo):
         info = cls.info2hash(currInfo)
         entity_id = info['id']
-        if infoType == 'Term':
+        if infoType == 'Term' and entity_id.startswith(cls.ontology_name):
             stanzas['terms'][entity_id] = info
         elif infoType == 'Typedef':
             stanzas['typedefs'][entity_id] = info
