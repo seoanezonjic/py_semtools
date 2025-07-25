@@ -37,7 +37,7 @@ def main_stEngine(opts: argparse.Namespace) -> None:
     options = vars(opts)
     if options["top_k"] == 0: options["top_k"] = np.inf
     stEngine = STengine(gpu_devices=options["gpu_device"])
-    if options.get("gpu_device"): stEngine.show_gpu_information(verbose= options['verbose'])
+    if options.get("gpu_device") and "cuda" in options["gpu_device"]: stEngine.show_gpu_information(verbose= options['verbose'])
 
     stEngine.init_model(options["model_name"], cache_folder = options["model_path"], verbose= options['verbose'])
 
@@ -400,7 +400,7 @@ def main_semtools(opts: argparse.Namespace) -> None:
     
     if options.get('output_report') != None:
       ontology.add_observed_terms_from_profiles(reset = True)
-      if not ontology.dicts.get('term_stats'): ontology.get_profiles_terms_frequency(count_parentals = False)
+      if not ontology.dicts.get('term_stats'): ontology.get_profiles_terms_frequency(count_parentals = options['count_parentals'])
       if not hasattr(ontology, 'profile_sizes') and not hasattr(ontology, 'parental_terms_per_profile'): ontology.get_profile_redundancy()
       if not ontology.dicts.get('prof_IC_struct') and not ontology.dicts.get('prof_IC_observ'):
         ontology.get_observed_ics_by_onto_and_freq()

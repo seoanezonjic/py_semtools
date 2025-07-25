@@ -153,6 +153,8 @@ def semtools(args = None):
               help="Use to save the self-similarities of the profiles in the input file (of --profiles_self_similarities) to a file")
     parser.add_argument("--output_report", dest="output_report", default=None,
               help="Use to create a short quality report with the chosen ontology and input profiles, to be saved at the path given")
+    parser.add_argument("--count_parentals", dest="count_parentals", default=False, action='store_true',
+              help="For the output report, use it to propagate frequency to parentals terms")
     parser.add_argument("--root_term", dest="root_term", default=None,
               help="For the output report, it sets the root term to show in center of ontoplot")
     parser.add_argument("--ref_term", dest="ref_term", default=None,
@@ -319,7 +321,11 @@ def get_corpus_index(args = None):
     parser.add_argument('-f', "--filter_by_blacklist", dest="filter_by_blacklist", default= None,
             help="Path to a single column file with blacklisted words to filter out documents whose titles contains these words")
     parser.add_argument("--blacklisted_mode", dest="blacklisted_mode", default= 'partial',
-            help="When using 'filter_by_blacklist' use this option to choose between 'exact' or 'partial' match. Default is 'partial'")        
+            help="When using 'filter_by_blacklist' use this option to choose between 'exact' or 'partial' match. Default is 'partial'")
+    parser.add_argument("--clean_type", dest="clean_type", default= 'hard',
+            help="Use to set the type of cleaning to be performed on the text. Options: basic (do not clean at all), soft or hard (default).")
+    parser.add_argument("--split_type", dest="split_type", default= 'classic',
+            help="Use to set the type of splitting to be performed on the text. Options: classic (default, splitting by '\n\n', \n', '.', ';', ',') or space_overlap ('\n\n', '\n', ' ', '' with overlap to avoid losing information).")
     opts =  parser.parse_args(args)
     main_get_corpus_index(opts)
 
