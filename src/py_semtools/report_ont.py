@@ -114,7 +114,7 @@ def prepare_ontoplot_data(self, ontology, hpo_stats_dict, user_root, reference_n
     max_level = max(root_centered_level_terms.keys())
     #print(f"User root: {user_root} with level {user_root_lvl}, max level in the ontology: {max_level}")
     
-    level_linspace = {level: np.linspace(0, 2*np.pi, len(terms)) for level, terms in root_centered_level_terms.items()}
+    level_linspace = {level: np.linspace(0, 2*np.pi, len(terms)+1) for level, terms in root_centered_level_terms.items()}
     level_current_index = {level: 0 for level in level_linspace.keys()}
     visited_terms = set(user_root)
     terms_to_visit = [term for term in ontology.get_direct_descendants(user_root) if term in hps_to_filter_in]
