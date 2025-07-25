@@ -22,6 +22,7 @@ class OboParser(FileParser):
 
     header = None
     stanzas = {'terms': {}, 'typedefs': {}, 'instances': {}}
+    ontology_name = None
     removable_terms = []
     alternatives_index = {}
     obsoletes = {}
@@ -110,7 +111,8 @@ class OboParser(FileParser):
     def process_entity(cls, infoType, stanzas, currInfo):
         info = cls.info2hash(currInfo)
         entity_id = info['id']
-        if infoType == 'Term' and entity_id.startswith(cls.ontology_name):
+        is_ontology_type = True if cls.ontology_name == None else entity_id.startswith(cls.ontology_name) # Check if entity_id is from the same ontology (if ontology name was found in the obo) (done this way because test toy examples do not contemplate ontology name equivalent with terms examples, but we should fix it in the future)
+        if infoType == 'Term' and is_ontology_type:
             stanzas['terms'][entity_id] = info
         elif infoType == 'Typedef':
             stanzas['typedefs'][entity_id] = info
