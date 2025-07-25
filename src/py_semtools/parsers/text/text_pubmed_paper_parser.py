@@ -12,7 +12,7 @@ class TextPubmedPaperParser(TextPubmedParser):
         return super().parse_xml(string_xml, is_file=False, as_element_tree = False)
 
     @classmethod
-    def parse(cls, file_path, logger = None):
+    def parse(cls, file_path, logger = None, options={'clean_type': 'hard'}):
         members = []
         stats = {"no_abstract": 0, "no_pmid": 0, "total": 0, "errors": 0}
         tar = tarfile.open(file_path, 'r:gz') 
@@ -23,7 +23,7 @@ class TextPubmedPaperParser(TextPubmedParser):
             f=tar.extractfile(member)
             filename = os.path.join(file_path, member.path)
             try:            
-                parsed_paper = cls.parse_paper(f.read(), filename)
+                parsed_paper = cls.parse_paper(f.read(), filename, options=options)
                 members.append(parsed_paper)
                 pmid, pmc, filename, year, whole_content, title, article_type, article_category = parsed_paper
                 if pmid == None:
@@ -43,7 +43,7 @@ class TextPubmedPaperParser(TextPubmedParser):
         return members, stats
 
     @classmethod
-    def parse_paper(cls, paper_xml_string, filename):
+    def parse_paper(cls, paper_xml_string, filename, options={'clean_type': 'hard'}):
         whole_content = ""
         year = 0
         year_text = None
@@ -78,5 +78,5 @@ class TextPubmedPaperParser(TextPubmedParser):
 
         #GETTING PAPER WHOLE CONTENT
         paper_root = article_root.find("body")
-        if paper_root != None: whole_content = cls.perform_soft_cleaning(  cls.do_recursive_xml_content_parse(paper_root).strip()  )
+        if paper_root != None: whole_content = cls.perform_soft_cleaning(  cls.do_recursive_xml_content_parse(paper_root).strip(), type=options["clean_type"] )
         return [pmid, pmc, filename, year, whole_content, title, article_type, article_category]

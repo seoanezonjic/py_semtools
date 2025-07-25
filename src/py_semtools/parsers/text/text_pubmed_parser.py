@@ -42,21 +42,3 @@ class TextPubmedParser(TextBasicParser):
         tail = element.tail
         if tail != None: whole_content +=  " " + tail.replace('\n', ' ') + " "
         return re.sub(r'[ ]+', ' ', whole_content)
-
-    @classmethod
-    def check_not_none_or_empty(cls, variable):
-        if type(variable) != str: 
-            condition = variable != None and variable.text != None and variable.text.strip().replace("&#x000a0;", "") != ""
-        else:
-            condition = variable != None and variable.strip().replace("&#x000a0;", "") != ""
-        return condition
-
-    @classmethod
-    def perform_soft_cleaning(cls, raw_document):
-        document = re.sub(r"([A-Za-z\(\)]+[ ]*)\n([ ]*[A-Z-a-z\(\)]+)", r"\1 \2", raw_document) #Removing nonsense newlines that broke the text and make information loss
-        document = document.strip().replace("\r", "\n").replace("&#13", "\n").replace("\t", " ") #Replace carriage returns and tabs
-        document = re.sub(r"\\[a-z]+(\[.+\])?(\{(.+)\})", r"\3", document) #Removing latex commands
-        document = re.sub(r"[ ]+", r" ", document) #Removing additional whitespaces between words
-        document = re.sub(r"([0-9]+)[\.\,]([0-9]+)", r"\1'\2", document) #Changing floating point numbers from 4.5 or 4,5 to 4'5
-        document = re.sub(r"i\.?e\.?", "ie", document).replace("al.", "al ") #Changing i.e to ie and et al. to et al
-        return document

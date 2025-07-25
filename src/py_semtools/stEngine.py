@@ -65,7 +65,8 @@ class STengine:
         if model_name != None and cache_folder != None:
             if verbose: print(f"\n-Downloading or loading model {model_name} inside path {cache_folder}")
             self.model_name = model_name
-            self.embedder = SentenceTransformer(model_name, cache_folder = cache_folder)
+            has_cached_model = os.path.exists(os.path.join(cache_folder, f'models--sentence-transformers--{model_name}')) #SentenceTransfomers now uses local_files_only to control internet access, even if the model is cached, and trying to download the model with this variable false gives error, so we have to control it
+            self.embedder = SentenceTransformer(model_name, cache_folder = cache_folder, local_files_only=has_cached_model)
 
     def embed_save_corpus(self, options, corpus_basename, all_textIDs, all_corpus, total_papers):
         if options["verbose"]: print(f"---Embedding corpus of {corpus_basename} comprised by {total_papers} initial papers with {len(all_textIDs)} sentences, with {'GPU' if options.get('gpu_device') else 'CPU'}")
@@ -124,6 +125,13 @@ class STengine:
                     pickle.dump(self.queries_content[query_basename], fOut)
 
     def embedd_single_query(self, query_filename, options):
+        """Embeds a single query from a file and returns its basename, IDs, queries, and embeddings.
+        Args:
+            query_filename (str): Path to the file containing the query.
+            options (dict): Options for embedding, including verbosity and GPU settings.
+        Returns:
+            list: A list containing the basename of the query, its IDs, queries, and embeddings
+        """
         query_basename = os.path.splitext(os.path.basename(query_filename))[0]
         if options["verbose"]: print(f"---Loading query from {query_basename}")
         keyword_index = self.load_keyword_index(query_filename) # keywords used in queries
@@ -136,6 +144,13 @@ class STengine:
         return [query_basename, query_ids, queries, query_embeddings]
 
     def embedd_text(self, text, options):
+        """General embedding function for queries and corpora. Embeds text using the embedder. If GPU devices are specified, it uses GPU for embedding; otherwise, it uses CPU.
+        Args:
+            text (list): The texts to be embedded.       
+            options (dict): Options for embedding, including verbosity and GPU settings.
+        Returns:
+            np.ndarray: The embeddings of the input text.
+        """
         if self.gpu_devices:
             text_embedding = self.embedd_text_gpu(text, options)
         else:
@@ -160,23 +175,42 @@ class STengine:
         return text_embedding
 
     def load_keyword_index(self, file):
+        """Load keyword index from a file. Columns are separated by tab. 
+        The first column is the keyword ID, the second is the keyword name, and the third (optional) is a list of synonimns or alternative keywords names separated by '|'. 
+
+        Args:
+            file (str): Path to the file containing the keyword index.
+        Returns:
+            dict: A dictionary where keys are keyword IDs and values are lists of keywords names (including synonyms and alternatives).
+        """
         keywords = {}
         with open(file) as f:
             for line in f:
                 fields = line.rstrip().split("\t")
                 if len(fields) == 2:
                     id, keyword = fields
-                    keywords[id] = [keyword.lower()]
-                else:
+                    keywords[id] = [keyword]
+                elif len(fields) == 3:
                     id, keyword, alternatives = fields
-                    alternatives = alternatives.split(',')
+                    alternatives = alternatives.split('|')
                     alternatives.append(keyword)
-                    alternatives = [ a.lower() for a in alternatives ]
                     kwrds = list(set(alternatives))
                     keywords[id] = kwrds
+                else:
+                    warnings.warn(f"Error reading line in file {os.path.basename(file)}: {line}. Expected 2 or 3 fields, got {len(fields)} fields. Skipping line.")
+                    continue
         return keywords
 
-    def get_splitted_abstract(self, id, text):
+    def get_splitted_document(self, id, text):
+        """
+        Process a document that has been split by get_corpus_index. It is a json formmated list of lists, where each sublist is a paragraph and each element inside the sublist is a sentence.
+        Each sentence is stored in a dictionary with the key being the ID of the document in the format "id_paragraphNumber_sentenceNumber" and the value being the sentence text.
+        Args:
+            id (str): The identifier for the document.
+            text (str): The text of the document in JSON format, where each paragraph is a list of sentences.
+        Returns:
+            dict: A dictionary where keys are IDs in the format "id_paragraph_sentence" and values are the corresponding sentences.
+        """
         pubmed_index = {}
         abstract_parts = json.loads(text)
         paragraph_number = 0
@@ -190,21 +224,29 @@ class STengine:
         return pubmed_index
 
     def load_pubmed_index(self, file, is_splitted):
-      pubmed_index = {}
-      n_papers = 0
-      with gzip.open(file, "rt") as f:
-        for line in f:
-            try:
-                id, text, *_rest = line.rstrip().split("\t")
-                if is_splitted:
-                  pubmed_index_iter = self.get_splitted_abstract(id, text)
-                  pubmed_index.update(pubmed_index_iter)
-                else:
-                  pubmed_index[f"{id}_0_0"] = text
-                n_papers += 1
-            except:
-                warnings.warn(f"Error reading line in file {os.path.basename(file)}: {line}")
-      return pubmed_index, n_papers
+        """
+        Load a PubMed processed index file get by 'get_corpus_index' binary. The file is expected to be in a specific format, where each line contains an ID and the corresponding text (and other columns with possible metadata not loaded).
+        Args:
+            file (str): Path to the file containing the PubMed index.
+            is_splitted (bool): If True, the text is expected to be in a JSON format with sentences split into paragraphs.
+        Returns:
+            tuple: A tuple containing a dictionary where keys are IDs in the format "id_paragraphNumber_sentenceNumber" and values are the corresponding sentences, and the total number of papers processed.
+        """
+        pubmed_index = {}
+        n_papers = 0
+        with gzip.open(file, "rt") as f:
+            for line in f:
+                try:
+                    id, text, *_rest = line.rstrip().split("\t")
+                    if is_splitted:
+                        pubmed_index_iter = self.get_splitted_document(id, text)
+                        pubmed_index.update(pubmed_index_iter)
+                    else:
+                        pubmed_index[f"{id}_0_0"] = text
+                    n_papers += 1
+                except Exception as e:
+                    warnings.warn(f"Error reading line in file {os.path.basename(file)}: {line}.\n Error: {e}")
+        return pubmed_index, n_papers
 
     def calculate_similarity(self, query_info, corpus_info, options, util):
         corpus_ids = corpus_info["textIDs"]

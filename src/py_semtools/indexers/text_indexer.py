@@ -27,11 +27,11 @@ class TextIndexer:
         else:
             manager = Parallelizer(options["n_cpus"], options["chunk_size"])
             if options["items_per_file"] == 0:
-                items = [[cls.process_files, [[options, [filename], None], {}]] for filename in filenames] # filename is a list to assign a one item list to a worker (worker per file)
+                items = [[[options, [filename], None], {}] for filename in filenames] # filename is a list to assign a one item list to a worker (worker per file)
             else:
                 chunks = manager.get_chunks(filenames, workload_balance='disperse_max', workload_function= lambda filename: os.stat(filename).st_size)
-                items = [[cls.process_files, [[options, chunk, idx], {}]] for idx,chunk in enumerate(chunks)]
-            manager.execute(items)
+                items = [[[options, chunk, idx], {}] for idx,chunk in enumerate(chunks)]
+            manager.execute(items, cls.process_files)
 
     @classmethod
     def process_files(cls, options, filenames, sup_counter, logger = None):
@@ -95,7 +95,7 @@ class TextIndexer:
         texts = [] # aggregate all texts
         file_exist = "does exist" if os.path.exists(file_path) else "does not exist"
         if logger != None: logger.info(f"The file {file_path} {file_exist}")
-        parsed_texts, stats = TextBasicParser.parse(file_path, logger= logger)
+        parsed_texts, stats = TextBasicParser.parse(file_path, logger= logger, options=options)
         for parsed_text in parsed_texts:
             doc_id, file, text = parsed_text
             if doc_id == None or text == "": continue
@@ -110,7 +110,7 @@ class TextIndexer:
         texts = [] # aggregate all abstracts in XML file
         file_exist = "does exist" if os.path.exists(file) else "does not exist"
         if logger != None: logger.info(f"The file {file} {file_exist}")
-        parsed_texts, stats = TextPubmedAbstractParser.parse(file, logger= logger)
+        parsed_texts, stats = TextPubmedAbstractParser.parse(file, logger= logger, options=options)
         for parsed_text in parsed_texts:
             pmid, text, year, title, article_type, article_category = parsed_text
             if pmid == None or text == "" or (len(text.split(" ")) < 10): continue
@@ -133,7 +133,7 @@ class TextIndexer:
     def get_paper_index(cls, file_path, options, logger = None):   
         file_exist = "does exist" if os.path.exists(file_path) else "does not exist"
         if logger != None: logger.info(f"The file {file_path} {file_exist}")
-        parsed_texts, stats = TextPubmedPaperParser.parse(file_path, logger= logger)
+        parsed_texts, stats = TextPubmedPaperParser.parse(file_path, logger= logger, options=options)
         
         PMC_PMID_dict = None
         if options["equivalences_file"] != None: PMC_PMID_dict = dict(CmdTabs.load_input_data(options["equivalences_file"]))
@@ -176,7 +176,7 @@ class TextIndexer:
 
         document_length = str(len(text))
         if options["split"]:
-          document_parts = cls.split_document(text, pmid)
+          document_parts = cls.split_document(text, pmid, split_type = options["split_type"])
           flattened_document = flatten(document_parts)
           number_of_sentences = str(len(flattened_document))
           length_of_sentences = ",".join([str(len(sentence)) for sentence in flattened_document])
@@ -192,10 +192,13 @@ class TextIndexer:
 
 
     @classmethod
-    def split_document(cls, text, pmid):
+    def split_document(cls, text, pmid, split_type = "classic"):
         #paragraph_splitter = RecursiveCharacterTextSplitter(chunk_size = 100, chunk_overlap  = 20, length_function = len, separators=[r"\n\n", r"\.\n?"], keep_separator=False, is_separator_regex=True)
         paragraph_splitter = RecursiveCharacterTextSplitter(chunk_size = 10, chunk_overlap  = 0, length_function = len, separators=["\n\n"], keep_separator=False)
-        sentences_splitter = RecursiveCharacterTextSplitter(chunk_size = 10, chunk_overlap  = 0, length_function = len, separators=["\n",".", ";", ","], keep_separator=False, is_separator_regex=False)
+        if split_type == "classic":
+            sentences_splitter = RecursiveCharacterTextSplitter(chunk_size = 10, chunk_overlap  = 0, length_function = len, separators=["\n",".", ";", ","], keep_separator=False, is_separator_regex=False)
+        elif split_type == "space_overlap":
+            sentences_splitter = RecursiveCharacterTextSplitter(chunk_size = 60, chunk_overlap  = 20, length_function = len, separators=["\n", " ", ""], keep_separator=False, is_separator_regex=False)
         #sentences_splitter = RecursiveCharacterTextSplitter(chunk_size = 120, chunk_overlap  = 20, length_function = len, separators=["\n", " ", ""], keep_separator=False, is_separator_regex=False)
         paragraphs = [paragraph.strip() for paragraph in paragraph_splitter.split_text(text)]
         sentences = [ sentences_splitter.split_text(paragraph.replace("\n", "")) for paragraph in paragraphs ]

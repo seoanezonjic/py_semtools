@@ -12,14 +12,14 @@ class TextPubmedAbstractParser(TextPubmedParser):
         return super().parse_xml(zipped_file, is_file=True, is_compressed=True, as_element_tree = True)
 
     @classmethod
-    def parse(cls, file, logger = None): 
+    def parse(cls, file, logger = None, options={'clean_type': 'hard'}): 
         texts = [] # aggregate all abstracts in XML file
         stats = {"total": 0, "no_abstract": 0, "no_pmid": 0}
         mytree = cls.parse_xml(file)
         pubmed_article_set = mytree.getroot()
         for article in pubmed_article_set:
             stats['total'] += 1
-            text_data = cls.parse_abstract(article)
+            text_data = cls.parse_abstract(article, options)
             pmid, abstract_content, year, title, article_type, article_category = text_data
             texts.append(text_data)
             if pmid == None:
@@ -34,7 +34,7 @@ class TextPubmedAbstractParser(TextPubmedParser):
         return texts, stats
 
     @classmethod
-    def parse_abstract(cls, article):
+    def parse_abstract(cls, article, options={'clean_type': 'hard'}):
         pmid = None
         abstract_content = ""
         article_type = "none"
@@ -58,7 +58,7 @@ class TextPubmedAbstractParser(TextPubmedParser):
                         if abstractText != None and abstractText != "":
                             #print(f"Text of abstract {pmid} in file {file}:")
                             #print(repr(abstractText), "\n\n")
-                            raw_abstract = cls.perform_soft_cleaning(abstractText)                                                 
+                            raw_abstract = cls.perform_soft_cleaning(abstractText, type=options["clean_type"])                                                 
                             abstract_content += raw_abstract + "\n\n"
-        abstract_content = cls.perform_soft_cleaning(abstract_content)        
+        abstract_content = cls.perform_soft_cleaning(abstract_content, type=options["clean_type"])        
         return [pmid, abstract_content, year, title, article_type, article_category]
