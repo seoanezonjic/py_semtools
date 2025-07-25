@@ -6,7 +6,7 @@
     ref_term = plotter.hash_vars['ref_term']
 %>
 <div style="width: 90%; background-color:#ecf0f1; margin: 0 auto;"> 
-    <h1 style="text-align: center; background-color:#d6eaf8">HPO annotations distribution</h1>
+    <h1 style="text-align: center; background-color:#d6eaf8">Annotations distribution</h1>
     <div style="overflow: hidden">
         ${plotter.ontodist(ontology="ontology", dist_type=['count', 'perc'], height=800, width=800)}
     </div>

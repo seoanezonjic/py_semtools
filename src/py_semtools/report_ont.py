@@ -164,7 +164,7 @@ def prepare_ontoplot_data(self, ontology, hpo_stats_dict, user_root, reference_n
 
 def ontoplot(self, **user_options):
   ontology = self.hash_vars[user_options['ontology']]
-  ONT_NAME = ontology.ont_name.upper() if hasattr(ontology, 'ont_name') else 'Ontology'
+  ONT_NAME = ontology.ont_name.upper() if hasattr(ontology, 'ont_name') and ontology.ont_name != None else 'Ontology'
   self._get_user_ontology_root_and_reference_nodes(ONT_NAME, user_options)
   default_opts = {"width": 800, "height": 800, "ONT_NAME": ONT_NAME, "mode": "static", "freq_by": "size", "fix_alpha": "none", 'guide_lines': "ont", 'title': f"",
                   "responsive": True, "dynamic_units_calc": True, "dpi": 100, 'plotly_layout': {}, 'config': {}, 'user_sizes': {}}
@@ -187,7 +187,7 @@ def ontoplot(self, **user_options):
 
 def ontodist(self, **user_options):
     ontology = self.hash_vars[user_options['ontology']]
-    ONT_NAME = ontology.ont_name.upper() if hasattr(ontology, 'ont_name') else 'Ontology'
+    ONT_NAME = ontology.ont_name.upper() if hasattr(ontology, 'ont_name') and ontology.ont_name != None else 'Ontology'
     default_opts = {"width": "600px", "height": "600px", "ONT_NAME": ONT_NAME}
     default_opts.update(user_options)        
     ontology_levels, distribution_percentage = ontology.get_profile_ontology_distribution_tables()
@@ -199,7 +199,7 @@ def ontodist(self, **user_options):
 
 def ontoICdist(self, **user_options):
     ontology = self.hash_vars[user_options['ontology']]
-    ONT_NAME = ontology.ont_name.upper() if hasattr(ontology, 'ont_name') else 'Ontology'
+    ONT_NAME = ontology.ont_name.upper() if hasattr(ontology, 'ont_name') and ontology.ont_name != None else 'Ontology'
     default_opts = {"width": "600px", "height": "600px", "ONT_NAME": ONT_NAME}
     default_opts.update(user_options)    
     term_IC_struct, term_IC_observed = ontology.get_observed_ics_by_onto_and_freq() # IC for TERMS
@@ -213,7 +213,7 @@ def ontoICdist(self, **user_options):
 
 def plotProfRed(self, **user_options):
     ontology = self.hash_vars[user_options['ontology']]
-    ONT_NAME = ontology.ont_name.upper() if hasattr(ontology, 'ont_name') else 'Ontology'
+    ONT_NAME = ontology.ont_name.upper() if hasattr(ontology, 'ont_name') and ontology.ont_name != None else 'Ontology'
     default_opts = {"width": "600px", "height": "600px", "ONT_NAME": ONT_NAME}
     default_opts.update(user_options)
     profiles_ids = list(ontology.profiles.keys())
@@ -225,7 +225,7 @@ def plotProfRed(self, **user_options):
 
 def makeTermFreqTable(self, **user_options):
     ontology = self.hash_vars[user_options['ontology']]
-    ONT_NAME = ontology.ont_name.upper() if hasattr(ontology, 'ont_name') else 'Ontology'
+    ONT_NAME = ontology.ont_name.upper() if hasattr(ontology, 'ont_name') and ontology.ont_name != None else 'Ontology'
     default_opts = {"width": "600px", "height": "600px", "ONT_NAME": ONT_NAME}    
     default_opts.update(user_options)    
     term_stat_dict = ontology.dicts['term_stats']
@@ -235,7 +235,7 @@ def makeTermFreqTable(self, **user_options):
 
 def plotClust(self, **user_options):
     ontology = self.hash_vars[user_options['ontology']]
-    ONT_NAME = ontology.ont_name.upper() if hasattr(ontology, 'ont_name') else 'Ontology'
+    ONT_NAME = ontology.ont_name.upper() if hasattr(ontology, 'ont_name') and ontology.ont_name != None else 'Ontology'
     default_opts = {"width": "600px", "height": "600px", "ONT_NAME": ONT_NAME}    
     default_opts.update(user_options)
     self.hash_vars['semantic_clust'] = ontology.clustering[user_options['method_name']]
