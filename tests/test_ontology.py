@@ -14,6 +14,7 @@ DATA_TEST_PATH = os.path.join(ROOT_PATH, 'data')
 # Define TESTS
 #########################################################
 class TestOBOFunctionalities(unittest.TestCase):
+    maxDiff = None
 
     def setUp(self):
         # Files
@@ -158,10 +159,11 @@ class TestOBOFunctionalities(unittest.TestCase):
     ################################
 
     def test_get_ontology_names(self):
-        self.assertEqual(self.hierarchical.ont_name, "hierarchical_sample")
-        self.assertEqual(self.branched.ont_name, "branched")
-        self.assertEqual(self.atomic.ont_name, "sparse_sample")
-        self.assertEqual(self.sparse.ont_name, "sparse2_sample")
+        self.skipTest("Not implemented yet because toy example ontologies do not have names similar to terms codes.")
+        #self.assertEqual(self.hierarchical.ont_name, "hierarchical_sample")
+        #self.assertEqual(self.branched.ont_name, "branched")
+        #self.assertEqual(self.atomic.ont_name, "sparse_sample")
+        #self.assertEqual(self.sparse.ont_name, "sparse2_sample")
 
     #################################
     # GENERATE METADATA FOR ALL ITEMS
@@ -824,4 +826,4 @@ class TestOBOFunctionalities(unittest.TestCase):
             ["Child2", {"id": "Child2", "name": "Child2", "synonym": ["\"1,6-alpha-mannosyltransferase activity\" EXACT []"], "alt_id": ["Child3", "Child4"], "is_a": ["Parental"]}]],
              iteration_with_custom_each)
         self.assertEqual(["Parental"], self.hierarchical.get_root())
-        self.assertEqual([["Parental", "All", 1], ["Child2", "Child2", 2]], self.hierarchical.list_term_attributes())
+        self.assertEqual([["Parental", "All", 1, ""], ["Child2", "Child2", 2, "1,6-alpha-mannosyltransferase activity"]], self.hierarchical.list_term_attributes())

@@ -34,14 +34,12 @@ class OBOParserTestCase(unittest.TestCase):
         self.file_Enr = {"file": os.path.join(DATA_TEST_PATH, "enrichment_ontology.obo"), "name": "enrichment_ontology"}
         
         ## OBO INFO
-        self.load_Header = (
-            {"file": os.path.join(DATA_TEST_PATH, "only_header_sample.obo"), "name": "only_header_sample"}, 
-            {"format-version":"1.2", "data-version": "test/a/b/c/", 'ontology': 'only_header_sample.obo'}, 
+        self.load_Header = ( 
+            {"format-version":"1.2", "data-version": "test/a/b/c/"}, 
             {"terms":{}, "typedefs": {}, "instances":{}})
 
         self.load_Hierarchical_WithoutIndex = (
-            {"file": os.path.join(DATA_TEST_PATH, "hierarchical_sample.obo"), "name": "hierarchical_sample"}, 
-            {"format-version": "1.2", "data-version": "test/a/b/c/", 'ontology': 'hierarchical_sample.obo'}, 
+            {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
             {"terms": {
                 "Parental": {"id": "Parental", "name": "All", "comment": "none"}, 
                 "Child1": {"id": "Child1", "name": "Child1", "is_obsolete": "true", "is_a": ["Parental"], "replaced_by": ["Child2"]}, 
@@ -51,7 +49,6 @@ class OBOParserTestCase(unittest.TestCase):
             "typedefs": {}, "instances": {}})
 
         self.load_Hierarchical_Compressed = (
-            {"file": os.path.join(DATA_TEST_PATH, "hierarchical_compressed.obo.gz"), "name": "hierarchical_compressed.obo"}, 
             {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
             {"terms": {
                 "Parental": {"id": "Parental", "name": "All", "comment": "none"}, 
@@ -63,8 +60,7 @@ class OBOParserTestCase(unittest.TestCase):
 
         #TODO: Confirm if the ontology below is defined correctly
         self.load_Hierarchical_altid = (
-            {"file": os.path.join(DATA_TEST_PATH, "hierarchical_sample.obo"), "name": "hierarchical_sample"}, 
-            {"format-version": "1.2", "data-version": "test/a/b/c/", 'ontology': 'hierarchical_sample.obo'}, 
+            {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
             {"terms": {
                 "Parental": {"id": "Parental", "name": "All", "comment": "none"}, 
                 "Child1": {"id": "Child1", "name": "Child1", "is_obsolete": "true", "is_a": ["Parental"], "replaced_by": ["Child2"]}, 
@@ -76,8 +72,7 @@ class OBOParserTestCase(unittest.TestCase):
             "typedefs": {}, "instances": {}})
 
         self.load_Hierarchical = (
-            {"file": os.path.join(DATA_TEST_PATH, "hierarchical_sample.obo"), "name": "hierarchical_sample"}, 
-            {"format-version": "1.2", "data-version": "test/a/b/c/", 'ontology': 'hierarchical_sample.obo'},
+            {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
             {"terms":{
                 "Parental": {"id": "Parental", "name": "All", "comment": "none"}, 
                 "Child1": {"id": "Child1", "name": "Child1", "is_obsolete": "true", "is_a": ["Parental"], "replaced_by": ["Child2"]}, 
@@ -87,7 +82,6 @@ class OBOParserTestCase(unittest.TestCase):
             "typedefs": {}, "instances": {}})
 
         self.load_Circular = (
-            {"file": os.path.join(DATA_TEST_PATH, "circular_sample.obo"), "name": "circular_sample"}, 
             {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
             {"terms": {
                 "A": {"id":"A", "name": "All", "is_a": ["C"]}, 
@@ -96,8 +90,7 @@ class OBOParserTestCase(unittest.TestCase):
             "typedefs": {}, "instances": {}})
 
         self.load_Atomic = (
-            {"file": os.path.join(DATA_TEST_PATH, "sparse_sample.obo"), "name": "sparse_sample"}, 
-            {"format-version": "1.2", "data-version": "test/a/b/c/", 'ontology': 'sparse_sample.obo'}, 
+            {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
             {"terms": {
                 "Parental": {"id": "Parental", "name": "All", "comment": "none"}, 
                 "Child1": {"id": "Child1", "name": "Child1"}, 
@@ -105,8 +98,7 @@ class OBOParserTestCase(unittest.TestCase):
             "typedefs": {}, "instances": {}})
 
         self.load_Sparse = (
-            {"file": os.path.join(DATA_TEST_PATH, "sparse2_sample.obo"), "name": "sparse2_sample"}, 
-            {"format-version": "1.2", "data-version": "test/a/b/c/", 'ontology': 'sparse2_sample.obo'}, 
+            {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
             {"terms": {
                 "A": {"id": "A", "name": "All"}, 
                 "B": {"id": "B", "name": "B", "is_a": ["A"]}, 
@@ -116,8 +108,7 @@ class OBOParserTestCase(unittest.TestCase):
 
         ## OBO INFO2
         self.load_Hierarchical_WithoutIndex2 = (
-            {"file": os.path.join(DATA_TEST_PATH, "hierarchical_sample.obo"), "name": "hierarchical_sample"}, 
-            {"format-version": "1.2", "data-version": "test/a/b/c/", 'ontology': 'hierarchical_sample.obo'}, 
+            {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
             {"terms": {
                 "Parental": {"id": "Parental", "name": "All", "comment": "none"}, 
                 "Child1": {"id": "Child1", "name": "Child1", "is_obsolete": "true", "is_a": ["Parental"], "replaced_by": ["Child2"]}, 
@@ -126,8 +117,7 @@ class OBOParserTestCase(unittest.TestCase):
         
         #TODO: Confirm if the ontology below is defined correctly
         self.load_Hierarchical2 = (
-            {"file": os.path.join(DATA_TEST_PATH, "hierarchical_sample.obo"), "name": "hierarchical_sample"}, 
-            {"format-version": "1.2", "data-version": "test/a/b/c/", 'ontology': 'hierarchical_sample.obo'}, 
+            {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
             {"terms": {
                 "Parental": {"id": "Parental", "name": "All", "comment": "none"}, 
                 "Child1": {"id": "Child1", "name": "Child1", "is_obsolete": "true", "is_a": ["Parental"], "replaced_by": ["Child2"]}, 
@@ -137,7 +127,6 @@ class OBOParserTestCase(unittest.TestCase):
             "typedefs": {}, "instances": {}})
             
         self.load_Circular2 = (
-            {"file": os.path.join(DATA_TEST_PATH, "circular_sample.obo"), "name": "circular_sample"}, 
             {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
             {"terms": {
                 "A": {"id": "A", "name": "All", "is_a": ["C"]}, 
@@ -156,14 +145,28 @@ class OBOParserTestCase(unittest.TestCase):
     def test_load_file(self):
         with self.assertRaises(Exception):
             OboParser.load_obo(self.file_Header["file"])
-        self.assertEqual(self.load_Hierarchical_WithoutIndex, OboParser.load_obo(self.file_Hierarchical["file"])) # Hierarchical
-        self.assertEqual(self.load_Circular, OboParser.load_obo(self.file_Circular["file"])) # Circular
-        self.assertEqual(self.load_Atomic, OboParser.load_obo(self.file_Atomic["file"])) # Sparsed
-        self.assertEqual(self.load_Sparse, OboParser.load_obo(self.file_Sparse["file"])) # Sparsed 2
+        
+        OboParser.load_obo(self.file_Hierarchical["file"])
+        self.assertEqual(self.load_Hierarchical_WithoutIndex, (OboParser.header, OboParser.stanzas)) # Hierarchical
+        OboParser.reset()
+
+        OboParser.load_obo(self.file_Circular["file"])
+        self.assertEqual(self.load_Circular, (OboParser.header, OboParser.stanzas)) # Circular
+        OboParser.reset()
+
+        OboParser.load_obo(self.file_Atomic["file"])
+        self.assertEqual(self.load_Atomic, (OboParser.header, OboParser.stanzas)) # Sparsed
+        OboParser.reset()
+
+        OboParser.load_obo(self.file_Sparse["file"])
+        self.assertEqual(self.load_Sparse, (OboParser.header, OboParser.stanzas)) # Sparsed 2
+        OboParser.reset()
 
     def test_load_file_compressed(self):
-        self.assertEqual(self.load_Hierarchical_Compressed, OboParser.load_obo(self.file_Hierarchical_Compressed["file"], zipped=True)) # Hierarchical
-    
+        OboParser.load_obo(self.file_Hierarchical_Compressed["file"], zipped=True)
+        self.assertEqual(self.load_Hierarchical_Compressed, (OboParser.header, OboParser.stanzas)) # Hierarchical
+        OboParser.reset()
+
     def test_expand(self):
         # self.assertIsNone(Ontology.get_related_ids_by_tag(terms= nil,target_tag= "")) # Nil terms
         # self.assertIsNone(Ontology.get_related_ids_by_tag(terms= {},target_tag= "")) # Empty terms
@@ -172,42 +175,47 @@ class OBOParserTestCase(unittest.TestCase):
         # self.assertIsNone(Ontology.get_related_ids_by_tag(terms= self.load_Hierarchical[2]["terms"],target_tag= "")) # No/Empty target
         # self.assertIsNone(Ontology.get_related_ids_by_tag(terms= self.load_Hierarchical[2]["terms"],target_tag= 8)) # Target not a string
         # assert_raises ArgumentError do Ontology.get_related_ids_by_tag(terms= self.load_Hierarchical[2]["terms"], target_tag= "is_a",split_info_char=" ! ",split_info_indx= -1) end # Erroneous info_indx
-        self.assertEqual(self.parentals_Hierachical,  OboParser.get_related_ids_by_tag(terms = self.load_Hierarchical_altid[2]["terms"], target_tag = "is_a")) # Hierarchical structure
-        self.assertEqual(self.parentals_Circular,  OboParser.get_related_ids_by_tag(terms = self.load_Circular[2]["terms"], target_tag = "is_a")) # Circular structure
-        self.assertEqual(self.parentals_Atomic,  OboParser.get_related_ids_by_tag(terms = self.load_Atomic[2]["terms"], target_tag = "is_a")) # Sparse structure
-        self.assertEqual(self.parentals_Sparse,  OboParser.get_related_ids_by_tag(terms = self.load_Sparse[2]["terms"], target_tag = "is_a")) # Sparse structure with some other structures
-        
+        self.assertEqual(self.parentals_Hierachical,  OboParser.get_related_ids_by_tag(terms = self.load_Hierarchical_altid[1]["terms"], target_tag = "is_a")) # Hierarchical structure
+        self.assertEqual(self.parentals_Circular,  OboParser.get_related_ids_by_tag(terms = self.load_Circular[1]["terms"], target_tag = "is_a")) # Circular structure
+        self.assertEqual(self.parentals_Atomic,  OboParser.get_related_ids_by_tag(terms = self.load_Atomic[1]["terms"], target_tag = "is_a")) # Sparse structure
+        self.assertEqual(self.parentals_Sparse,  OboParser.get_related_ids_by_tag(terms = self.load_Sparse[1]["terms"], target_tag = "is_a")) # Sparse structure with some other structures
+
     def test_expand2(self):
         # Test regular
-        self.assertEqual(("hierarchical",["Parental"]), OboParser.get_related_ids("Child2", self.load_Hierarchical2[2]["terms"], "is_a"))
+        self.assertEqual(("hierarchical",["Parental"]), OboParser.get_related_ids("Child2", self.load_Hierarchical2[1]["terms"], "is_a"))
         # Test with already expanded info
         aux_expansion = {"Parental": ["A"]}
-        self.assertEqual(("hierarchical",["Parental", "A"]), OboParser.get_related_ids("Child2", self.load_Hierarchical2[2]["terms"], "is_a", aux_expansion))		
+        self.assertEqual(("hierarchical",["Parental", "A"]), OboParser.get_related_ids("Child2", self.load_Hierarchical2[1]["terms"], "is_a", aux_expansion))		
         # Test circular
-        self.assertEqual(("circular",["C","B"]), OboParser.get_related_ids("A", self.load_Circular2[2]["terms"], "is_a"))
-        self.assertEqual(("circular",["B","A"]), OboParser.get_related_ids("C", self.load_Circular2[2]["terms"], "is_a"))
-        
+        self.assertEqual(("circular",["C","B"]), OboParser.get_related_ids("A", self.load_Circular2[1]["terms"], "is_a"))
+        self.assertEqual(("circular",["B","A"]), OboParser.get_related_ids("C", self.load_Circular2[1]["terms"], "is_a"))
+
     def test_load(self):
-        _, header, stanzas = OboParser.load_obo(self.file_Hierarchical["file"])
-        self.assertEqual(self.load_Hierarchical[1], header)
-        self.assertEqual(self.load_Hierarchical[2], stanzas)
+        OboParser.load_obo(self.file_Hierarchical["file"])
+        self.assertEqual(self.load_Hierarchical[0], OboParser.header)
+        self.assertEqual(self.load_Hierarchical[1], OboParser.stanzas)
+        OboParser.reset()
 
-        _, header, stanzas = OboParser.load_obo(self.file_Circular["file"])
-        self.assertEqual(self.load_Circular[1], header)
-        self.assertEqual(self.load_Circular[2], stanzas)
+        OboParser.load_obo(self.file_Circular["file"])
+        self.assertEqual(self.load_Circular[0], OboParser.header)
+        self.assertEqual(self.load_Circular[1], OboParser.stanzas)
+        OboParser.reset()
 
-        _, header, stanzas = OboParser.load_obo(self.file_Atomic["file"])
-        self.assertEqual(self.load_Atomic[1], header)		
-        self.assertEqual(self.load_Atomic[2], stanzas)		
+        OboParser.load_obo(self.file_Atomic["file"])
+        self.assertEqual(self.load_Atomic[0], OboParser.header)		
+        self.assertEqual(self.load_Atomic[1], OboParser.stanzas)		
+        OboParser.reset()
 
-        _, header, stanzas = OboParser.load_obo(self.file_Sparse["file"])
-        self.assertEqual(self.load_Sparse[1], header)		
-        self.assertEqual(self.load_Sparse[2], stanzas)
+        OboParser.load_obo(self.file_Sparse["file"])
+        self.assertEqual(self.load_Sparse[0], OboParser.header)		
+        self.assertEqual(self.load_Sparse[1], OboParser.stanzas)
+        OboParser.reset()
 
     def test_load_compressed(self):
-        _, header, stanzas = OboParser.load_obo(self.file_Hierarchical_Compressed["file"], zipped=True)
-        self.assertEqual(self.load_Hierarchical_Compressed[1], header)
-        self.assertEqual(self.load_Hierarchical_Compressed[2], stanzas)                
+        OboParser.load_obo(self.file_Hierarchical_Compressed["file"], zipped=True)
+        self.assertEqual(self.load_Hierarchical_Compressed[0], OboParser.header)
+        self.assertEqual(self.load_Hierarchical_Compressed[1], OboParser.stanzas)
+        OboParser.reset()                
 
     def test_dictionaries(self):
         OboParser.load(Ontology(), self.file_Hierarchical["file"], build= True)

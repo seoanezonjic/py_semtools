@@ -127,23 +127,35 @@ class TextPubmedParserTestCase(unittest.TestCase):
         #Test with a string with additional whitespaces
         test_with_whitespaces = "Test    with  additional       whitespaces"
         test_with_whitespaces_expected = "Test with additional whitespaces"
-        test_with_whitespaces_returned = TextPubmedParser.perform_soft_cleaning(test_with_whitespaces)
+        test_with_whitespaces_returned = TextPubmedParser.perform_soft_cleaning(test_with_whitespaces, type="soft")
         self.assertEqual(test_with_whitespaces_expected, test_with_whitespaces_returned)
 
         #Test with a string with latex commands
         test_with_latex = "This is a test with a \\textbf{latex} command"
         test_with_latex_expected = "This is a test with a latex command"
-        test_with_latex_returned = TextPubmedParser.perform_soft_cleaning(test_with_latex)
+        test_with_latex_returned = TextPubmedParser.perform_soft_cleaning(test_with_latex, type="soft")
         self.assertEqual(test_with_latex_expected, test_with_latex_returned)
 
         #Test with a string with floating point numbers
         test_with_float = "This is a test with 4.5 and 4,5"
         test_with_float_expected = "This is a test with 4'5 and 4'5"
-        test_with_float_returned = TextPubmedParser.perform_soft_cleaning(test_with_float)
+        test_with_float_returned = TextPubmedParser.perform_soft_cleaning(test_with_float, type="hard")
         self.assertEqual(test_with_float_expected, test_with_float_returned)
 
         #Testing with tabs and carriage returns
         test_with_tabs = "This is a test with\ttabs and \r carriage returns"
         test_with_tabs_expected = "This is a test with tabs and \n carriage returns"
-        test_with_tabs_returned = TextPubmedParser.perform_soft_cleaning(test_with_tabs)
+        test_with_tabs_returned = TextPubmedParser.perform_soft_cleaning(test_with_tabs, type="soft")
         self.assertEqual(test_with_tabs_expected, test_with_tabs_returned)
+
+        #Test that soft cleaning does not change points and commas in numbers
+        test_with_float = "This is a test with 4.5 and 4,5"
+        test_with_float_expected = "This is a test with 4.5 and 4,5"
+        test_with_float_returned = TextPubmedParser.perform_soft_cleaning(test_with_float, type="soft")
+        self.assertEqual(test_with_float_expected, test_with_float_returned)
+
+        #Test that basic leaves the text as it is
+        test_raw = "This is a test with a \\textbf{latex} command      many spaces and \t tabs and 4.5 and 4,5 numbers"
+        expected = "This is a test with a \\textbf{latex} command      many spaces and \t tabs and 4.5 and 4,5 numbers"
+        returned = TextPubmedParser.perform_soft_cleaning(test_raw, type="basic")
+        self.assertEqual(expected, returned)
