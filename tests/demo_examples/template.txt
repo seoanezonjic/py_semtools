@@ -1,6 +1,11 @@
 <%
     root_term = "HP:0000118"
     ref_term = "HP:0000118"
+    count_parents = True
+
+    config_link = '<a href="https://plotly.com/python/configuration-options/" target="_blank">configuration</a>'
+    layout_link = '<a href="https://plotly.com/python/reference/layout/" target="_blank">layout</a>'
+    polar_layout_link = '<a href="https://plotly.com/python/reference/layout/polar/" target="_blank">polar layout</a>'
 
     def get_ontoplot_call(dyn, freq, fix, guide, root, ref, height=800, width=800, others=""):
         return f"""<code>plotter.ontoplot(ontology="ontology", root_node="{root}", reference_node="{ref}", dpi = 300,
@@ -41,58 +46,70 @@ ${ plotter.create_title(f'Ontoplot. Different calls examples', id='div_from',
 
 <%  
     content = "<div style=\"width: 90%; background-color:#ecf0f1; margin: 0 auto;\">"
+    
+    content += "Static ontoplot, frequency by size, guide lines set by ontology term points. Without propagating parent terms in frequencies" + "<br>"
+    content += get_ontoplot_call(dyn="static", freq="size", fix="\"none\"", guide="ont", root=root_term, ref=ref_term, others=", count_parentals=False") + "<br>"
+    content += get_ontoplot(dyn="static", freq="size", fix="none", guide="ont", root=root_term, ref=ref_term, count_parentals=False) + "<br>"
+
+    content += "Static ontoplot, frequency by size, guide lines set by ontology term points. Propagating parent terms in frequencies" + "<br>"
+    content += get_ontoplot_call(dyn="static", freq="size", fix="\"none\"", guide="ont", root=root_term, ref=ref_term, others=", count_parentals=True") + "<br>"
+    content += get_ontoplot(dyn="static", freq="size", fix="none", guide="ont", root=root_term, ref=ref_term, count_parentals=count_parents) + "<br>"
+
+    content += "Static ontoplot, frequency by size, guide lines set by ontology term points. Propagating parent terms in frequencies. Minimum frequency threshold of 0.2" + "<br>"
+    content += get_ontoplot_call(dyn="static", freq="size", fix="\"none\"", guide="ont", root=root_term, ref=ref_term, others=", count_parentals=True, onto_min_freq=0.2") + "<br>"
+    content += get_ontoplot(dyn="static", freq="size", fix="none", guide="ont", root=root_term, ref=ref_term, count_parentals=count_parents, onto_min_freq=0.2) + "<br>"
 
     content += "Dynamic ontoplot, frequency by size and opacity, opacity low values fixed by cubic root, guide lines set by ontology term points" + "<br>"
-    content += get_ontoplot_call(dyn="dynamic", freq="both", fix="\"cubic_root\"", guide="ont", root=root_term, ref=ref_term) + "<br>"
-    content += get_ontoplot(dyn="dynamic", freq="both", fix="cubic_root", guide="ont", root=root_term, ref=ref_term) + "<br>"
+    content += get_ontoplot_call(dyn="dynamic", freq="both", fix="\"cubic_root\"", guide="ont", root=root_term, ref=ref_term, others=", count_parentals=True") + "<br>"
+    content += get_ontoplot(dyn="dynamic", freq="both", fix="cubic_root", guide="ont", root=root_term, ref=ref_term, count_parentals=count_parents) + "<br>"
  
     content += "Dynamic ontoplot, frequency by size, guide lines set by concentric lines at each level of the ontology"+ "<br>"
-    content += get_ontoplot_call(dyn="dynamic", freq="size", fix="\"none\"", guide="grid", root=root_term, ref=ref_term) + "<br>"
-    content += get_ontoplot(dyn="dynamic", freq="size", fix="none", guide="grid", root=root_term, ref=ref_term) + "<br>"
+    content += get_ontoplot_call(dyn="dynamic", freq="size", fix="\"none\"", guide="grid", root=root_term, ref=ref_term, others=", count_parentals=True") + "<br>"
+    content += get_ontoplot(dyn="dynamic", freq="size", fix="none", guide="grid", root=root_term, ref=ref_term, count_parentals=count_parents) + "<br>"
     
     content += "Dynamic ontoplot, frequency by opacity, no guide lines used" + "<br>"
-    content += get_ontoplot_call(dyn="dynamic", freq="alpha", fix="\"none\"", guide="none", root=root_term, ref=ref_term) + "<br>"
-    content += get_ontoplot(dyn="dynamic", freq="alpha", fix="none", guide="none", root=root_term, ref=ref_term) + "<br>"
+    content += get_ontoplot_call(dyn="dynamic", freq="alpha", fix="\"none\"", guide="none", root=root_term, ref=ref_term, others=", count_parentals=True") + "<br>"
+    content += get_ontoplot(dyn="dynamic", freq="alpha", fix="none", guide="none", root=root_term, ref=ref_term, count_parentals=count_parents) + "<br>"
 
 
     content += "Static ontoplot, frequency by size and opacity, opacity low values fixed by cubic root, guide lines set by ontology term points" + "<br>"
-    content += get_ontoplot_call(dyn="static", freq="both", fix="\"bins\"", guide="ont", root=root_term, ref=ref_term) + "<br>"
-    content += get_ontoplot(dyn="static", freq="both", fix="bins", guide="ont", root=root_term, ref=ref_term) + "<br>"
+    content += get_ontoplot_call(dyn="static", freq="both", fix="\"bins\"", guide="ont", root=root_term, ref=ref_term, others=", count_parentals=True") + "<br>"
+    content += get_ontoplot(dyn="static", freq="both", fix="bins", guide="ont", root=root_term, ref=ref_term, count_parentals=count_parents) + "<br>"
     
     content += "Static ontoplot, frequency by size, guide lines set by concentric lines at each level of the ontology" + "<br>"
-    content += get_ontoplot_call(dyn="static", freq="size", fix="\"none\"", guide="grid", root=root_term, ref=ref_term) + "<br>"
-    content += get_ontoplot(dyn="static", freq="size", fix="none", guide="grid", root=root_term, ref=ref_term) + "<br>"
+    content += get_ontoplot_call(dyn="static", freq="size", fix="\"none\"", guide="grid", root=root_term, ref=ref_term, others=", count_parentals=True") + "<br>"
+    content += get_ontoplot(dyn="static", freq="size", fix="none", guide="grid", root=root_term, ref=ref_term, count_parentals=count_parents) + "<br>"
     
     content += "Static ontoplot, frequency by opacity, no guide lines used" + "<br>"
-    content += get_ontoplot_call(dyn="static", freq="alpha", fix="lambda x: x**(1/3)", guide="none", root=root_term, ref=ref_term) + "<br>"
-    content += get_ontoplot(dyn="static", freq="alpha", fix=lambda x: x**(1/3), guide="none", root=root_term, ref=ref_term) + "<br>"
+    content += get_ontoplot_call(dyn="static", freq="alpha", fix="lambda x: x**(1/3)", guide="none", root=root_term, ref=ref_term, others=", count_parentals=True") + "<br>"
+    content += get_ontoplot(dyn="static", freq="alpha", fix=lambda x: x**(1/3), guide="none", root=root_term, ref=ref_term, count_parentals=count_parents) + "<br>"
 
     content += "Dynamic ontoplot centered in HP:0012443 (Abnormal brain morphology), using childs of HP:0012443 as main branches colors, frequency by size and opacity, opacity low values fixed by cubic root, guide lines set by ontology term points" + "<br>"
-    content += get_ontoplot_call(dyn="dynamic", freq="both", fix="\"cubic_root\"", guide="ont", root="HP:0012443", ref="HP:0012443") + "<br>"
-    content += get_ontoplot(dyn="dynamic", freq="both", fix="cubic_root", guide="ont", root="HP:0012443", ref="HP:0012443") + "<br>"
+    content += get_ontoplot_call(dyn="dynamic", freq="both", fix="\"cubic_root\"", guide="ont", root="HP:0012443", ref="HP:0012443", others=", count_parentals=True") + "<br>"
+    content += get_ontoplot(dyn="dynamic", freq="both", fix="cubic_root", guide="ont", root="HP:0012443", ref="HP:0012443", count_parentals=count_parents) + "<br>"
     content += "</div>"
 
     cv_height, cv_width = 700, 1400
     block1 = "Canvasxpress ontoplot, frequency by size (only mode), guide lines set by ontology term points"+ "<br>"
-    block1 += get_ontoplot_call(dyn="canvas", freq="size", fix="\"none\"", guide="ont", root=root_term, ref=ref_term, height=cv_height, width=cv_width) + "<br>"
+    block1 += get_ontoplot_call(dyn="canvas", freq="size", fix="\"none\"", guide="ont", root=root_term, ref=ref_term, height=cv_height, width=cv_width, others=", count_parentals=True") + "<br>"
     content += plotter.prettify_div(block1) + "<br>"
-    content += plotter.prettify_div(get_ontoplot(dyn="canvas", freq="size", fix="none", guide="ont", root=root_term, ref=ref_term, height=cv_height, width=cv_width) + "<br>")
+    content += plotter.prettify_div(get_ontoplot(dyn="canvas", freq="size", fix="none", guide="ont", root=root_term, ref=ref_term, height=cv_height, width=cv_width, count_parentals=count_parents) + "<br>")
 
     block2 = "Canvasxpress ontoplot, frequency by size (only mode), guide lines set by concentric lines at each level of the ontology"+ "<br>"
-    block2 += get_ontoplot_call(dyn="canvas", freq="size", fix="\"none\"", guide="grid", root=root_term, ref=ref_term, height=cv_height, width=cv_width) + "<br>"
+    block2 += get_ontoplot_call(dyn="canvas", freq="size", fix="\"none\"", guide="grid", root=root_term, ref=ref_term, height=cv_height, width=cv_width, others=", count_parentals=True") + "<br>"
     content += plotter.prettify_div(block2) + "<br>"
-    content += plotter.prettify_div(get_ontoplot(dyn="canvas", freq="size", fix="none", guide="grid", root=root_term, ref=ref_term, height=cv_height, width=cv_width) + "<br>")
+    content += plotter.prettify_div(get_ontoplot(dyn="canvas", freq="size", fix="none", guide="grid", root=root_term, ref=ref_term, height=cv_height, width=cv_width, count_parentals=count_parents) + "<br>")
 
     block2 = "Canvasxpress ontoplot. Adding a config as an argument to change any canvas configuration parameter"+ "<br>"
-    block2 += get_ontoplot_call(dyn="canvas", freq="size", fix="\"none\"", guide="grid", root=root_term, ref=ref_term, height=cv_height, width=cv_width, others=', config={"sizeStep": 5}') + "<br>"
+    block2 += get_ontoplot_call(dyn="canvas", freq="size", fix="\"none\"", guide="grid", root=root_term, ref=ref_term, height=cv_height, width=cv_width, others=', config={"sizeStep": 5}, count_parentals=True') + "<br>"
     content += plotter.prettify_div(block2) + "<br>"
-    content += plotter.prettify_div(get_ontoplot(dyn="canvas", freq="size", fix="none", guide="grid", root=root_term, ref=ref_term, height=cv_height, width=cv_width, config={"sizeStep": 5}) + "<br>")
+    content += plotter.prettify_div(get_ontoplot(dyn="canvas", freq="size", fix="none", guide="grid", root=root_term, ref=ref_term, height=cv_height, width=cv_width, config={"sizeStep": 5}, count_parentals=count_parents) + "<br>")
 
 
     px_height, px_width = 1800, 2400
     content += "<div style=\"width: 90%; background-color:#ecf0f1; margin: 0 auto;\">"
-    content += "Dynamic ontoplot. Defining custom config and layout for plotly (dict can also be expressed as { } form) and point sizes (base size and scaling factors to frequency)"+ "<br>"
-    
+    content += f"Dynamic ontoplot. Defining custom {config_link} and {layout_link} or {polar_layout_link} for plotly (dict can also be expressed as {{}} form) and point sizes (base size and scaling factors to frequency)"+ "<br>"
+
     layout_str = "plotly_layout=dict(legend=dict(font=dict(size=24)), polar=dict(radialaxis=dict(tickfont=dict(size=24))))"
     layout = dict(legend=dict(font=dict(size=24)), polar=dict(radialaxis=dict(tickfont=dict(size=24))))
     
@@ -102,8 +119,8 @@ ${ plotter.create_title(f'Ontoplot. Different calls examples', id='div_from',
     user_sizes_str = "user_sizes={'ont_size': 3, 'prof_base_size': 5, 'prof_size_factor': 40}"
     user_sizes = {'ont_size': 3, 'prof_base_size': 5, 'prof_size_factor': 40}
 
-    content += get_ontoplot_call(dyn="dynamic", freq="both", fix="\"none\"", guide="ont", root=root_term, ref=ref_term, height=px_height, width=px_width, others=f", {layout_str}, {config_str}, {user_sizes_str}") + "<br>"
-    content += get_ontoplot(dyn="dynamic", freq="both", fix="none", guide="ont", root=root_term, ref=ref_term, height=px_height, width=px_width, config=config, plotly_layout=layout, user_sizes=user_sizes) + "<br>"
+    content += get_ontoplot_call(dyn="dynamic", freq="both", fix="\"none\"", guide="ont", root=root_term, ref=ref_term, height=px_height, width=px_width, others=f", {layout_str}, {config_str}, {user_sizes_str}, count_parentals=True") + "<br>"
+    content += get_ontoplot(dyn="dynamic", freq="both", fix="none", guide="ont", root=root_term, ref=ref_term, height=px_height, width=px_width, config=config, plotly_layout=layout, user_sizes=user_sizes, count_parentals=count_parents) + "<br>"
 
     content += "</div>"    
 %>

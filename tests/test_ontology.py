@@ -57,12 +57,12 @@ class TestOBOFunctionalities(unittest.TestCase):
             {"format-version": "1.2", "data-version": "test/a/b/c/"}, 
             {"terms": {
                 "Parental": {"id": "Parental", "name": "All", "comment": "none"}, 
-                "ChildA": {"id": "ChildA", "name": "ChildA", "is_a": ["Parental"]}, 
-                "ChildB": {"id": "ChildB", "name": "ChildB", "is_a": ["Parental"]}, 
-                "ChildA1": {"id": "ChildA1", "name": "ChildA1", "is_a": ["ChildA"]},
-                "ChildA2": {"id": "ChildA2", "name": "ChildA2", "is_a": ["ChildA"]},
-                "ChildB1": {"id": "ChildB1", "name": "ChildB1", "is_a": ["ChildB"]},
-                "ChildB2": {"id": "ChildB2", "name": "ChildB2", "is_a": ["ChildB"]}
+                "ChildA": {"id": "ChildA", "name": "ChildAname", "is_a": ["Parental"]}, 
+                "ChildB": {"id": "ChildB", "name": "ChildBname", "is_a": ["Parental"]}, 
+                "ChildA1": {"id": "ChildA1", "name": "ChildA1name", "is_a": ["ChildA"]},
+                "ChildA2": {"id": "ChildA2", "name": "ChildA2name", "is_a": ["ChildA"]},
+                "ChildB1": {"id": "ChildB1", "name": "ChildB1name", "is_a": ["ChildB"]},
+                "ChildB2": {"id": "ChildB2", "name": "ChildB2name", "is_a": ["ChildB"]}
                 }, 
             "typedefs": {}, "instances": {}})
         #self.load_Circular = (
@@ -538,7 +538,68 @@ class TestOBOFunctionalities(unittest.TestCase):
 
     # IC data
     ####################################
-    
+    def test_get_profiles_terms_frequency(self):
+        self.branched.precompute()
+        self.branched.add_profile("P1", ["ChildA1", "ChildA2"], substitute= False)
+        self.branched.add_profile("P2", ["ChildB1", "ChildB2"], substitute= False)
+        self.branched.add_observed_terms_from_profiles(reset=True)
+
+        #Checking total counts without parentals
+        expected = {'ChildA1': 1, 'ChildA2': 1, 'ChildB1': 1, 'ChildB2': 1}
+        returned = self.branched.get_profiles_terms_frequency(ratio= False, asArray= False, translate= False)
+        self.assertDictEqual(expected, returned)
+
+        #Checking frequencies without parentals and as array
+        expected = [['ChildA1', 0.5], ['ChildA2', 0.5], ['ChildB1', 0.5], ['ChildB2', 0.5]]
+        returned = self.branched.get_profiles_terms_frequency(ratio= True, asArray= True, translate= False)
+        self.assertListEqual(expected, returned)
+
+        # Checking total counts with parentals (we should expect ChildA and ChildB only one time, because, for example, the ChildA is parent of both ChildA1 and ChildA2, so we check it is not double counted)
+        expected = {'ChildA1': 1, 'ChildA2': 1, 'ChildB1': 1, 'ChildB2': 1, "ChildA": 1, "ChildB": 1, 'Parental': 2}
+        returned = self.branched.get_profiles_terms_frequency(ratio= False, asArray= False, translate= False, count_parentals= True)
+        self.assertDictEqual(expected, returned)
+
+        # Checking frequencies with parentals
+        expected = {'ChildA1': 0.5, 'ChildA2': 0.5, 'ChildB1': 0.5, 'ChildB2': 0.5, "ChildA": 0.5, "ChildB": 0.5, 'Parental': 1}
+        returned = self.branched.get_profiles_terms_frequency(ratio= True, asArray= False, translate= False, count_parentals= True)
+
+        #Now that we already checked parentals are not being double counted, we are going to check the following profiles examples
+        ## Example 1
+        self.branched.load_profiles({"P1": ["ChildA1"], "P2": ["ChildA2"], "P3": ["ChildB1"], "P4": ["ChildB2"]}, reset_stored = True)
+        self.branched.add_observed_terms_from_profiles(reset=True)
+        # Checking frequencies with parentals
+        expected = {'ChildA1': 0.25, 'ChildA2': 0.25, 'ChildB1': 0.25, 'ChildB2': 0.25, "ChildA": 0.5, "ChildB": 0.5, 'Parental': 1}
+        returned = self.branched.get_profiles_terms_frequency(ratio= True, asArray= False, translate= False, count_parentals= True)
+        self.assertDictEqual(expected, returned)
+
+        ## Example 2
+        self.branched.load_profiles({"P1": ["Parental"], "P2": ["ChildA"], "P3": ["ChildA1"], "P4": ["ChildB1"]}, reset_stored = True)
+        self.branched.add_observed_terms_from_profiles(reset=True)
+        # Checking frequencies with parentals
+        expected = {'ChildA1': 0.25, 'ChildB1': 0.25, "ChildA": 0.5, "ChildB": 0.25, 'Parental': 1}
+        returned = self.branched.get_profiles_terms_frequency(ratio= True, asArray= False, translate= False, count_parentals= True)
+        self.assertDictEqual(expected, returned)
+        #Filtering with threshold of 0.5
+        expected = {"ChildA": 0.5, 'Parental': 1}
+        returned = self.branched.get_profiles_terms_frequency(ratio= True, asArray= False, translate= False, count_parentals= True, min_freq= 0.5)
+        self.assertDictEqual(expected, returned)
+        #Checking translation functionallity
+        expected_translated = {"ChildAname": 0.5, 'All': 1}
+        returned_translated = self.branched.get_profiles_terms_frequency(ratio= True, asArray= False, translate= True, count_parentals= True, min_freq= 0.5)
+        self.assertDictEqual(expected_translated, returned_translated)
+
+        ## Example 3
+        self.branched.load_profiles({"P1": ["ChildA1"], "P2": ["ChildA1"], "P3": ["ChildA1"], "P4": ["ChildB1"]}, reset_stored = True)
+        self.branched.add_observed_terms_from_profiles(reset=True)
+        # #Filtering with threshold of 0.5 without parentals
+        expected = {'ChildA1': 0.75}
+        returned = self.branched.get_profiles_terms_frequency(ratio= True, asArray= False, translate= False, count_parentals= False, min_freq= 0.5)
+        self.assertDictEqual(expected, returned)
+        #Filtering with threshold of 0.5 with parentals
+        expected = {'ChildA1': 0.75, "ChildA": 0.75, 'Parental': 1}
+        returned = self.branched.get_profiles_terms_frequency(ratio= True, asArray= False, translate= False, count_parentals= True, min_freq= 0.5)
+        self.assertDictEqual(expected, returned)
+
     def test_similarities_profile_internal(self):
         self.hierarchical.precompute()
         self.hierarchical.add_profile("A",["Child2"], substitute= False)
@@ -592,7 +653,7 @@ class TestOBOFunctionalities(unittest.TestCase):
         
         candidate_sim_matrix, candidates, candidates_ids, similarities, _, _ = ont.calc_sim_term2term_similarity_matrix(reference_profile, ref_profile_id, external_profiles, string_format=True)
         candidate_sim_matrix.pop(0)
-        self.assertEqual(candidate_sim_matrix, [['Child1A1', 1.0, 1.0, 1.0, 0.0, 0.0, 0.0], ['ChildA2', 1.0, 0, 0.0, 0.0, 0.0, 0]])
+        self.assertEqual(candidate_sim_matrix, [['ChildA1name', 1.0, 1.0, 1.0, 0.0, 0.0, 0.0], ['ChildA2name', 1.0, 0, 0.0, 0.0, 0.0, 0]])
         self.assertEqual(candidates, [['A', 1.0], ['F', 0.8118083219821401], ['C', 0.6088562414866051], ['B', 0.0], ['D', 0.0], ['E', 0.0]])
         self.assertEqual(candidates_ids, ['A', 'F', 'C', 'B', 'D', 'E'])
         self.assertEqual(similarities, {'X': {'A': 1.0, 'B': 0.0, 'C': 0.6088562414866051, 'D': 0.0, 'E': 0.0, 'F': 0.8118083219821401}})
@@ -611,19 +672,19 @@ class TestOBOFunctionalities(unittest.TestCase):
                                     "Profile2": {"ChildA": [0.2,0.1,0.1], "ChildB1": [0.1,0.1,0.1], "ChildA2": [0.8,0.7,0.5]},
                                     "Profile3": {"ChildA": [0.2,0.0,0.1], "ChildB1": [0.1,0.1,0.0], "ChildB2": [0.1,0.2,0.1]}}
         
-        expected = [['HP', 'Profile1', 'Profile2', 'Profile3'], ['ChildA', 3, 3, 3], ['ChildB1', 0, 2, 2], ['ChildB2', 0, 0, 1]]
+        expected = [['HP', 'Profile1', 'Profile2', 'Profile3'], ['ChildAname', 3, 3, 3], ['ChildB1name', 0, 2, 2], ['ChildB2name', 0, 0, 1]]
         returned, _ = ont.get_negative_terms_matrix(candidate_terms_all_sims, term_limit = 10, candidate_limit = 10, 
                                                     string_format = True, header_id = "HP")
         self.assertEqual(expected, returned)
 
         #Testing with term_limit lower than the number of terms
-        expected = [['HP', 'Profile1', 'Profile2', 'Profile3'], ['ChildA', 3, 3, 3], ['ChildB1', 0, 2, 2]]
+        expected = [['HP', 'Profile1', 'Profile2', 'Profile3'], ['ChildAname', 3, 3, 3], ['ChildB1name', 0, 2, 2]]
         returned, _ = ont.get_negative_terms_matrix(candidate_terms_all_sims, term_limit = 2, candidate_limit = 10,
                                                     string_format = True, header_id = "HP")
         self.assertEqual(expected, returned)
         
         #Testing with candidate_limit lower than the number of candidates
-        expected = [['HP', 'Profile1', 'Profile2'], ['ChildA', 2, 2], ['ChildB1', 0, 1]]
+        expected = [['HP', 'Profile1', 'Profile2'], ['ChildAname', 2, 2], ['ChildB1name', 0, 1]]
         returned, _ = ont.get_negative_terms_matrix(candidate_terms_all_sims, term_limit = 10, candidate_limit = 2,
                                                     string_format = True, header_id = "HP")
         self.assertEqual(expected, returned)

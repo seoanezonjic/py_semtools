@@ -400,7 +400,7 @@ def main_semtools(opts: argparse.Namespace) -> None:
     
     if options.get('output_report') != None:
       ontology.add_observed_terms_from_profiles(reset = True)
-      if not ontology.dicts.get('term_stats'): ontology.get_profiles_terms_frequency(count_parentals = options['count_parentals'])
+      if not ontology.dicts.get('term_stats'): ontology.get_profiles_terms_frequency()
       if not hasattr(ontology, 'profile_sizes') and not hasattr(ontology, 'parental_terms_per_profile'): ontology.get_profile_redundancy()
       if not ontology.dicts.get('prof_IC_struct') and not ontology.dicts.get('prof_IC_observ'):
         ontology.get_observed_ics_by_onto_and_freq()
@@ -410,8 +410,13 @@ def main_semtools(opts: argparse.Namespace) -> None:
         os.makedirs(tmp_path, exist_ok=True)
         ontology.get_similarity_clusters(method_name=options['similarity_cluster_plot'], temp_folder=tmp_path, options=options)
       # Building report
-      container = {"ontology": ontology, "root_term": options['root_term'], "ontoplot_mode": options['ontoplot_mode'],
-                   "ref_term":options['ref_term'], 'similarity_cluster_plot': options['similarity_cluster_plot']}
+      container = {"ontology": ontology, 
+                   "root_term": options['root_term'], 
+                   "ref_term":options['ref_term'], 
+                   "ontoplot_mode": options['ontoplot_mode'], 
+                   "onto_count_parent": options['count_parentals'],
+                   "onto_min_freq": options['onto_min_freq'],
+                   "similarity_cluster_plot": options['similarity_cluster_plot']}
       template = open(REPORT_TEMPLATE).read()
       report = Py_report_html(container, os.path.basename(options["output_report"]), True)
       report.data_from_files = False # We are sending the a ontology object not a raw table file loaded with report_html's I/O methods

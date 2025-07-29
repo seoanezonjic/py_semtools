@@ -42,7 +42,7 @@ profiles = {row[0]: row[1].split(options['terms_separator']) for row in CmdTabs.
 # Loading ontology and getting profiles terms frequency
 ontology = Ontology(file = ontology_file, load_file = True, extra_dicts = {})
 ontology.load_profiles(profiles, reset_stored=True)
-ontology.get_profiles_terms_frequency(count_parentals = True, min_freq = 0.015)
+ontology.get_profiles_terms_frequency()
 ontology.get_profile_redundancy()
 ontology.get_observed_ics_by_onto_and_freq()
 ontology.get_profiles_resnik_dual_ICs()

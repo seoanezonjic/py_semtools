@@ -4,6 +4,8 @@
     cluster_activated = True if similarity_cluster_plot else False
     root_term = plotter.hash_vars['root_term']
     ref_term = plotter.hash_vars['ref_term']
+    onto_count_parent = plotter.hash_vars['onto_count_parent']
+    onto_min_freq = plotter.hash_vars['onto_min_freq']
 %>
 <div style="width: 90%; background-color:#ecf0f1; margin: 0 auto;"> 
     <h1 style="text-align: center; background-color:#d6eaf8">Annotations distribution</h1>
@@ -24,7 +26,7 @@
     </div>
 
     <div style="width: 90%; background-color:#ecf0f1; margin: 0 auto;">
-        ${plotter.ontoplot(ontology="ontology", root_node=root_term, reference_node=ref_term, dpi = 300,
+        ${plotter.ontoplot(ontology="ontology", root_node=root_term, reference_node=ref_term, dpi = 300, count_parentals = onto_count_parent, onto_min_freq=onto_min_freq,
                                 height=800, width=800, title=f"Profiles signature", mode = ontoplot_mode, freq_by="size", fix_alpha="none", guide_lines="ont")}                                                       
     </div>
     %if cluster_activated:

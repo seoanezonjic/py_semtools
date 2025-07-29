@@ -8,30 +8,30 @@ comment: none
 
 [Term]
 id: ChildA
-name: ChildA
+name: ChildAname
 is_a: Parental ! Parental
 
 [Term]
 id: ChildB
-name: ChildB
+name: ChildBname
 is_a: Parental ! Parental
 
 [Term]
 id: ChildA1
-name: Child1A1
+name: ChildA1name
 is_a: ChildA ! ChildA
 
 [Term]
 id: ChildA2
-name: ChildA2
+name: ChildA2name
 is_a: ChildA ! ChildA
 
 [Term]
 id: ChildB1
-name: ChildB1
+name: ChildB1name
 is_a: ChildB ! ChildB
 
 [Term]
 id: ChildB2
-name: ChildB2
+name: ChildB2name
 is_a: ChildB ! ChildB

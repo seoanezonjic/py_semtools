@@ -65,7 +65,7 @@ def _get_plot_points_params(self, hpo_stats_dict, guide_lines, freq_by, mode, us
     
     # Defining the alpha and frequency of the ontology terms points
     ont_alpha=0.7
-    ont_freq=1
+    ont_freq=1 if mode != "canvas" else 0.1
 
     return ont_to_prof_dist, prof_base_size, prof_size_factor, ont_size, ont_alpha, ont_freq
 
@@ -167,12 +167,13 @@ def ontoplot(self, **user_options):
   ONT_NAME = ontology.ont_name.upper() if hasattr(ontology, 'ont_name') and ontology.ont_name != None else 'Ontology'
   self._get_user_ontology_root_and_reference_nodes(ONT_NAME, user_options)
   default_opts = {"width": 800, "height": 800, "ONT_NAME": ONT_NAME, "mode": "static", "freq_by": "size", "fix_alpha": "none", 'guide_lines': "ont", 'title': f"",
-                  "responsive": True, "dynamic_units_calc": True, "dpi": 100, 'plotly_layout': {}, 'config': {}, 'user_sizes': {}}
+                  "responsive": True, "dynamic_units_calc": True, "dpi": 100, 'plotly_layout': {}, 'config': {}, 'user_sizes': {}, 'count_parentals': False, 'onto_min_freq': 0}
   default_opts.update(user_options)
   freq_by, mode, fix_alpha, guide_lines, user_sizes = default_opts['freq_by'], default_opts['mode'], default_opts['fix_alpha'], default_opts['guide_lines'], default_opts['user_sizes']
 
+  term_frequencies = ontology.dicts['term_stats'] if not default_opts['count_parentals'] else ontology.dicts['term_stats_with_parentals']
   max_freq = 1  #max(ontology.dicts['term_stats'].values()) This would make a max scaling, not the desired behaviour, but leave it here for reference
-  term_frequencies = {term: proportion/max_freq for term, proportion in ontology.dicts['term_stats'].items()}
+  term_frequencies = {term: proportion/max_freq for term, proportion in term_frequencies.items() if proportion >= default_opts['onto_min_freq']}
   user_root = default_opts['root_node']
   reference_node = default_opts['reference_node']
   prepared_data, color_legend, root_legend, max_level = self.prepare_ontoplot_data(ontology, term_frequencies, user_root, reference_node, freq_by, mode, fix_alpha, guide_lines, user_sizes)
@@ -226,9 +227,9 @@ def plotProfRed(self, **user_options):
 def makeTermFreqTable(self, **user_options):
     ontology = self.hash_vars[user_options['ontology']]
     ONT_NAME = ontology.ont_name.upper() if hasattr(ontology, 'ont_name') and ontology.ont_name != None else 'Ontology'
-    default_opts = {"width": "600px", "height": "600px", "ONT_NAME": ONT_NAME}    
+    default_opts = {"width": "600px", "height": "600px", "ONT_NAME": ONT_NAME, "count_parentals": False}    
     default_opts.update(user_options)    
-    term_stat_dict = ontology.dicts['term_stats']
+    term_stat_dict = ontology.dicts['term_stats'] if not default_opts['count_parentals'] else ontology.dicts['term_stats_with_parentals']
     term_stats = [ [ontology.translate_id(term), freq * 100] for term, freq in term_stat_dict.items()] 
     self.hash_vars['term_stats'] = term_stats
     return self.renderize_child_template(self.get_internal_template('makeTermFreqTable.txt'), **default_opts)

@@ -1248,38 +1248,50 @@ class Ontology:
     # stored profiles terms frequencies
     def get_profiles_terms_frequency(self, ratio = True, asArray = True, translate = False, count_parentals = False, min_freq = 0):
         freqs = defaultdict(lambda: 0)
+        freqs_parents = defaultdict(lambda: 0)
         for t_id, terms in self.profiles.items():
             unique_terms = set() 
             for term in terms: 
-                freqs[term] += 1 
-                if count_parentals:
-                    for parent in self.get_ancestors(term): unique_terms.add(parent)
-            if count_parentals:
-                for uniq_parent in unique_terms: freqs[uniq_parent] += 1
+                freqs[term] += 1
+                freqs_parents[term] += 1 
+                for parent in self.get_ancestors(term): unique_terms.add(parent)
+            for uniq_parent in unique_terms: freqs_parents[uniq_parent] += 1
 
         if translate:
             translated_freqs = {}
-            for term, freq in freqs.items():
+            translated_freqs_parents = {}
+            for term, freq in freqs_parents.items(): #We iterate over freqs_parents dictionary as it is a superset of freqs terms, so we make sure not to miss any term in both dicts (but we have to check the term does not exist in freqs)
                 tr = self.translate_id(term)
-                if tr != None: translated_freqs[tr] = freq
+                if tr != None: translated_freqs_parents[tr] = freq
+                if tr != None and freqs.get(term) != None: translated_freqs[tr] = freqs[term]
             freqs = translated_freqs
+            freqs_parents = translated_freqs_parents
 
         if ratio:
+            terms_to_filter_out_parents = []
             terms_to_filter_out = []
             n_profiles = len(self.profiles)
-            for term, freq in freqs.items(): 
-                frequency = freq / n_profiles
-                freqs[term] = frequency
-                if frequency < min_freq:
-                    terms_to_filter_out.append(term)
+            for term, freq in freqs_parents.items(): #Iterating over freqs_parents due to the same reason as above
+                parents_freq = freq / n_profiles
+                freqs_parents[term] = parents_freq
+                if parents_freq < min_freq: terms_to_filter_out_parents.append(term)
+                
+                if freqs.get(term) != None: 
+                    term_freq = freqs.get(term) / n_profiles
+                    freqs[term] = term_freq
+                    if term_freq < min_freq: terms_to_filter_out.append(term)
+            for term in terms_to_filter_out_parents: del freqs_parents[term]
             for term in terms_to_filter_out: del freqs[term]
 
         self.dicts['term_stats'] = freqs
+        self.dicts['term_stats_with_parentals'] = freqs_parents
+
         if asArray:
             freqs = [ [k, v] for k,v in freqs.items() ]
             freqs.sort(key = lambda f: f[1], reverse=True)
-
-        return freqs
+        
+        dict_to_return = freqs if not count_parentals else freqs_parents
+        return dict_to_return
 
 
     # Calculates number of ancestors present (redundant) in each profile stored

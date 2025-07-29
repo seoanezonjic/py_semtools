@@ -20,7 +20,7 @@
 					"colorLegendTitle": "Main branch",
 					"legendTextScaleFontFact": 0.5,
 					"legendTextScaleFontFactor": 0.5,
-					"sizeBy": "sizes",
+					"sizeBy": "freqs",
 					"sizeByContinuous": True,
 					"initialSize": 0,
 					"sizeStep": 2,
