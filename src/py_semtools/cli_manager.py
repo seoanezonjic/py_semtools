@@ -1,4 +1,3 @@
-from html import parser
 import argparse, re, sys, inspect
 from py_semtools.main_modules import *
 
@@ -167,7 +166,7 @@ def semtools(args = None):
     parser.add_argument("--skip_count_parentals", dest="count_parentals", default=True, action='store_false',
               help="For the ontoplot, use it to deactivate propagating frequency to parentals terms")
     parser.add_argument("--onto_min_freq", dest="onto_min_freq", default=0.005, type=float,
-              help="For the ontoplot, it sets the minimum frequency of terms to be shown in the plot. Default is 0.5%. Set to 0 to show all terms.") 
+              help="For the ontoplot, it sets the minimum frequency of terms to be shown in the plot. Default is 0.5 percent. Set to 0 to show all terms.") 
     opts =  parser.parse_args(args)
     main_semtools(opts)
 
