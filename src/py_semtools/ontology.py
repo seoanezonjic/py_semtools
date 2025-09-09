@@ -904,6 +904,27 @@ class Ontology:
             if mica[-1] > maxmica[-1]: maxmica = mica 
         return maxmica
 
+    # robust mica in profile #
+
+    def get_LCA_from_profile(self, terms, cutoff = 1):
+        maximum_occurencies = len(terms)
+        ancestor2counts = {}
+        for term in terms:
+            ancestors = self.get_ancestors(term)
+            for ancestor in ancestors:
+                if ancestor2counts.get(ancestor):
+                    ancestor2counts[ancestor] += 1
+                else:
+                    ancestor2counts[ancestor] = 1
+        lcas = [lca for lca, counts in ancestor2counts.items() if counts/maximum_occurencies >= cutoff]
+        return lcas
+    
+    def get_MICA_from_profile(self, terms, ic_type, cutoff=1):
+        lcas = self.get_LCA_from_profile(terms, cutoff=cutoff)
+        lca, ic = self.compute_MICA(lcas, ic_type)
+        mica = [lca, ic]
+        return mica
+    
     # Profile vs Profile #
 
     # Get semantic similarity from two term sets 
