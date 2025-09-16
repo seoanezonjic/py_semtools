@@ -100,6 +100,22 @@ class OboParser(FileParser):
             if infoType == 'Header': raise Exception('OBO file has only header, no terms')
             cls.process_entity(infoType, cls.stanzas, currInfo) # Store last loaded info
 
+    @classmethod
+    def isfromontology(cls, string):
+        return string.startswith(cls.ontology_name) if cls.ontology_name != None else True
+    
+    @classmethod
+    def clean_entity(cls, entity):
+        is_a = entity.get("is_a")
+        if is_a != None: 
+            parents = [ parent for parent in is_a if cls.isfromontology(parent)] # Skip is_a relations to other ontologies (if ontology name was found in the obo)
+            if parents:
+                entity["is_a"] = parents
+            else:
+                entity['is_a'] = None              
+
+
+
     # Handle OBO loaded info and stores it into correct container and format
     # ===== Parameters
     # +infoType+:: current ontology item type detected
@@ -111,8 +127,8 @@ class OboParser(FileParser):
     def process_entity(cls, infoType, stanzas, currInfo):
         info = cls.info2hash(currInfo)
         entity_id = info['id']
-        is_ontology_type = True if cls.ontology_name == None else entity_id.startswith(cls.ontology_name) # Check if entity_id is from the same ontology (if ontology name was found in the obo) (done this way because test toy examples do not contemplate ontology name equivalent with terms examples, but we should fix it in the future)
-        if infoType == 'Term' and is_ontology_type:
+        if infoType == 'Term' and cls.isfromontology(entity_id):
+            cls.clean_entity(info)
             stanzas['terms'][entity_id] = info
         elif infoType == 'Typedef':
             stanzas['typedefs'][entity_id] = info
