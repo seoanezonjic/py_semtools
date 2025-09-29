@@ -2,6 +2,7 @@ import pytest, shutil, sys, os
 from io import StringIO
 from py_semtools import Ontology, JsonParser
 import py_semtools
+from py_semtools.main_modules import expand_path
 from py_cmdtabs import CmdTabs
 ROOT_PATH=os.path.dirname(__file__)
 ONTOLOGY_PATH = os.path.join(ROOT_PATH, 'data')
@@ -446,3 +447,20 @@ def test_stEngine_report(abs_profiles, pmids_and_titles, ref_profile):
     assert os.path.exists(output_file.replace('.html', '/tmp/similitudes.pckl'))
 
     shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+
+################################################## TESTING AUXILIARY FUNCTIONS #######################################################
+
+def test_expand_path():
+    #Testing a path that matches several files
+    path_with_content = os.path.join(ROOT_PATH, 'data', 'st_engine_report')
+    expected_files = [os.path.join(path_with_content, f) for f in ["abs_profiles.txt", "pmids_and_titles.txt"]]
+    returned_files = expand_path(os.path.join(path_with_content, '*'))
+    assert set(expected_files) == set(returned_files)
+
+    #Testing a path with no matching files
+    path_with_no_content = os.path.join(ROOT_PATH, 'tmp', '*')
+    with pytest.raises(Exception) as excinfo:
+        expand_path(path_with_no_content)
+    assert str(excinfo.value) == f"Path {path_with_no_content} does not match any file"

@@ -42,14 +42,14 @@ def main_stEngine(opts: argparse.Namespace) -> None:
     stEngine.init_model(options["model_name"], cache_folder = options["model_path"], verbose= options['verbose'])
 
     if options.get("query") != None: 
-        stEngine.embedd_several_queries(options, glob.glob(options["query"]), verbose= options['verbose'])
+        stEngine.embedd_several_queries(options, expand_path(options["query"]), verbose= options['verbose'])
     elif options.get("query_embedded") != None:
-        stEngine.load_several_queries(options, glob.glob(options["query_embedded"]), verbose= options['verbose'])
+        stEngine.load_several_queries(options, expand_path(options["query_embedded"]), verbose= options['verbose'])
 
     if options.get("corpus") != None:
-      corpus_filenames = glob.glob(options["corpus"])
+      corpus_filenames = expand_path(options["corpus"])
     elif options.get("corpus") == None and options.get("corpus_embedded") != None:
-      corpus_filenames = glob.glob(options["corpus_embedded"])
+      corpus_filenames = expand_path(options["corpus_embedded"])
     else: # Raw text or saved embedding for corpus not defined so we cannot embed o calculate similarities.
       exit()
 
@@ -834,3 +834,8 @@ def read_stEngine_profiles(input_filename, id_col, profile_col, terms_sep=","):
             terms = row[profile_col].split(terms_sep)
             profiles[profile_id] = terms
     return profiles
+
+def expand_path(path):
+    expanded_paths = glob.glob(path)
+    if len(expanded_paths) == 0: raise Exception(f"Path {path} does not match any file")
+    return expanded_paths
