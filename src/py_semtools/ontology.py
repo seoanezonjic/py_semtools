@@ -545,7 +545,7 @@ class Ontology:
     # +ic_type+:: IC formula to be used
     # ===== Returns 
     # the similarity between both sets or false if frequencies are not available yet
-    def get_similarity(self, termA, termB, sim_type = 'resnik', ic_type = 'resnik', mica_index = False):
+    def get_similarity(self, termA, termB, sim_type = 'resnik', ic_type = 'resnik', mica_index = False, normalize_by = None):
         if sim_type not in self.allowed_calcs['sims']: raise Exception(f"SIM type specified ({sim_type}) is not allowed") 
         sim = None
         mica, sim_res = self.get_MICA(termA, termB, ic_type, mica_index)
@@ -580,6 +580,18 @@ class Ontology:
                         sim = (2.0 * sim_res) / (self.get_IC(termA, ic_type=ic_type) + self.get_IC(termB, ic_type=ic_type))
                     else:
                         sim = 0
+
+            # Normalization if required
+            if normalize_by != None:
+                if sim_type in ['lin', 'neric']:
+                    raise Exception(f"Normalization not allowed for similarity type {sim_type}")
+                if normalize_by == 'max_ic':
+                    max_ic = -math.log10(1/self.max_freqs['struct_freq'])
+                    sim = sim / max_ic
+                elif normalize_by == 'local_maximum':
+                    t1t1 = self.get_similarity(termA, termA, sim_type, ic_type, mica_index, normalize_by = None)
+                    t2t2 = self.get_similarity(termB, termB, sim_type, ic_type, mica_index, normalize_by = None)
+                    sim = sim * (t1t1 + t2t2) / (t1t1*t2t2)
         return sim
 
     # Checking valid terms
