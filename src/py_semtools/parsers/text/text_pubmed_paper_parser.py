@@ -25,16 +25,16 @@ class TextPubmedPaperParser(TextPubmedParser):
             try:            
                 parsed_paper = cls.parse_paper(f.read(), filename, options=options)
                 members.append(parsed_paper)
-                pmid, pmc, filename, year, whole_content, title, article_type, article_category = parsed_paper
-                if pmid == None:
+                pmid, pmc, filename, year, whole_content, title, article_type, article_category, keywords = parsed_paper
+                if pmid == "None":
                     stats["no_pmid"] += 1
                     if logger != None: logger.warning(f"Warning: Article without PMID found in file {filename}")
-                elif whole_content == "":
+                elif whole_content == "None":
                     stats["no_abstract"] += 1
                     if logger != None: logger.warning(f"Warning: Article PDMID:{pmid} without abstract found in file {filename}")
-                elif len(whole_content) < 50: 
-                    stats["no_abstract"] += 1
-                    if logger != None: logger.warning(f"Warning: Article PDMID:{pmid} had short abstract content in file {filename}. Content:{whole_content}")
+                elif len(whole_content) < 500: 
+                    #stats["no_abstract"] += 1 #We do not count short papers as no_abstract papers, IDK why this was here
+                    if logger != None: logger.warning(f"Warning: Article PDMID:{pmid} had short text content in file {filename}. Content:{whole_content}")
 
             except Exception as e:
                 stats['errors'] += 1
@@ -44,27 +44,34 @@ class TextPubmedPaperParser(TextPubmedParser):
 
     @classmethod
     def parse_paper(cls, paper_xml_string, filename, options={'clean_type': 'hard'}):
-        whole_content = ""
+        whole_content = "None"
         year = 0
         year_text = None
-        pmc = None
-        pmid = None
+        pmc = "None"
+        pmid = "None"
+        title = "None"
+        keywords = []
         article_root = cls.parse_xml(paper_xml_string)
 
         #GETTING ARTICLE TITLE FIELD
         title = cls.do_recursive_find(article_root, ['front','article-meta','title-group','article-title'])
-        title = cls.do_recursive_xml_content_parse(title).strip().lower() if cls.check_not_none_or_empty(title) else "none"
+        title = cls.do_recursive_xml_content_parse(title).strip().lower() if cls.check_not_none_or_empty(title) else "None"
         #GETTING article-type property from article tag and article category from article-categories tag
-        article_type = article_root.get('article-type').lower() if article_root.get('article-type') != None else "none"
+        article_type = article_root.get('article-type').lower() if article_root.get('article-type') != None else "None"
         article_category = cls.do_recursive_find(article_root, ['front','article-meta','article-categories', 'subj-group', 'subject'])
-        article_category = article_category.text.strip().lower() if cls.check_not_none_or_empty(article_category) else "none"
+        article_category = article_category.text.strip().lower() if cls.check_not_none_or_empty(article_category) else "None"
         #GETTING PMC ID, PMID AND YEAR
         for id_tags in article_root.iter('article-id'):
             if id_tags.get('pub-id-type') == "pmid":
                 pmid = id_tags.text 
             if id_tags.get('pub-id-type') == "pmc":
                 pmc = id_tags.text
-
+        #GETTING KEYWORDS
+        for kwd_group in article_root.iter('kwd-group'):
+            for kwd in kwd_group.iter('kwd'):
+                if cls.check_not_none_or_empty(kwd):
+                    keywords.append(kwd.text.strip().lower())
+        #GETTING YEAR
         for date_fields in article_root.iter("date"):
             if date_fields.get("date-type") == "accepted":
                 year_text = cls.extract_year(date_fields.find("year").text)
@@ -79,4 +86,5 @@ class TextPubmedPaperParser(TextPubmedParser):
         #GETTING PAPER WHOLE CONTENT
         paper_root = article_root.find("body")
         if paper_root != None: whole_content = cls.perform_soft_cleaning(  cls.do_recursive_xml_content_parse(paper_root).strip(), type=options["clean_type"] )
-        return [pmid, pmc, filename, year, whole_content, title, article_type, article_category]
+        if len(whole_content.strip()) == 0: whole_content = "None"
+        return [pmid, pmc, filename, year, whole_content, title, article_type, article_category, keywords]

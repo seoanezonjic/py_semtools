@@ -48,31 +48,34 @@ class TextPubmedAbstractParserTestCase(unittest.TestCase):
 
     #This method in called by parse and only parses one abstract (a xml Element already loaded)
     def test_parse_abstract(self):
-        pmid, abstract_content, year, title, article_type, article_category = TextPubmedAbstractParser.parse_abstract(self.article)
+        self.maxDiff = None
+        pmid, abstract_content, year, title, article_type, article_category, keywords = TextPubmedAbstractParser.parse_abstract(self.article)
         self.assertEqual(pmid, "22981092")
 
         self.assertEqual(abstract_content, self.abs_single_file_text)
         self.assertEqual(year, 2014)
         self.assertEqual(title, "depth of penetration of methylene blue in mandibular cortical bone.")
-        self.assertEqual(article_type, "none") #These fields are only available for full papers
-        self.assertEqual(article_category, "none") #These fields are only available for full papers
+        self.assertEqual(article_type, "None") #These fields are only available for full papers
+        self.assertEqual(article_category, "None") #These fields are only available for full papers
+        self.assertEqual(keywords, []) #TODO: ADD an abstracts with keywords to test this field
 
 
     #This method loads a file and parses all the abstracts calling parse_xml and parse_abstract inside
     def test_parse(self):
+        self.maxDiff = None
         chunk1_txts = self.chk1_exptd_txt
         chunk1_titles = self.chk1_exptd_titles
 
         #Note that documents without PMID/PMC or content are filtered out later with prepare_indexes method, not at this stage of the parsing
         #Below, the second document has no abstract, and the third document has no PMID
-        expected_indexes = [['22981089', chunk1_txts["22981089"], 2013, chunk1_titles['22981089'], 'none', 'none'], 
-                            ['22981088', chunk1_txts["22981088"], 2013, chunk1_titles['22981088'], 'none', 'none'], 
-                            [None,       chunk1_txts["None"],     2013, chunk1_titles['None'],     'none', 'none'],
-                            ['22981091', chunk1_txts['22981091'], 2013, chunk1_titles['22981091'], 'none', 'none'], 
-                            ['22981092', chunk1_txts['22981092'], 2014, chunk1_titles['22981092'], 'none', 'none']]
+        expected_indexes = [['22981089', chunk1_txts["22981089"], 2013, chunk1_titles['22981089'], 'None', 'None', []], 
+                            ['22981088', chunk1_txts["22981088"], 2013, chunk1_titles['22981088'], 'None', 'None', []], 
+                            ["None",     chunk1_txts["None"],     2013, chunk1_titles['None'],     'None', 'None', []],
+                            ['22981091', chunk1_txts['22981091'], 2013, chunk1_titles['22981091'], 'None', 'None', []], 
+                            ['22981092', chunk1_txts['22981092'], 2014, chunk1_titles['22981092'], 'None', 'None', []]]
 
         
         raw_indexes, stats = TextPubmedAbstractParser.parse(ABS_CHUNK1)        
-        self.assertEqual(stats, {'total': 5, 'no_abstract': 1, 'no_pmid': 1})
         self.assertEqual(raw_indexes, expected_indexes)
+        self.assertEqual(stats, {'total': 5, 'no_abstract': 1, 'no_pmid': 1})
         

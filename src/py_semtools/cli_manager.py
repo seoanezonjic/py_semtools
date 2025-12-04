@@ -1,5 +1,6 @@
 import argparse, re, sys, inspect
 from py_semtools.main_modules import *
+from collections import defaultdict
 
 ###########################################################################
 ## TYPES
@@ -8,6 +9,12 @@ from py_semtools.main_modules import *
 def one_column_file(file): return [line.strip() for line in open(file).readlines()]
 
 def text_list(string): return string.split(',')
+
+def text_to_default_dict(string):
+    d = defaultdict(lambda: False)
+    for item in text_list(string):
+        d[item] = True
+    return d
 
 def filter_regex(string):
     filters = []
@@ -98,7 +105,7 @@ def semtools(args = None):
     parser.add_argument("-t", "--translate", dest="translate", default= None,
               help="Translate to 'names' or to 'codes'")
     parser.add_argument("-s", "--similarity_method", dest="similarity", default= None, 
-              help="Calculate similarity between profile IDs computed by 'resnik', 'lin' or 'jiang_conrath' methods.")
+              help="Calculate similarity between profile IDs computed by 'resnik', 'lin' or 'jiang_conrath' methods. Recently added 'eric', 'neric', 'nweric' and 'erlin' methods.")
     parser.add_argument("--reference_profiles", dest="reference_profiles", default= None, 
               help="Path to file tabulated file with first column as id profile and second column with ontology terms separated by separator.")
     parser.add_argument('-c', "--clean_profiles", dest="clean_profiles", default= False, action='store_true', 
@@ -328,6 +335,10 @@ def get_corpus_index(args = None):
             help="Use to set the type of cleaning to be performed on the text. Options: basic (do not clean at all), soft or hard (default).")
     parser.add_argument("--split_type", dest="split_type", default= 'classic',
             help="Use to set the type of splitting to be performed on the text. Options: classic (default, splitting by '\n\n', \n', '.', ';', ',') or space_overlap ('\n\n', '\n', ' ', '' with overlap to avoid losing information).")
+    parser.add_argument("--extra_fields", dest="extra_fields", default= defaultdict(lambda: False), type=text_to_default_dict,
+            help="Comma-separated list of extra fields to include in the processed corpus. Available: title and/or keywords. Default: none")
+    parser.add_argument("--remain_empty_documents", dest="remain_empty_documents", default= False, action='store_true',
+            help="Use this option to keep entries with (main text) empty documents in the processed corpus (if they have at least title or keywords)")
     opts =  parser.parse_args(args)
     main_get_corpus_index(opts)
 

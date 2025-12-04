@@ -215,8 +215,13 @@ class STengine:
         abstract_parts = json.loads(text)
         paragraph_number = 0
         for paragraph in abstract_parts:
+            if paragraph[0] == "TITLE": paragraph_number = -2
+            if paragraph[0] == "KEYWORDS": paragraph_number = -1
             sentence_number = 0
             for sentence in paragraph:
+                if sentence in ["TITLE", "KEYWORDS", "None"]: 
+                    sentence_number += 1
+                    continue
                 id_tag = f"{id}_{paragraph_number}_{sentence_number}"
                 pubmed_index[id_tag] = sentence
                 sentence_number += 1
@@ -238,11 +243,8 @@ class STengine:
             for line in f:
                 try:
                     id, text, *_rest = line.rstrip().split("\t")
-                    if is_splitted:
-                        pubmed_index_iter = self.get_splitted_document(id, text)
-                        pubmed_index.update(pubmed_index_iter)
-                    else:
-                        pubmed_index[f"{id}_0_0"] = text
+                    pubmed_index_iter = self.get_splitted_document(id, text)
+                    pubmed_index.update(pubmed_index_iter)
                     n_papers += 1
                 except Exception as e:
                     warnings.warn(f"Error reading line in file {os.path.basename(file)}: {line}.\n Error: {e}")
