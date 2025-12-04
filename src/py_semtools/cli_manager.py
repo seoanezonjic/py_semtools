@@ -108,7 +108,7 @@ def semtools(args = None):
               help="Calculate similarity between profile IDs computed by 'resnik', 'lin' or 'jiang_conrath' methods. Recently added 'eric', 'neric', 'nweric' and 'erlin' methods.")
     parser.add_argument("--reference_profiles", dest="reference_profiles", default= None, 
               help="Path to file tabulated file with first column as id profile and second column with ontology terms separated by separator.")
-    parser.add_argument('-c', "--clean_profiles", dest="clean_profiles", default= False, action='store_true', 
+    parser.add_argument("--disable_cleaning_profiles", dest="clean_profiles", default= True, action='store_false', 
               help="Removes ancestors, descendants and obsolete terms from profiles.")
     parser.add_argument('-r', "--removed_path", dest="removed_path", default= 'rejected_profs', 
               help="Desired path to write removed profiles file.")
