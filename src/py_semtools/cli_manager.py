@@ -369,7 +369,9 @@ def get_sorted_profs(args=None):
     parser.add_argument("-X", "--excluded_terms", dest="excluded_terms", default= [], type = one_column_file,
                         help="File with excluded terms. One term code per line.")
     parser.add_argument("--hard_check", dest="hard_check", default= True, action="store_false",
-                        help="Set to disable hard check cleaning. Default true")    
+                        help="Set to disable hard check cleaning. Default true")
+    parser.add_argument("-s", "--similarity_method", dest="similarity", default= 'lin', 
+                        help="Calculate similarity between profile IDs computed by 'resnik', 'lin' or 'jiang_conrath' methods. Recently added 'eric', 'neric', 'nweric' and 'erlin' methods.")    
     parser.add_argument("-o", "--output_file", dest="output_file", default= 'report.html',
                         help="Output report file")
     parser.add_argument("-f", "--general_prof_freq", dest="term_freq", default= 0, type= float,
