@@ -1,7 +1,7 @@
 from collections import defaultdict
 from pydoc import text
 import sys, os, glob, re, warnings, json, gzip
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from py_exp_calc.exp_calc import invert_nested_hash, flatten
 
 from py_cmdtabs import CmdTabs
