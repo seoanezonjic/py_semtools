@@ -7,6 +7,6 @@ source envf/bin/activate
 #pip install -e ~/dev_py/py_semtools/
 #pip install -e ~/dev_py/py_report_html
 
-report_html -t template.txt -d ./example
+report_html -t template.txt -c styles.css -d ./example
 
 
