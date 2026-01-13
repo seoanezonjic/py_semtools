@@ -37,6 +37,12 @@ h3 {
   border-radius: 3px;
 }
 
+.table-compact {
+  width: fit-content;
+  font-size: 80%;
+  font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+
 .main {
   width: 95%; 
   padding:20px;
@@ -53,6 +59,7 @@ h3 {
 .code  {
   padding: 2px 4px;
   margin: 0.5em 0em;
+  width: fit-content;
   font-size: 90%;
   color: #c7254e;
   background-color: #f9f2f4;
@@ -60,11 +67,64 @@ h3 {
   font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
  }
 
+ .code p { /* We need to remove the margin to all p elements within code class  */
+  margin : 0;
+}
+
+.results {
+  background-color:#000000; 
+  width: fit-content; 
+  font-size: 90%;
+  font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+  padding: 5px;
+}
+
+.results p {
+  margin: 0;
+}
+
+.template {
+  width: fit-content;
+  font-size: 90%;
+  font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+  background-color:bisque; 
+  padding:10px; 
+}
+
+.template p {
+  margin : 0;
+ }
+
+.task {
+  width: fit-content;
+  background-color: lemonchiffon;
+  padding: 5px;
+  margin: 5px;
+}
+
 .click-data {
-  width: 10%;
+  width: fit-content;
+  padding: 2px;
   border-style: solid;
   border-color: #000000;
   border-width: thin;
   border-radius: 1px;
   background-color: #f2f2f2;
+}
+
+.divcolumn {
+  float: left;
+  padding: 5px;
+}
+
+.divrow {
+  margin-left:-5px;
+  margin-right:-5px;
+}
+
+/* Clearfix (clear floats) */
+.divrow::after {
+  content: "";
+  clear: both;
+  display: table;
 }
