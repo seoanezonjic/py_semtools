@@ -17,6 +17,14 @@ def show_n_exec(args, command='semtools', out='std'):
 	</details>
 	'''
 	return html
+
+def write_n_show_table(table, input_file):
+	plotter.hash_vars['terms'] = table
+	input_file = 'terms.txt'
+	with open(input_file, 'w') as f:
+			for r in table: f.write("\t".join(r) + "\n")
+	formated_table = plotter.table(id='terms', text=True, header=False, row_names=False, styled='bs', attrib = {'class' : 'table table-striped table-bordered table-compact'})
+	return formated_table
 %>
 
 <div class="main">
@@ -27,16 +35,10 @@ def show_n_exec(args, command='semtools', out='std'):
 				<p> <b>Input</b> </p>
 				<%
 					table = [['GO:0005499'], ['GO:0005502'], ['GO:0016918']]
-					plotter.hash_vars['terms'] = table
-
 					input_file = 'terms.txt'
-					with open(input_file, 'w') as f:
-							for r in table: f.write("\t".join(r) + "\n")
 				%>
-				${ plotter.table(id='terms', text=True, header=False, row_names=False, styled='bs', attrib = {'class' : 'table table-striped table-bordered table-compact'})}
-
+				${ write_n_show_table(table, input_file) }
 				<p> The script takes a input file with one code term per line and translates the list to term names </p>
-
 				<% args = f"-O GO -i {input_file} -l names" %>
 				${show_n_exec(args)}
 		</div>
@@ -67,13 +69,10 @@ def show_n_exec(args, command='semtools', out='std'):
 					<summary class="click-data"> <b>Input:</b> Show </summary>
 					<%
 						table = [['GO:0005499'],['GO:0005502'],['GO:0016918'],['GO:0005503'],['GO:0005542'],['GO:0008431'],['GO:0009374'],['GO:0019841'],['GO:0030170'],['GO:0070279'],['GO:0030975'],['GO:0030976'],['GO:0031177'],['GO:0031418'],['GO:0031419'],['GO:0070280'],['GO:0070281'],['GO:0070282'] ]
-						plotter.hash_vars['terms'] = table
-
 						input_file = 'terms.txt'
-						with open(input_file, 'w') as f:
-								for r in table: f.write("\t".join(r) + "\n")
 					%>
-					${ plotter.table(id='terms', text=True, header=False, row_names=False, styled='bs', attrib = {'class' : 'table table-striped table-bordered table-compact'})}
+					${ write_n_show_table(table, input_file) }
+
 				</details>
 
 				<p> To filter a list of code terms the -F flag must be used with a string that with specifices white lists (p, to keep terms with a given parent) or black list (n, to remove terms with a given parent). Parents are listed as comma separated term list flanked by '(' and ')'. The string can include several especifications of this estructure. The flag '--list' specifies that the input file is one item per line list.</p>
