@@ -35,7 +35,7 @@
 					"hoverTemplate": "<strong>{hp_names}</strong> <br> Main branch: {colors} <br> Frequency: {freqs} <br> level: {level}"
 				}
 
-	plotly_def_conf = {'toImageButtonOptions': {'format': 'svg', 'height': 800, 'width': 800, 'scale': 1}}
+	plotly_def_conf = {'toImageButtonOptions': {'format': 'svg', 'height': height, 'width': width, 'scale': 1}}
 	
 	if mode == "canvas": update_innermost(cvx_def_conf, config)
 	if mode == "dynamic": update_innermost(plotly_def_conf, config)
