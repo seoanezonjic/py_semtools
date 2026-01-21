@@ -1,0 +1,130 @@
+h1 { 
+  font-size: 2em;
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+  margin-left: 0;
+  margin-right: 0;
+  font-weight: bold;
+}
+
+h2 {
+  padding:2px;
+  font-size: 1.3em;
+  margin-top: 0.7em;
+  margin-bottom: 0.7em;
+  margin-left: 0;
+  margin-right: 0;
+  font-weight: bold;
+  background-color: #ffebe6;
+  border-color: #ffc2b3 ;
+  border-style: groove;
+  border-width: thick;
+  border-radius: 3px;
+}
+
+h3 {
+  padding: 2px;
+  font-size: 1.1em;
+  margin-top: 0.55em;
+  margin-bottom: 0.55em;
+  margin-left: 0;
+  margin-right: 0;
+  font-weight: bold;
+  background-color: #79d779;
+  border-color: #9de29d;
+  border-style: groove;
+  border-width: thick;
+  border-radius: 3px;
+}
+
+.table-compact {
+  width: fit-content;
+  font-size: 80%;
+  font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+
+.main {
+  width: 95%; 
+  padding:20px;
+}
+
+.lvl1 {
+  margin-left: 2em;
+}
+
+.lvl2 {
+  margin-left: 4em;
+}
+
+.code  {
+  padding: 2px 4px;
+  margin: 0.5em 0em;
+  width: fit-content;
+  font-size: 90%;
+  color: #c7254e;
+  background-color: #f9f2f4;
+  border-radius: 4px;
+  font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+ }
+
+ .code p { /* We need to remove the margin to all p elements within code class  */
+  margin : 0;
+}
+
+.results {
+  background-color:#000000; 
+  width: fit-content; 
+  font-size: 90%;
+  font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+  padding: 5px;
+}
+
+.results p {
+  margin: 0;
+}
+
+.template {
+  width: fit-content;
+  font-size: 90%;
+  font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+  background-color:bisque; 
+  padding:10px; 
+}
+
+.template p {
+  margin : 0;
+ }
+
+.task {
+  width: fit-content;
+  background-color: lemonchiffon;
+  padding: 5px;
+  margin: 5px;
+}
+
+.click-data {
+  width: fit-content;
+  padding: 2px;
+  border-style: solid;
+  border-color: #000000;
+  border-width: thin;
+  border-radius: 1px;
+  background-color: #f2f2f2;
+}
+
+.divcolumn {
+  float: left;
+  padding: 5px;
+}
+
+.divrow {
+  margin-left:-5px;
+  margin-right:-5px;
+}
+
+/* Clearfix (clear floats) */
+.divrow::after {
+  content: "";
+  clear: both;
+  display: table;
+}
