@@ -2,6 +2,7 @@ import argparse, re, sys, inspect
 from py_semtools.main_modules import *
 from collections import defaultdict
 
+
 ###########################################################################
 ## TYPES
 ###########################################################################
@@ -80,8 +81,8 @@ def remote_retriever(args = None):
     main_remote_retriever(opts)
  
 def semtools(args = None):
-    if args is None:
-        args = sys.argv[1:]
+    
+    if args is None: args = sys.argv[1:]
 
     parser = argparse.ArgumentParser(description='Perform Ontology driven analysis ')
     parser.add_argument("--return_all_terms_with_user_defined_attributes", dest="return_all_terms_with_user_defined_attributes", default=None,
@@ -175,7 +176,9 @@ def semtools(args = None):
     parser.add_argument("--onto_min_freq", dest="onto_min_freq", default=0.005, type=float,
               help="For the ontoplot, it sets the minimum frequency of terms to be shown in the plot. Default is 0.5 percent. Set to 0 to show all terms.") 
     opts =  parser.parse_args(args)
+    
     main_semtools(opts)
+
 
 def get_sorted_suggestions(args = None):
     if args is None:

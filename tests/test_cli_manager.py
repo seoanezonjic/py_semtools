@@ -1,8 +1,7 @@
 import pytest, shutil, sys, os 
 from io import StringIO
-from py_semtools import Ontology, JsonParser
-import py_semtools
 from py_semtools.main_modules import expand_path
+from py_semtools.cli_manager import *
 from py_cmdtabs import CmdTabs
 ROOT_PATH=os.path.dirname(__file__)
 ONTOLOGY_PATH = os.path.join(ROOT_PATH, 'data')
@@ -61,11 +60,11 @@ def capture_stdout(func):
 
 @capture_stdout
 def pysemtools(lsargs):
-    return py_semtools.semtools(lsargs)
+    return semtools(lsargs)
 
 @capture_stdout
 def pystrsimnet(lsargs):
-    return py_semtools.strsimnet(lsargs)
+    return strsimnet(lsargs)
 
 def strng2table(strng, fs="\t", rs="\n"):
 	table = [row.split(fs) for row in strng.split(rs)][0:-1]
@@ -134,7 +133,7 @@ def test_filter_profiles(tmp_dir, enrichment_ontology_3, filter_type, filename):
 def test_clean_profiles(tmp_dir,enrichment_ontology,profiles): # -c -T
     removed_profile = os.path.join(tmp_dir, 'removed_profiles')
     output_file = os.path.join(tmp_dir, 'cleaned_profiles')
-    args = f"-i {profiles} -c -T branchA -O {enrichment_ontology} -o {output_file} -r {removed_profile}".split(" ")
+    args = f"-i {profiles} -T branchA -O {enrichment_ontology} -o {output_file} -r {removed_profile}".split(" ")
     pysemtools(args)
     test_result = CmdTabs.load_input_data(output_file)
     expected_result = CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'cleaned_profiles'))
@@ -145,7 +144,7 @@ def test_clean_profiles(tmp_dir,enrichment_ontology,profiles): # -c -T
 
     # Checking the --out2cols option
     output_file_out2cols = os.path.join(tmp_dir, 'cleaned_profiles_2cols')
-    args = f"-i {profiles} -c -T branchA -O {enrichment_ontology} --out2cols -o {output_file_out2cols} -r {removed_profile}".split(" ")
+    args = f"-i {profiles} -T branchA -O {enrichment_ontology} --out2cols -o {output_file_out2cols} -r {removed_profile}".split(" ")
     pysemtools(args)
     test_result = CmdTabs.load_input_data(output_file_out2cols)
     expected_result_out2cols = CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'cleaned_profiles_2cols'))
@@ -153,13 +152,13 @@ def test_clean_profiles(tmp_dir,enrichment_ontology,profiles): # -c -T
 
     # Checking the --2cols option
     input_file = os.path.join(DATA_TEST_PATH, 'profiles_2cols')
-    args = f"-i {input_file} -c -T branchA -O {enrichment_ontology} --2cols -o {output_file} -r {removed_profile}".split(" ")
+    args = f"-i {input_file} -T branchA -O {enrichment_ontology} --2cols -o {output_file} -r {removed_profile}".split(" ")
     pysemtools(args)
     test_result = CmdTabs.load_input_data(output_file)
     assert expected_result == test_result
 
     # get profs with no removed profiles
-    args = f"-i {profiles} -c -T root -O {enrichment_ontology} -o {output_file} -r {removed_profile}".split(" ")
+    args = f"-i {profiles} -T root -O {enrichment_ontology} -o {output_file} -r {removed_profile}".split(" ")
     pysemtools(args)
     test_result = CmdTabs.load_input_data(output_file)
     expected =  [['P1', 'branchAChild1'], ['P2', 'branchB;branchAChild1'], ['P3', 'branchAChild1;branchAChild2'], ['P4', 'branchA'], ['P5', 'branchAChild1']]
@@ -266,7 +265,7 @@ def test_download(tmp_dir, profiles):
     @capture_stdout
     def script2test(lsargs):
         with pytest.raises(SystemExit):
-            return py_semtools.semtools(lsargs)
+            return semtools(lsargs)
         
     output_file = os.path.join(tmp_dir, 'downloaded_ontology')
     args = f"-d HPO -o {output_file}".split(" ")
@@ -275,7 +274,7 @@ def test_download(tmp_dir, profiles):
 
     download_args = f"-d GO".split(" ")
     removed_profile = os.path.join(tmp_dir, 'removed_profiles')
-    get_ont_args = f"-i {profiles} -c -O GO -r {removed_profile}".split(" ")
+    get_ont_args = f"-i {profiles} -O GO -r {removed_profile}".split(" ")
     script2test(download_args)# Talk with PSZ
     pysemtools(get_ont_args)
     test_result = CmdTabs.load_input_data(removed_profile)
@@ -348,7 +347,7 @@ def test_get_sorted_suggestions():
     returned_file_no_filter_no_limit = os.path.join(GET_SORTED_SUGG_PATH, 'returned', 'no_filter_no_limit.txt')
     args = f"-q {query_hps_file} -r {relations_file} -O {ontology_file} -o {returned_file_no_filter_no_limit}".split()
 
-    py_semtools.get_sorted_suggestions(args)
+    get_sorted_suggestions(args)
     expected = CmdTabs.load_input_data(os.path.join(GET_SORTED_SUGG_PATH, 'expected', 'no_filter_no_limit.txt'))
     returned = CmdTabs.load_input_data(returned_file_no_filter_no_limit)
     assert expected == returned
@@ -357,7 +356,7 @@ def test_get_sorted_suggestions():
     returned_file_no_filter_limit_2 = os.path.join(GET_SORTED_SUGG_PATH, 'returned', 'no_filter_limit_2.txt')
     args2 = f"-q {query_hps_file} -r {relations_file} -O {ontology_file} -o {returned_file_no_filter_limit_2} --max_targets 2".split(" ")
 
-    py_semtools.get_sorted_suggestions(args2)
+    get_sorted_suggestions(args2)
     expected = CmdTabs.load_input_data(os.path.join(GET_SORTED_SUGG_PATH, 'expected', 'no_filter_limit_2.txt'))
     returned = CmdTabs.load_input_data(returned_file_no_filter_limit_2)
     assert expected == returned
@@ -368,7 +367,7 @@ def test_get_sorted_suggestions():
     args3 = f"-q {query_hps_file} -r {relations_file} -O {ontology_file} -o {returned_file_filter_target_parentals} -f"
     args_list3 = args3.split(" ")
 
-    py_semtools.get_sorted_suggestions(args_list3)
+    get_sorted_suggestions(args_list3)
     expected = CmdTabs.load_input_data(os.path.join(GET_SORTED_SUGG_PATH, 'expected', 'filter_target_parentals.txt'))
     returned = CmdTabs.load_input_data(returned_file_filter_target_parentals)
     assert expected == returned
@@ -378,7 +377,7 @@ def test_get_sorted_suggestions():
     args4 = f"-q {query_hps_file} -r {relations_file} -O {ontology_file} -o {returned_file_filter_query_parentals} -c"
     args_list4 = args4.split(" ")
 
-    py_semtools.get_sorted_suggestions(args_list4)
+    get_sorted_suggestions(args_list4)
     expected = CmdTabs.load_input_data(os.path.join(GET_SORTED_SUGG_PATH, 'expected', 'filter_query_parentals.txt'))
     returned = CmdTabs.load_input_data(returned_file_filter_query_parentals)
     assert expected == returned
@@ -388,7 +387,7 @@ def test_get_sorted_suggestions():
     args5 = f"-q {query_hps_file} -r {relations_file} -O {ontology_file} -o {returned_file_filter_both_parentals} -f -c"
     args_list5 = args5.split(" ")
 
-    py_semtools.get_sorted_suggestions(args_list5)
+    get_sorted_suggestions(args_list5)
     expected = CmdTabs.load_input_data(os.path.join(GET_SORTED_SUGG_PATH, 'expected', 'filter_target_and_query_parentals.txt'))
     returned = CmdTabs.load_input_data(returned_file_filter_both_parentals)
     assert expected == returned
@@ -401,7 +400,7 @@ def test_get_sorted_suggestions():
     returned_file_filter_both_parentals = os.path.join(GET_SORTED_SUGG_PATH, 'returned', 'filter_target_and_query_parentals.txt')
     args6 = f"-q {query_hps_file} -r {relations_file} -O {ontology_file} -o {returned_file_filter_both_parentals} -f -c --output_report {output_file}"
     args_list6 = args6.split(" ")
-    py_semtools.get_sorted_suggestions(args_list6)
+    get_sorted_suggestions(args_list6)
     assert os.path.exists(output_file)
     shutil.rmtree(tmp_dir, ignore_errors=True)
 
@@ -422,7 +421,7 @@ def test_get_sorted_profs(omim_profiles, ref_profile):
                     "-o", f"{os.path.join(GET_SORTED_PROFS_PATH, 'report.html')}"]
     
     #Testing to check if calculations can be executed and report done without errors. Just checking that file exist
-    py_semtools.get_sorted_profs(list_of_args)
+    get_sorted_profs(list_of_args)
     assert os.path.exists(f"{os.path.join(GET_SORTED_PROFS_PATH, 'report.html')}")
     assert os.path.exists(f"{os.path.join(GET_SORTED_PROFS_PATH, 'report.txt')}")
 
@@ -440,7 +439,7 @@ def test_stEngine_report(abs_profiles, pmids_and_titles, ref_profile):
     print(list_of_args)
 
     #Testing to check if calculations can be executed and report done without errors. Just checking that file exist
-    py_semtools.stEngine_report(list_of_args)
+    stEngine_report(list_of_args)
 
     assert os.path.exists(output_file)
     assert os.path.exists(output_file.replace('.html', '_sims.txt'))

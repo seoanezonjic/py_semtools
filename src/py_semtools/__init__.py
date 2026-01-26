@@ -1,12 +1,16 @@
-from py_semtools.parsers.ont.file_parser import FileParser
-from py_semtools.parsers.ont.oboparser import OboParser
-from py_semtools.parsers.ont.json_parser import JsonParser
-from py_semtools.ontology import Ontology
-from py_semtools.indexers.text_indexer import TextIndexer
-from py_semtools.parsers.text.text_basic_parser import TextBasicParser
-from py_semtools.parsers.text.text_pubmed_parser import TextPubmedParser
-from py_semtools.parsers.text.text_pubmed_abstract_parser import TextPubmedAbstractParser
-from py_semtools.parsers.text.text_pubmed_paper_parser import TextPubmedPaperParser
-from py_semtools.stEngine import STengine
-from py_semtools.cli_manager import *
-from py_semtools.parallelizer import Parallelizer
+import sys
+
+if sys.version_info[:2] >= (3, 8):
+    # TODO: Import directly (no need for conditional) when `python_requires = >= 3.8`
+    from importlib.metadata import PackageNotFoundError, version  # pragma: no cover
+else:
+    from importlib_metadata import PackageNotFoundError, version  # pragma: no cover
+
+try:
+    # Change here if project is renamed and does not equal the package name
+    dist_name = __name__
+    __version__ = version(dist_name)
+except PackageNotFoundError:  # pragma: no cover
+    __version__ = "unknown"
+finally:
+    del version, PackageNotFoundError

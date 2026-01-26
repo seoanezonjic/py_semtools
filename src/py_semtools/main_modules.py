@@ -4,16 +4,16 @@ from importlib.resources import files
 import pickle
 import pandas as pd
 
+import py_exp_calc.exp_calc as pxc
+from py_exp_calc.exp_calc import invert_nested_hash, flatten
+from py_cmdtabs import CmdTabs
+from py_report_html import Py_report_html
+
+import py_semtools # For external_data
 from py_semtools.ontology import Ontology
 from py_semtools.indexers.text_indexer import TextIndexer
 from py_semtools.stEngine import STengine
-
-import py_semtools # For external_data
 from py_semtools.sim_handler import *
-import py_exp_calc.exp_calc as pxc
-from py_cmdtabs import CmdTabs
-from py_exp_calc.exp_calc import invert_nested_hash, flatten
-from py_report_html import Py_report_html
 
 #For get_pubmed_index
 import numpy as np
@@ -236,9 +236,9 @@ def main_semtools(opts: argparse.Namespace) -> None:
     extra_dicts = []
     if options.get('keyword') != None:
         extra_dicts.append(['xref', {'select_regex': eval('r"'+options['keyword']+'"'), 'store_tag': 'tag', 'multiterm': True}]) 
+
     ontology = Ontology(file = options['ontology_file'], load_file = True, extra_dicts = extra_dicts)
     ontology.precompute()
-
     ontology.threads = options['processes']
 
     if options['root'] != None:

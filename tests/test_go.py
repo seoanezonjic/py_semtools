@@ -6,7 +6,7 @@
 
 import unittest
 import os
-from py_semtools import Ontology
+from py_semtools.ontology import Ontology
 
 
 ROOT_PATH= os.path.dirname(__file__)

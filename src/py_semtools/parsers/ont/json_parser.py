@@ -1,5 +1,5 @@
 import json, gzip
-from py_semtools import FileParser
+from py_semtools.parsers.ont.file_parser import FileParser
 
 class JsonParser(FileParser):
 

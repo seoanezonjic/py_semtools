@@ -1,29 +1,23 @@
 import math
 import os
 import sys
-import time
 import copy
 import warnings
+import re
+import time
 import json
 import numpy as np
-from collections import defaultdict, Counter
+from collections import defaultdict, Counter, deque
 import networkx as nx
-import entrezpy.esearch.esearcher
-from py_semtools.parallelizer import Parallelizer
-
-from functools import partial
-from collections import defaultdict, deque
 import itertools
-import re
+
 import py_exp_calc.exp_calc as pxc
-
-from py_semtools import OboParser
-from py_semtools import JsonParser
-
 from py_exp_calc.exp_calc import intersection, union, diff, add_record, transform_tree
 
-# Importing monkey-patched methods
-import py_semtools.report_ont
+from py_semtools.parsers.ont.oboparser import OboParser
+from py_semtools.parsers.ont.json_parser import JsonParser
+import py_semtools.report_ont # Importing monkey-patched methods
+
 
 class Ontology:
     TEMPLATES = "py_semtools.templates"
@@ -1400,6 +1394,8 @@ class Ontology:
 
     def get_mica_index_from_profiles(self, pair_index, ic_type = 'resnik', sim_type = 'resnik'):
         if self.threads > 1:
+            from py_semtools.parallelizer import Parallelizer
+
             manager = Parallelizer(self.threads, 5000000) #threads, chunk size 0 to split all the tasks in one worker round
             pairs = list(pair_index.keys())
             s2c = self.dicts['string2code']
@@ -1665,6 +1661,7 @@ class Ontology:
     ## INTERNET QUERY METHODS
     ######################################## 
     def query_ncbi(self, db): # Due a hardcoded limit in NCBI API we only can retrieve 10000 records. To download the complete dataset, we need the E-Direct tools. Install from https://www.ncbi.nlm.nih.gov/books/NBK179288/ and add detection and implementation
+        import entrezpy.esearch.esearcher
         #import entrezpy.log.logger
         #entrezpy.log.logger.set_level('DEBUG')
         count = 0
@@ -1839,5 +1836,4 @@ class Ontology:
             concatenated = union([itemA] + itemB)
         elif type(itemB) is not dict:
             concatenated = list(set([itemA, itemB]))
-        return concatenated
-    
+        return concatenated    

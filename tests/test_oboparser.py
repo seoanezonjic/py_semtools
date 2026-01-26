@@ -7,7 +7,8 @@
 import copy
 import unittest
 import os
-from py_semtools import OboParser, Ontology
+from py_semtools.ontology import Ontology
+from py_semtools.parsers.ont.oboparser import OboParser
 
 
 ROOT_PATH= os.path.dirname(__file__)
