@@ -6,7 +6,9 @@ import json
 import numpy as np
 import warnings
 
-class STengine:
+from py_semtools.lexical_engines.engine_baseclass import LexicalEngineBaseClass
+
+class STengine(LexicalEngineBaseClass):
 
     def __init__(self, gpu_devices = []):
         self.gpu_devices = gpu_devices
@@ -78,35 +80,7 @@ class STengine:
                 pickle.dump(corpus_info, fOut)
         return corpus_info
 
-    def calculate_similarities(self, options, corpus_info):
-        from sentence_transformers import util # Moving import here to avoid long import time
-        if options.get("output_file"):
-          for query_basename, query_info in self.queries_content.items():
-            best_matches = self.calculate_similarity(query_info, corpus_info, options, util=util)
-            if options['print_relevant_pairs']: self.print_similarities(query_info, corpus_info, best_matches, options)
-            output_filename = os.path.join(options["output_file"],query_basename)
-            self.save_similarities(output_filename, best_matches, options)
-
-    def print_similarities(self, query_info, corpus_info, best_matches, options):
-        term_related_sentences = {}
-        for textID, matches in best_matches.items():
-            textIDX = corpus_info["textIDs"].index(textID)
-            text = corpus_info["all_corpus"][textIDX]
-            for kwdID, score in matches.items():
-                if score >= options["threshold"]: 
-                    kwIDXs = (idx for idx, char in enumerate(query_info['query_ids']) if char == kwdID) 
-                    term = " -- ".join([query_info["queries"][kwIDX] for kwIDX in kwIDXs])
-                    if term not in term_related_sentences: term_related_sentences[term] = {"term_id": kwdID, "sentences": []}
-                    term_related_sentences[term]["sentences"].append((textID, text, score))
-        print("-"*30)
-        for term, data in term_related_sentences.items():
-            print(f"Term: {term} (ID: {data['term_id']}) has {len(data['sentences'])} related sentences:")
-            for textID, text, score in data["sentences"]:
-                print(f"  - Text ID: {textID}, Score: {score}")
-                print(f"    Text: {text}")
-            print("-"*30)
-
-    def load_several_queries(self, options, embedded_queries_filenames, verbose = False):
+    def load_embedded_queries(self, options, embedded_queries_filenames, verbose = False):
         if verbose: print("\n-Loading embedded queries:")
         for embedded_query_filename in embedded_queries_filenames:
             embedded_query_basename = os.path.splitext(os.path.basename(embedded_query_filename))[0]
@@ -117,29 +91,23 @@ class STengine:
     def embedd_several_queries(self, options, queries_filenames, verbose = False):
         if verbose: print("\n-Loading and embedding queries:")
         for query_filename in queries_filenames:
-            query_basename, query_ids, queries, query_embeddings = self.embedd_single_query(query_filename, options)
-            self.queries_content[query_basename] = {'query_ids': query_ids, "queries": queries, "embeddings": query_embeddings}
+            query_basename, query_ids, queries, query_embeddings = self.load_and_embedd_single_query(query_filename, options)
+            #self.queries_content[query_basename] = {'query_ids': query_ids, "queries": queries, "embeddings": query_embeddings}
+            self.queries_content[query_basename].update({"embeddings": query_embeddings})
             if options.get("query_embedded") != None:
                 if verbose: print(f"---Saving embedded query in {query_basename}")
                 with open(os.path.join(options["query_embedded"], query_basename) + '.pkl', "wb") as fOut:
                     pickle.dump(self.queries_content[query_basename], fOut)
 
-    def embedd_single_query(self, query_filename, options):
-        """Embeds a single query from a file and returns its basename, IDs, queries, and embeddings.
+    def load_and_embedd_single_query(self, query_filename, options):
+        """Loads and embeds a single query from a file and returns its basename, IDs, queries, and embeddings.
         Args:
             query_filename (str): Path to the file containing the query.
             options (dict): Options for embedding, including verbosity and GPU settings.
         Returns:
             list: A list containing the basename of the query, its IDs, queries, and embeddings
         """
-        query_basename = os.path.splitext(os.path.basename(query_filename))[0]
-        if options["verbose"]: print(f"---Loading query from {query_basename}")
-        keyword_index = self.load_keyword_index(query_filename) # keywords used in queries
-        queries = []
-        query_ids = []
-        for kwdID, kwds in keyword_index.items():
-            queries.extend(kwds)
-            query_ids.extend([kwdID for i in range(0, len(kwds))])
+        queries, query_ids, query_basename = self.load_single_query(query_filename, options)
         query_embeddings = self.embedd_text(queries, options)
         return [query_basename, query_ids, queries, query_embeddings]
 
@@ -174,83 +142,8 @@ class STengine:
         if options["verbose"]: print(f"---Embedding time with {0 if options.get('gpu_device') == None else len(options['gpu_device'])} GPUs: {time.time() - start} seconds")
         return text_embedding
 
-    def load_keyword_index(self, file):
-        """Load keyword index from a file. Columns are separated by tab. 
-        The first column is the keyword ID, the second is the keyword name, and the third (optional) is a list of synonimns or alternative keywords names separated by '|'. 
-
-        Args:
-            file (str): Path to the file containing the keyword index.
-        Returns:
-            dict: A dictionary where keys are keyword IDs and values are lists of keywords names (including synonyms and alternatives).
-        """
-        keywords = {}
-        with open(file) as f:
-            for line in f:
-                fields = line.rstrip().split("\t")
-                if len(fields) == 2:
-                    id, keyword = fields
-                    keywords[id] = [keyword]
-                elif len(fields) == 3:
-                    id, keyword, alternatives = fields
-                    alternatives = alternatives.split('|')
-                    alternatives.append(keyword)
-                    kwrds = list(set(alternatives))
-                    keywords[id] = kwrds
-                else:
-                    warnings.warn(f"Error reading line in file {os.path.basename(file)}: {line}. Expected 2 or 3 fields, got {len(fields)} fields. Skipping line.")
-                    continue
-        return keywords
-
-    def get_splitted_document(self, id, text):
-        """
-        Process a document that has been split by get_corpus_index. It is a json formmated list of lists, where each sublist is a paragraph and each element inside the sublist is a sentence.
-        Each sentence is stored in a dictionary with the key being the ID of the document in the format "id_paragraphNumber_sentenceNumber" and the value being the sentence text.
-        Args:
-            id (str): The identifier for the document.
-            text (str): The text of the document in JSON format, where each paragraph is a list of sentences.
-        Returns:
-            dict: A dictionary where keys are IDs in the format "id_paragraph_sentence" and values are the corresponding sentences.
-        """
-        pubmed_index = {}
-        abstract_parts = json.loads(text)
-        paragraph_number = 0
-        for paragraph in abstract_parts:
-            if paragraph[0] == "TITLE": paragraph_number = -2
-            if paragraph[0] == "KEYWORDS": paragraph_number = -1
-            sentence_number = 0
-            for sentence in paragraph:
-                if sentence in ["TITLE", "KEYWORDS", "None"]: 
-                    sentence_number += 1
-                    continue
-                id_tag = f"{id}_{paragraph_number}_{sentence_number}"
-                pubmed_index[id_tag] = sentence
-                sentence_number += 1
-            paragraph_number += 1
-        return pubmed_index
-
-    def load_pubmed_index(self, file, is_splitted):
-        """
-        Load a PubMed processed index file get by 'get_corpus_index' binary. The file is expected to be in a specific format, where each line contains an ID and the corresponding text (and other columns with possible metadata not loaded).
-        Args:
-            file (str): Path to the file containing the PubMed index.
-            is_splitted (bool): If True, the text is expected to be in a JSON format with sentences split into paragraphs.
-        Returns:
-            tuple: A tuple containing a dictionary where keys are IDs in the format "id_paragraphNumber_sentenceNumber" and values are the corresponding sentences, and the total number of papers processed.
-        """
-        pubmed_index = {}
-        n_papers = 0
-        with gzip.open(file, "rt") as f:
-            for line in f:
-                try:
-                    id, text, *_rest = line.rstrip().split("\t")
-                    pubmed_index_iter = self.get_splitted_document(id, text)
-                    pubmed_index.update(pubmed_index_iter)
-                    n_papers += 1
-                except Exception as e:
-                    warnings.warn(f"Error reading line in file {os.path.basename(file)}: {line}.\n Error: {e}")
-        return pubmed_index, n_papers
-
-    def calculate_similarity(self, query_info, corpus_info, options, util):
+    def calculate_similarity(self, query_info, corpus_info, options):
+        from sentence_transformers import util # Moving import here to avoid long import time
         corpus_ids = corpus_info["textIDs"]
         corpus_embeddings = corpus_info["embeddings"]
 
@@ -315,17 +208,6 @@ class STengine:
               kwd[textID] = score
           #sentence = corpus_sentences[hit['corpus_id']]
         return best_matches
-
-    def save_similarities(self, filepath, best_matches, options):
-        #with gzip.open(filepath, "a") as f: #TODO: add it later
-        with open(filepath, 'a') as f:
-          for kwdID, matches in best_matches.items():
-            for textID, score in matches.items():
-              if score >= options["threshold"]: 
-                if options["order"] == "corpus-query":
-                  f.write(f"{textID}\t{kwdID}\t{score}\n")
-                else:
-                  f.write(f"{kwdID}\t{textID}\t{score}\n")
 
     def process_corpus_get_similarities(self, corpus_filenames, options, verbose=False):
         from torch import cuda, from_numpy # Moving import here to avoid long import time
