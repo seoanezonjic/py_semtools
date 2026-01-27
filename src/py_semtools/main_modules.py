@@ -313,7 +313,7 @@ def main_semtools(opts: argparse.Namespace) -> None:
                 refs_removed_profiles = clean_profiles(refs, ontology, options) 
             if refs == None or len(refs) == 0:
                 raise Exception('Reference profiles are empty after cleaning ')
-        write_similarity_profile_list(options['output_file'], ontology, options['similarity'], refs)
+        write_similarity_profile_list(options['output_file'], ontology, options['similarity'], refs, sim_index = options['similarity_index'])
 
 
     if options.get('ic') == 'prof':
@@ -651,8 +651,8 @@ def clean_profiles(profiles, ontology, options):
   for rp in removed_profiles: profiles.pop(rp)
   return removed_profiles
 
-def write_similarity_profile_list(output, onto_obj, similarity_type, refs):
-  profiles_similarity = onto_obj.compare_profiles(sim_type = similarity_type, external_profiles = refs)
+def write_similarity_profile_list(output, onto_obj, similarity_type, refs, sim_index = None):
+  profiles_similarity = onto_obj.compare_profiles(sim_type = similarity_type, external_profiles = refs, sim_index = sim_index)
   with open(output, 'w') as f:
     for profA, profB_and_sim in profiles_similarity.items():
       for profB, sim in profB_and_sim.items(): f.write(f"{profA}\t{profB}\t{sim}\n")

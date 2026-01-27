@@ -7,6 +7,8 @@ import re
 import time
 import json
 import numpy as np
+import pickle
+
 from collections import defaultdict, Counter, deque
 import networkx as nx
 import itertools
@@ -945,26 +947,25 @@ class Ontology:
     def compare(self, termsA, termsB, sim_type = 'resnik', ic_type = 'resnik', bidirectional = True, store_mica = False):
         # Check
         if termsA == None or termsB == None: raise Exception("Terms sets given are None")
-        if len(termsA) == 0 or len(termsB) == 0: raise Exception("Set given is empty. Aborting similarity calc")
-        micasA = []
-        # Compare A -> B
-        for tA in termsA:
+        if not termsA or not termsB: raise Exception("Set given is empty. Aborting similarity calc")
+        sum_micas = 0
+        for tA in termsA: # Compare A -> B
+            maxMICA = 0 # we select max value to get the best MICA for the term pair A-B
             if store_mica:
                 tA_micas = self.sim_index[tA]
-                micas = [ tA_micas[tB] for tB in termsB ]
+                for tB in termsB:
+                    val = tA_micas[tB]
+                    if val > maxMICA: maxMICA = val 
             else:    
                 micas = []
                 for tB in termsB:
                     value = self.get_similarity(tA, tB, sim_type = sim_type, ic_type = ic_type)
-                    if type(value) is float: micas.append(value)
-            if len(micas) > 0:
-                micasA.append(max(micas))  
-            else:
-                micasA.append(0) 
-        means_sim = sum(micasA) / len(micasA)
+                    if type(value) is float and value > maxMICA: maxMICA =  value
+            sum_micas += maxMICA  
+        means_sim = sum_micas / len(termsA)
         # Compare B -> A
         if bidirectional:
-            means_simA = means_sim * len(micasA)
+            means_simA = means_sim * len(termsA)
             means_simB = self.compare(termsB, termsA, sim_type = sim_type, ic_type = ic_type, bidirectional = False, store_mica = store_mica) * len(termsB)
             means_sim = (means_simA + means_simB) / (len(termsA) + len(termsB))
         # Return
@@ -1376,23 +1377,33 @@ class Ontology:
 
     # Profiles vs Profiles #
 
-    def get_pair_index(self, profiles_A, profiles_B, same_profiles=True):
+
+    def get_pair_index(self, profiles_A, profiles_B, same_profiles=True, sort_p = True):
         pair_index = {}
+            
         if same_profiles: # in this way we can save time for one half of the comparations
             profiles = list(profiles_A.values())
             total = len(profiles)
             for i, profile_A in enumerate(profiles):
                 for j in range(i, total): # get profile to compare with itself and with the others. When a profile is used is not checked again
                     for pair in itertools.product(profile_A, profiles[j]):
-                        pair_index[tuple(sorted(pair))] = True
+                        if sort_p:
+                            p = tuple(sorted(pair))
+                        else:
+                            p = tuple(pair)
+                        pair_index[p] = True
         else:
             for profile_A in  profiles_A.values():
                 for profile_B in profiles_B.values():
                     for pair in itertools.product(profile_A, profile_B):
-                        pair_index[tuple(sorted(pair))] = True
+                        if sort_p:
+                            p = tuple(sorted(pair))
+                        else:
+                            p = tuple(pair)
+                        pair_index[p] = True
         return pair_index
 
-    def get_mica_index_from_profiles(self, pair_index, ic_type = 'resnik', sim_type = 'resnik'):
+    def get_mica_index_from_profiles(self, pair_index, ic_type = 'resnik', sim_type = 'resnik', bidirectional = True):
         if self.threads > 1:
             from py_semtools.parallelizer import Parallelizer
 
@@ -1406,22 +1417,22 @@ class Ontology:
             for chunk_results in manager.execute(items, self.get_MICA_from_pairs):
                 for res in chunk_results:
                     pair, value = res
-                    self.calculateNpopulate_MICA_sim_indexes(pair, value, ic_type, sim_type)
+                    self.calculateNpopulate_MICA_sim_indexes(pair, value, ic_type, sim_type, bidirectional = bidirectional)
             #print(f"Parallel {time.time() - start}")
         else:
             for pair in pair_index.keys():
                 value = self.get_MICA_from_pair(pair, ic_type = ic_type)
                 #if term == None: value = False  # We use False to save that the operation was made but there is not mica value
-                self.calculateNpopulate_MICA_sim_indexes(pair, value, ic_type, sim_type)
+                self.calculateNpopulate_MICA_sim_indexes(pair, value, ic_type, sim_type, bidirectional = bidirectional)
 
-    def calculateNpopulate_MICA_sim_indexes(self, pair, value, ic_type, sim_type):
+    def calculateNpopulate_MICA_sim_indexes(self, pair, value, ic_type, sim_type, bidirectional = True):
         tA, tB = pair
         self.add2nestHashDef(self.mica_index, tA, tB, value)
-        self.add2nestHashDef(self.mica_index, tB, tA, value)
+        if bidirectional: self.add2nestHashDef(self.mica_index, tB, tA, value)
         value = self.get_similarity(tA, tB, sim_type = sim_type, ic_type = ic_type, mica_index = False)
         if value == None: value = 0
         self.add2nestHashDef(self.sim_index, tA, tB, value)
-        self.add2nestHashDef(self.sim_index, tB, tA, value)
+        if bidirectional: self.add2nestHashDef(self.sim_index, tB, tA, value)
 
 
     # Compare internal stored profiles against another set of profiles. If an external set is not provided, internal profiles will be compared with itself 
@@ -1432,7 +1443,7 @@ class Ontology:
     # +bidirectional+:: calculate bidirectional similitude. Default: false
     # ===== Return
     # Similitudes calculated
-    def compare_profiles(self, external_profiles = None, sim_type = 'resnik', ic_type = 'resnik', bidirectional = True):
+    def compare_profiles(self, external_profiles = None, sim_type = 'resnik', ic_type = 'resnik', bidirectional = True, sim_index = None):
         profiles_similarity = {} #calculate similarity between patients profile
         if external_profiles == None:
             comp_profiles = self.profiles
@@ -1442,14 +1453,8 @@ class Ontology:
             comp_profiles = external_profiles
             main_profiles = self.profiles
             same_profiles = False
-        #start = time.time()
-        pair_index = self.get_pair_index(main_profiles, comp_profiles, same_profiles=same_profiles)
-        #print(f"pair_index: {time.time() - start}")
-        #start = time.time()
-        self.mica_index = defaultdict(lambda: dict())
-        self.sim_index = defaultdict(lambda: dict())
-        self.get_mica_index_from_profiles(pair_index, ic_type = ic_type, sim_type=sim_type)
-        #print(f"mica_index: {time.time() - start}")
+
+        self.get_similarity_index(main_profiles, comp_profiles, sim_type=sim_type, ic_type=ic_type, same_profiles= same_profiles, file=sim_index)
         #start = time.time()
         if same_profiles:
             profiles = list(comp_profiles.items())
@@ -1468,12 +1473,23 @@ class Ontology:
         #print(f"similarity: {time.time() - start}")
         return profiles_similarity
 
+    def get_similarity_index(self, main_profiles, comp_profiles,  sim_type = 'resnik', ic_type = 'resnik', same_profiles = True, file=None):
+        #start = time.time()
+        if file == None or not os.path.exists(file):
+            pair_index = self.get_pair_index(main_profiles, comp_profiles, same_profiles=same_profiles)
+            #print(f"pair_index: {time.time() - start}")
+            #start = time.time()
+            self.mica_index = defaultdict(lambda: dict())
+            self.sim_index = defaultdict(lambda: dict())
+            self.get_mica_index_from_profiles(pair_index, ic_type = ic_type, sim_type=sim_type)
+            if file != None and not os.path.exists(file): pickle.dump(dict(self.sim_index), open(file, 'wb'))
+        elif os.path.exists(file):
+            self.sim_index = pickle.load(open(file, 'rb'))
+        #print(f"mica_index: {time.time() - start}")
+
     def get_profile_similarities_from_profiles(self, sim_type = 'resnik', ic_type = 'resnik'):
         profiles_similarity = {}
-        pair_index = self.get_pair_index(self.profiles, self.profiles, same_profiles=True)
-        self.mica_index = defaultdict(lambda: dict())
-        self.sim_index = defaultdict(lambda: dict())
-        self.get_mica_index_from_profiles(pair_index, ic_type = ic_type, sim_type=sim_type)
+        self.get_similarity_index(self.profiles, self.profiles,  sim_type = sim_type, ic_type = ic_type, same_profiles = True)
         for t_id, prof in self.profiles.items():
             sim = self.get_profile_similarities(prof, sim_type = sim_type, ic_type = ic_type, store_mica = True)
             profiles_similarity[t_id] = 1 if (np.isnan(sim) and len(prof) == 1) else sim

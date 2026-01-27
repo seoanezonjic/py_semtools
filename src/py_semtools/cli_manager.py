@@ -175,6 +175,9 @@ def semtools(args = None):
               help="For the ontoplot, use it to deactivate propagating frequency to parentals terms")
     parser.add_argument("--onto_min_freq", dest="onto_min_freq", default=0.005, type=float,
               help="For the ontoplot, it sets the minimum frequency of terms to be shown in the plot. Default is 0.5 percent. Set to 0 to show all terms.") 
+    parser.add_argument("--similarity_index", dest="similarity_index", default=None,
+              help="Term to term similarity index to perform profile similarity calculations") 
+
     opts =  parser.parse_args(args)
     
     main_semtools(opts)
