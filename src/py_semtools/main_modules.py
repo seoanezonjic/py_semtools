@@ -29,6 +29,18 @@ def main_get_corpus_index(opts: argparse.Namespace) -> None:
   TextIndexer.build_index(options)
 
 
+def main_fmEngine(opts: argparse.Namespace) -> None: 
+    from py_semtools.lexical_engines.fmEngine import FMengine
+    options = vars(opts)
+    if options["top_k"] == 0: options["top_k"] = np.inf
+    fmEngine = FMengine()
+    fmEngine.init_model(options["model_name"], verbose= options['verbose'])
+
+    fmEngine.load_several_queries(options, expand_path(options["query"]), verbose= options['verbose'])
+    corpus_info = fmEngine.load_several_corpora(options, expand_path(options["corpus"]), options['verbose'])
+    fmEngine.calculate_similarities(options, corpus_info)
+
+
 def main_stEngine(opts: argparse.Namespace) -> None: 
     from py_semtools.lexical_engines.stEngine import STengine
     options = vars(opts)

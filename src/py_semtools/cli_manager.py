@@ -220,6 +220,37 @@ def get_sorted_suggestions(args = None):
     opts =  parser.parse_args(args)
     main_get_sorted_suggestions(opts)
 
+
+def fmEngine(args = None):
+    if args is None:
+        args = sys.argv[1:]
+
+    parser = argparse.ArgumentParser(description='Perform Ontology driven analysis with Sentence Transformer')
+
+    parser.add_argument('-m', "--model_name", dest="model_name", default= None,
+            help="Model to be used. Current options include 'bm25' and 'tfidf'")
+    parser.add_argument('-q', "--query", dest="query", default= None,
+            help="Path to the query file. Wildcards are accepted to process multiple files")
+    parser.add_argument('-c', "--corpus", dest="corpus", default= None,
+            help="Path to the corpus file. Wildcards are accepted to process multiple files")    
+    parser.add_argument('-o', "--output_file", dest="output_file", default= None,
+            help="Path to save the output file with semantic scores")
+    parser.add_argument('-k', "--top_k", dest="top_k", default= 20, type = int,
+            help="Get top scores per keyword")
+    parser.add_argument('-t', "--threshold", dest="threshold", default= 0, type = float,
+            help="Similarity threshold to filter results to write")    
+    parser.add_argument('-v', "--verbose", dest="verbose", default= False, action='store_true',
+            help="Toogle on to get verbose output")
+    parser.add_argument("--order", dest="order", default= "corpus-query",
+            help="Order of the semantic search. Options: 'corpus-query' or 'query-corpus'")    
+    parser.add_argument('-s', "--split", dest="split", default= False, action='store_true',
+            help="Use it if your corpus comes splitted in smaller parts as list of lists (embedded in a json)")
+    parser.add_argument("--print_relevant_pairs", dest="print_relevant_pairs", default= False, action='store_true',
+            help="Use it to print the relevant pairs of query-corpus with their scores")        
+    opts =  parser.parse_args(args)
+    main_fmEngine(opts)
+
+
 def stEngine(args = None):
     if args is None:
         args = sys.argv[1:]
