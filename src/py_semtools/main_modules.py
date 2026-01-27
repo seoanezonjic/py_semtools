@@ -12,7 +12,7 @@ from py_report_html import Py_report_html
 import py_semtools # For external_data
 from py_semtools.ontology import Ontology
 from py_semtools.indexers.text_indexer import TextIndexer
-from py_semtools.stEngine import STengine
+from py_semtools.lexical_engines.stEngine import STengine
 from py_semtools.sim_handler import *
 
 #For get_pubmed_index

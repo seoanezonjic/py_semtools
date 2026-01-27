@@ -11,7 +11,7 @@ import gzip, glob, shutil
 import copy
 import unittest
 import os, sys, site
-from py_semtools import STengine
+from py_semtools.lexical_engines.stEngine import STengine
 
 
 ROOT_PATH= os.path.dirname(__file__)

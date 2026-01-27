@@ -7,7 +7,7 @@
 import copy
 import unittest
 import os
-from py_semtools import TextPubmedParser
+from py_semtools.parsers.text.text_pubmed_paper_parser import TextPubmedParser
 import xml.etree.ElementTree as ET
 
 ROOT_PATH= os.path.dirname(__file__)

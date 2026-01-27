@@ -5,7 +5,7 @@
 #########################################################
 
 import unittest, os, glob
-from py_semtools import TextPubmedPaperParser
+from py_semtools.parsers.text.text_pubmed_paper_parser import TextPubmedPaperParser
 
 ROOT_PATH= os.path.dirname(__file__)
 

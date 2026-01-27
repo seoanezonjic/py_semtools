@@ -177,19 +177,19 @@ def test_translate(tmp_dir,enrichment_ontology,profiles):
     output_file = os.path.join(tmp_dir, 'translated_profiles')
     output_file_codes = os.path.join(tmp_dir, 'translated_profiles_codes')
     
-    args = f"-i {profiles} -O {enrichment_ontology} -t names -o {output_file}".split(" ")
+    args = f"-i {profiles} -O {enrichment_ontology} -t names --disable_cleaning_profiles -o {output_file}".split(" ")
     pysemtools(args)
     test_result =  CmdTabs.load_input_data(output_file)
     expected_result =  CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'translated_profiles_names'))
     assert expected_result == test_result
 
-    args = f"-i {output_file} -O {enrichment_ontology} -t codes -o {output_file_codes}".split(" ")
+    args = f"-i {output_file} -O {enrichment_ontology} -t codes --disable_cleaning_profiles -o {output_file_codes}".split(" ")
     pysemtools(args)
     test_result =  CmdTabs.load_input_data(output_file_codes)
     expected_result =  CmdTabs.load_input_data(profiles)
     assert expected_result == test_result
 
-    args = f"-i {input_file_terms} -O {enrichment_ontology} -l codes".split(" ")
+    args = f"-i {input_file_terms} -O {enrichment_ontology} -l codes --disable_cleaning_profiles".split(" ")
     _, printed = pysemtools(args)
     test_result = strng2table(printed)
     expected_result =  CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'translated_terms_codes'))
@@ -197,14 +197,14 @@ def test_translate(tmp_dir,enrichment_ontology,profiles):
 
 ### Analysis
 def test_get_ic(tmp_dir,enrichment_ontology,profiles): # -I
-    args = f"-i {profiles} -O {enrichment_ontology} -I prof".split(" ")
+    args = f"-i {profiles} -O {enrichment_ontology} -I prof --disable_cleaning_profiles".split(" ")
     pysemtools(args)
     test_result =  CmdTabs.load_input_data("./profiles_IC_onto_freq")
     os.remove("./profiles_IC_onto_freq")
     expected_result =  CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'profiles_IC_onto_freq'))
     assert test_result == expected_result
 
-    args = f"-O {enrichment_ontology} -I ont".split(" ")
+    args = f"-O {enrichment_ontology} -I ont --disable_cleaning_profiles".split(" ")
     pysemtools(args)
     test_result =  CmdTabs.load_input_data("./ont_IC")
     os.remove("./ont_IC")
@@ -212,7 +212,7 @@ def test_get_ic(tmp_dir,enrichment_ontology,profiles): # -I
     assert test_result == expected_result
 
 def test_statistics_profiler(enrichment_ontology,profiles): # -n    
-    args = f"-i {profiles} -O {enrichment_ontology} -n".split(" ")
+    args = f"-i {profiles} -O {enrichment_ontology} --disable_cleaning_profiles -n".split(" ")
     _, printed = pysemtools(args)
     test_result =  strng2table(printed)
     expected_result =  CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'profile_stats'))
@@ -220,7 +220,7 @@ def test_statistics_profiler(enrichment_ontology,profiles): # -n
 
 def test_semantic_similarity(tmp_dir,enrichment_ontology,profiles): 
     output_file = os.path.join(tmp_dir, 'similarity_profiles')
-    args = f"-i {profiles} -O {enrichment_ontology} -o {output_file} -s lin".split(" ")
+    args = f"-i {profiles} -O {enrichment_ontology} --disable_cleaning_profiles -o {output_file} -s lin".split(" ")
     pysemtools(args)
     test_result =  CmdTabs.load_input_data(output_file)
     expected_result =  [['P5', 'P1', '0.6204627667845211'], ['P5', 'P2', '0.5'], ['P5', 'P3', '0.5793484513785037'],
@@ -235,7 +235,7 @@ def test_semantic_similarity(tmp_dir,enrichment_ontology,profiles):
 
     # With reference profiles
     reference_file = os.path.join(DATA_TEST_PATH, 'profiles_with_removedTerms')
-    args = f"-i {profiles} -O {enrichment_ontology} -o {output_file} -s lin --reference_profiles {reference_file}".split(" ")
+    args = f"-i {profiles} -O {enrichment_ontology} --disable_cleaning_profiles -o {output_file} -s lin --reference_profiles {reference_file}".split(" ")
     pysemtools(args)
     test_result =  CmdTabs.load_input_data(output_file)
     expected_result = [['P1', 'P1', '1.0'], ['P1', 'P2', '0.7469751778563474'], ['P1', 'P3', '0.8272836890460279'], 

@@ -9,7 +9,8 @@ import xml.etree.ElementTree as ET
 import copy
 import unittest
 import os
-from py_semtools import TextPubmedAbstractParser, TextPubmedParser
+from py_semtools.parsers.text.text_pubmed_abstract_parser import TextPubmedAbstractParser
+from py_semtools.parsers.text.text_pubmed_parser import TextPubmedParser
 
 
 ROOT_PATH= os.path.dirname(__file__)
