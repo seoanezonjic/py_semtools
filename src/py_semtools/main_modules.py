@@ -3,21 +3,16 @@ from collections import defaultdict
 from importlib.resources import files
 import pickle
 import pandas as pd
+import numpy as np
 
-import py_exp_calc.exp_calc as pxc
-from py_exp_calc.exp_calc import invert_nested_hash, flatten
 from py_cmdtabs import CmdTabs
 from py_report_html import Py_report_html
 
-import py_semtools # For external_data
-from py_semtools.ontology import Ontology
-from py_semtools.indexers.text_indexer import TextIndexer
-from py_semtools.lexical_engines.stEngine import STengine
-from py_semtools.sim_handler import *
 
 #For get_pubmed_index
-import numpy as np
 
+import py_semtools # For external_data
+from py_semtools.ontology import Ontology
 ONTOLOGY_INDEX = str(files('py_semtools.external_data').joinpath('ontologies.txt'))
 REPORT_TEMPLATE = str(files('py_semtools.templates').joinpath('report.txt'))
 #https://pypi.org/project/platformdirs/
@@ -28,12 +23,14 @@ ONTOLOGIES=os.path.join(site.USER_BASE, "semtools", 'ontologies')
 # MAIN FUNCTIONS 
 #########################################################################
 
-def main_get_corpus_index(opts: argparse.Namespace) -> None: 
+def main_get_corpus_index(opts: argparse.Namespace) -> None:
+  from py_semtools.indexers.text_indexer import TextIndexer 
   options = vars(opts)
   TextIndexer.build_index(options)
 
 
 def main_stEngine(opts: argparse.Namespace) -> None: 
+    from py_semtools.lexical_engines.stEngine import STengine
     options = vars(opts)
     if options["top_k"] == 0: options["top_k"] = np.inf
     stEngine = STengine(gpu_devices=options["gpu_device"])
@@ -423,7 +420,8 @@ def main_semtools(opts: argparse.Namespace) -> None:
       report.build(template)
       report.write(options['output_report'])
 
-def main_strsimnet(options: argparse.Namespace) -> None: 
+def main_strsimnet(options: argparse.Namespace) -> None:
+    from py_semtools.sim_handler import similitude_network 
     texts2compare = load_table_file(input_file = options.input_file,
                                  splitChar = options.split_char,
                                  targetCol = options.cindex,
@@ -476,7 +474,8 @@ def query_pubmed(keywords, file):
             f.write(f"{id}\t{query}\n") # write on the fly to avoid lose the previous queries for any incovenience
             time.sleep(1)
 
-def main_get_sorted_suggestions(opts: argparse.Namespace) -> None: 
+def main_get_sorted_suggestions(opts: argparse.Namespace) -> None:
+    from py_exp_calc.exp_calc import invert_nested_hash, flatten 
     options = vars(opts)
 
     ##### LOADING AND PRECOMPUTING ONTOLOGY AND LOADING AND CLEANING QUERY INPUT TERMS
@@ -689,6 +688,7 @@ def sort_terms_by_levels(terms, modifiers, ontology, all_childs):
   return all_childs, term_levels
 
 def get_childs(ontology, terms, modifiers):
+  import py_exp_calc.exp_calc as pxc
   #modifiers
   # - a: get ancestors instead of decendants
   # - r: get parent-child relations instead of list descendants/ancestors
@@ -741,6 +741,7 @@ def format_data(data, options):
     return data
 
 def load_table_file(input_file, splitChar = "\t", targetCol = [1], filterCol = -1, filterValue = None):
+    import py_exp_calc.exp_calc as pxc
     texts = []
     with open(input_file) as f:
         for line in f:
