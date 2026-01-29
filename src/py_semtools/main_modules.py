@@ -53,7 +53,7 @@ def main_stEngine(opts: argparse.Namespace) -> None:
     if options.get("query") != None: 
         stEngine.embedd_several_queries(options, expand_path(options["query"]), verbose= options['verbose'])
     elif options.get("query_embedded") != None:
-        stEngine.load_several_queries(options, expand_path(options["query_embedded"]), verbose= options['verbose'])
+        stEngine.load_embedded_queries(options, expand_path(options["query_embedded"]), verbose= options['verbose'])
 
     if options.get("corpus") != None:
       corpus_filenames = expand_path(options["corpus"])
