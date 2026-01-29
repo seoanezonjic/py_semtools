@@ -4,7 +4,7 @@
 # Load necessary packages and folder paths
 #########################################################
 
-from py_cmdtabs import CmdTabs
+from py_cmdtabs.cmdtabs import CmdTabs
 import json
 import copy
 import unittest

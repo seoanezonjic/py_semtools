@@ -1,10 +1,10 @@
 #! /usr/bin/env python
 import os, argparse
 import py_report_html
-from py_report_html import Py_report_html
-from py_cmdtabs import CmdTabs
+from py_report_html.py_report_html import Py_report_html
+from py_cmdtabs.cmdtabs import CmdTabs
 import py_semtools
-from py_semtools import Ontology
+from py_semtools.ontology import Ontology
 from importlib.resources import files
 import site
 

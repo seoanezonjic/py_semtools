@@ -4,7 +4,7 @@ import sys, os, glob, re, warnings, json, gzip
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from py_exp_calc.exp_calc import invert_nested_hash, flatten
 
-from py_cmdtabs import CmdTabs
+from py_cmdtabs.cmdtabs import CmdTabs
 from py_semtools.parallelizer import Parallelizer
 from py_semtools.parsers.text.text_basic_parser import TextBasicParser
 from py_semtools.parsers.text.text_pubmed_abstract_parser import TextPubmedAbstractParser

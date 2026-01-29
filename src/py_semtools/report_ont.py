@@ -6,7 +6,7 @@ import numpy as np
 import networkx as nx
 
 import py_exp_calc.exp_calc as pxc
-from py_report_html import Py_report_html
+from py_report_html.py_report_html import Py_report_html
 
 ########################################
 ## Monkey Patching Methods

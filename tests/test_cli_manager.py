@@ -2,7 +2,7 @@ import pytest, shutil, sys, os
 from io import StringIO
 from py_semtools.main_modules import expand_path
 from py_semtools.cli_manager import *
-from py_cmdtabs import CmdTabs
+from py_cmdtabs.cmdtabs import CmdTabs
 ROOT_PATH=os.path.dirname(__file__)
 ONTOLOGY_PATH = os.path.join(ROOT_PATH, 'data')
 DATA_TEST_PATH = os.path.join(ONTOLOGY_PATH, 'input_scripts')

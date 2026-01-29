@@ -5,8 +5,8 @@ import pickle
 import pandas as pd
 import numpy as np
 
-from py_cmdtabs import CmdTabs
-from py_report_html import Py_report_html
+from py_cmdtabs.cmdtabs import CmdTabs
+from py_report_html.py_report_html import Py_report_html
 
 
 #For get_pubmed_index
