@@ -4,10 +4,7 @@
 # Load necessary packages
 #########################################################
 
-import json
-import unittest
-import os
-import sys
+import unittest, os
 from py_semtools.sim_handler import text_similitude, ctext_AtoB, complex_text_similitude, calc_all_vs_all_sims
 
 

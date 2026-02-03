@@ -4,13 +4,8 @@
 # Load necessary packages and folder paths
 #########################################################
 
-import subprocess
-import json
+import subprocess, json, unittest, os
 from py_cmdtabs.cmdtabs import CmdTabs
-import gzip, glob, shutil
-import copy
-import unittest
-import os, sys, site
 from py_semtools.lexical_engines.stEngine import STengine
 
 

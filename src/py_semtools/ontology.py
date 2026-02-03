@@ -1,17 +1,8 @@
-import math
-import os
-import sys
-import copy
-import warnings
-import re
-import time
-import json
-import numpy as np
-import pickle
-
+import math, os, copy, warnings, re, json, pickle, itertools
 from collections import defaultdict, Counter, deque
+
+import numpy as np
 import networkx as nx
-import itertools
 
 import py_exp_calc.exp_calc as pxc
 from py_exp_calc.exp_calc import intersection, union, diff, add_record, transform_tree

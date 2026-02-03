@@ -4,11 +4,9 @@
 # Load necessary packages and folder paths
 #########################################################
 
-import copy
-import unittest
-import os
-from py_semtools.parsers.text.text_pubmed_paper_parser import TextPubmedParser
+import unittest, os
 import xml.etree.ElementTree as ET
+from py_semtools.parsers.text.text_pubmed_paper_parser import TextPubmedParser
 
 ROOT_PATH= os.path.dirname(__file__)
 DATA_TEST_PATH = os.path.join(ROOT_PATH, 'data', "stEngine", "inputs")

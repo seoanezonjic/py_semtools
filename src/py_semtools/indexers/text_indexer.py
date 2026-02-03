@@ -1,8 +1,7 @@
 from collections import defaultdict
-from pydoc import text
 import sys, os, glob, re, warnings, json, gzip
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from py_exp_calc.exp_calc import invert_nested_hash, flatten
+from py_exp_calc.exp_calc import flatten
 
 from py_cmdtabs.cmdtabs import CmdTabs
 from py_semtools.parallelizer import Parallelizer

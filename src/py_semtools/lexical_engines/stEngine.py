@@ -1,10 +1,4 @@
-import os
-import time
-import gc
-import gzip, pickle
-import json
-import numpy as np
-import warnings
+import os, time, gc, pickle
 
 from py_semtools.lexical_engines.engine_baseclass import LexicalEngineBaseClass
 

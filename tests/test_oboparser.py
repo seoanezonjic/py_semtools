@@ -4,9 +4,7 @@
 # Load necessary packages and folder paths
 #########################################################
 
-import copy
-import unittest
-import os
+import unittest, os
 from py_semtools.ontology import Ontology
 from py_semtools.parsers.ont.oboparser import OboParser
 

@@ -1,5 +1,4 @@
 import re
-import sys
 
 def get_white_similarity(textA, textB):
   string_A_pairs = get_string_pairs(textA)

@@ -1,8 +1,4 @@
-import os
-import re
-import traceback
-import tarfile
-import xml.etree.ElementTree as ET
+import os, traceback, tarfile
 from py_semtools.parsers.text.text_pubmed_parser import TextPubmedParser
 
 class TextPubmedPaperParser(TextPubmedParser):

@@ -1,4 +1,3 @@
-import sys
 from collections import defaultdict
 from importlib.resources import files
 

@@ -4,12 +4,8 @@
 # Load necessary packages and folder paths
 #########################################################
 
+import json, copy, unittest, os, shutil
 from py_cmdtabs.cmdtabs import CmdTabs
-import json
-import copy
-import unittest
-import os
-import shutil
 from py_semtools.indexers.text_indexer import TextIndexer
 
 ROOT_PATH= os.path.dirname(__file__)

@@ -4,8 +4,7 @@
 # Load necessary packages
 #########################################################
 
-import unittest
-import os
+import unittest, os
 from py_semtools.ontology import Ontology
 
 

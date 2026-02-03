@@ -4,9 +4,7 @@
 # Load necessary packages
 #########################################################
 
-import json
-import unittest
-import os
+import unittest, os
 from py_semtools.ontology import Ontology
 from py_semtools.parsers.ont.json_parser import JsonParser
 

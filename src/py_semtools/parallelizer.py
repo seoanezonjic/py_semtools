@@ -1,4 +1,3 @@
-import sys
 import time
 #from concurrent.futures import ProcessPoolExecutor
 from loky import get_reusable_executor

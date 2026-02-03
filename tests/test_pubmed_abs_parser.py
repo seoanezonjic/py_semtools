@@ -4,11 +4,7 @@
 # Load necessary packages and folder paths
 #########################################################
 
-import gzip, glob
-import xml.etree.ElementTree as ET
-import copy
-import unittest
-import os
+import glob, unittest, os
 from py_semtools.parsers.text.text_pubmed_abstract_parser import TextPubmedAbstractParser
 from py_semtools.parsers.text.text_pubmed_parser import TextPubmedParser
 
