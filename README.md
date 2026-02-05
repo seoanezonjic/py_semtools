@@ -2,5 +2,5 @@ If you want to use lexical models capabilities (stEngine and fmEngine binaries),
 with the base installation. For that end, you can install semtools like the following:
 
 ```bash
-pip install semtool[MODELS]
+pip install py_semtools[MODELS]
 ``` 
