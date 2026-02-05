@@ -6,6 +6,8 @@ class FMengine(LexicalEngineBaseClass):
         self.queries_content = {}
 
     def init_model(self, model_name: str, verbose: bool = False) -> None:
+        if model_name not in ["bm25", "tfidf"]:
+            raise Exception(f"Model {model_name} not supported in FMengine")
         if verbose: print(f"\n-Loading {model_name} model")
         self.model_name = model_name
 
@@ -48,6 +50,11 @@ class FMengine(LexicalEngineBaseClass):
     
     def calculate_bm25_similarity(self, query_text, corpus_text, options):
         import bm25s
+        import numpy as np
+        
+        # Adjust top_k to corpus size if top_k is infinite, otherwise bm25s throws an error (althouhg it works with sentence_transformers)
+        if options['top_k'] == np.inf: options['top_k'] = len(corpus_text)
+        
         retriever = bm25s.BM25()
 
         tokenized_corpus = bm25s.tokenize(corpus_text)
