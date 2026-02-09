@@ -942,12 +942,21 @@ class Ontology:
         sum_micas = 0
         for tA in termsA: # Compare A -> B
             maxMICA = 0 # we select max value to get the best MICA for the term pair A-B
+            fail_index = False
             if store_mica:
-                tA_micas = self.sim_index[tA]
-                for tB in termsB:
-                    val = tA_micas[tB]
-                    if val > maxMICA: maxMICA = val 
-            else:    
+                tA_micas = self.sim_index.get(tA)
+                if tA_micas == None:
+                    fail_index = True
+                else:
+                    for tB in termsB:
+                        val = tA_micas.get(tB)
+                        if val == None:
+                            fail_index = True
+                            break
+                        else:
+                            if val > maxMICA: maxMICA = val
+            
+            if not store_mica or fail_index: 
                 micas = []
                 for tB in termsB:
                     value = self.get_similarity(tA, tB, sim_type = sim_type, ic_type = ic_type)
