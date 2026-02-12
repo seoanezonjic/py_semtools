@@ -905,21 +905,26 @@ class Ontology:
 
     # robust mica in profile #
 
-    def get_LCA_from_profile(self, terms, cutoff = 1):
+    def get_LCA_from_profile(self, terms, cutoff = 1, white_list = None):
         maximum_occurencies = len(terms)
-        ancestor2counts = {}
-        for term in terms:
-            ancestors = self.get_ancestors(term)
-            for ancestor in ancestors:
-                if ancestor2counts.get(ancestor):
-                    ancestor2counts[ancestor] += 1
-                else:
-                    ancestor2counts[ancestor] = 1
+        if white_list == None:
+            ancestor2counts = defaultdict(int)
+            for term in terms:
+                ancestors = self.get_ancestors(term)
+                for ancestor in ancestors: ancestor2counts[ancestor] += 1
+        else:
+            ancestor2counts = {}
+            for term in white_list: ancestor2counts[term] = 0
+            for term in terms:
+                ancestors = self.get_ancestors(term)
+                for ancestor in ancestors: 
+                    if ancestor in ancestor2counts: ancestor2counts[ancestor] += 1
+
         lcas = [lca for lca, counts in ancestor2counts.items() if counts/maximum_occurencies >= cutoff]
         return lcas
     
-    def get_MICA_from_profile(self, terms, ic_type, cutoff=1):
-        lcas = self.get_LCA_from_profile(terms, cutoff=cutoff)
+    def get_MICA_from_profile(self, terms, ic_type = 'resnik', cutoff=1, white_list = None):
+        lcas = self.get_LCA_from_profile(terms, cutoff=cutoff, white_list = white_list)
         lca, ic = self.compute_MICA(lcas, ic_type)
         mica = [lca, ic]
         return mica
@@ -1497,15 +1502,15 @@ class Ontology:
 
     ## clustering methods
     ########################################################
-    def get_matrix_similarity(self, method_name, options, reference_profiles=None, profiles_similarity_filename=None, matrix_filename = None):
+    def get_matrix_similarity(self, method_name, options, reference_profiles=None, profiles_similarity_filename=None, matrix_filename = None, sim_index = None):
         if reference_profiles == None: 
-            profiles_similarity = self.compare_profiles(sim_type = method_name, external_profiles = reference_profiles)
+            profiles_similarity = self.compare_profiles(sim_type = method_name, external_profiles = reference_profiles, sim_index = sim_index)
         else: # AS reference profiles are constant, the sematic comparation will be A => B (A reference). So, we have to invert the elements to perform the comparation
             pat_profiles = self.profiles # TEmporal copy to preserve patient profiles and inject reference profiles
             self.load_profiles(reference_profiles, reset_stored = True)
             profiles_similarity = self.compare_profiles(sim_type = method_name, 
                 external_profiles = pat_profiles, 
-                bidirectional = False)
+                bidirectional = False,  sim_index = sim_index)
             self.load_profiles(pat_profiles, reset_stored = True)
             profiles_similarity = pxc.invert_nested_hash(profiles_similarity)
         if options.get('sim_thr') != None: pxc.remove_nested_entries(profiles_similarity, lambda id, sim: sim >= options['sim_thr']) 
@@ -1529,7 +1534,7 @@ class Ontology:
                 for pairsB, values in pairsB_and_values.items():
                     f.write(f"{pairsA}\t{pairsB}\t{values}\n")
 
-    def get_similarity_clusters(self, method_name, options, temp_folder = None, reference_profiles = None):
+    def get_similarity_clusters(self, method_name, options, temp_folder = None, reference_profiles = None, sim_index = None):
         clusters = {}
         similarity_matrix = None
         linkage = None
@@ -1549,7 +1554,8 @@ class Ontology:
                 similarity_matrix, y_names, x_names = self.get_matrix_similarity(method_name, options, 
                     reference_profiles=reference_profiles,  
                     profiles_similarity_filename=profiles_similarity_filename, 
-                    matrix_filename = matrix_filename)
+                    matrix_filename = matrix_filename,
+                    sim_index = sim_index)
             elif temp_folder != None or os.path.exists(matrix_filename):
                 similarity_matrix, x_names, y_names = pxc.load(matrix_filename, x_axis_file=axis_file, y_axis_file=axis_file_y)
             

@@ -165,6 +165,8 @@ def semtools(args = None):
               help="For the output report, it sets the root term to show in center of ontoplot")
     parser.add_argument("--ref_term", dest="ref_term", default=None,
               help="For the output report, it sets the term whose childs will be in the color legend to indicate the branches of descendants")
+    parser.add_argument("--similarity_cluster", dest="similarity_cluster", default=None,
+              help="Use to activate profiles clustering with a similarity method and generate basefiles (resnik', 'lin' or 'jiang_conrath). Not active by default")
     parser.add_argument("--similarity_cluster_plot", dest="similarity_cluster_plot", default=None,
               help="For output report, use to activate profiles clustering and clustermap plot with a similarity method (resnik', 'lin' or 'jiang_conrath). Not active by default")
     parser.add_argument("--cl_size_factor", dest="cl_size_factor", default=1.0, type=float,
@@ -177,6 +179,12 @@ def semtools(args = None):
               help="For the ontoplot, it sets the minimum frequency of terms to be shown in the plot. Default is 0.5 percent. Set to 0 to show all terms.") 
     parser.add_argument("--similarity_index", dest="similarity_index", default=None,
               help="Term to term similarity index to perform profile similarity calculations") 
+    parser.add_argument("--get_LCA_from_profile", dest="get_LCA_from_profile", default=None, type=float,
+              help="For a list if profiles, give for each one the list of LCA that occurs for the selected frequency in the profile terms.") 
+    parser.add_argument("--get_MICA_from_profile", dest="get_MICA_from_profile", default=None, type=float,
+              help="For a list if profiles, give for each one the list of LCA that occurs for the selected frequency in the profile terms.") 
+    parser.add_argument("--LCA_list", dest="LCA_list", default=None, type=str,
+              help="With flags 'get_LCA_from_profile' and 'get_MICA_from_profile' constraint the ancestors to the given list of terms (one per line).") 
 
     opts =  parser.parse_args(args)
     

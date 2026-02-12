@@ -302,6 +302,23 @@ def main_semtools(opts: argparse.Namespace) -> None:
     if options.get('expand_profiles') != None:
         ontology.expand_profiles(options['expand_profiles'], unwanted_terms = options['unwanted_terms'])
 
+    if options.get('get_LCA_from_profile') != None or options.get('get_MICA_from_profile'):
+      white_list_terms = None
+      if options.get('LCA_list') != None:
+        with open(options['LCA_list']) as f:
+           white_list_terms = [ line.rstrip().split("\t")[0] for line in f ]
+      with open(options['output_file'], 'w') as f:
+        for pid, prof in ontology.each_profile():
+          if options.get('get_LCA_from_profile') != None:
+            lcas = ontology.get_LCA_from_profile(prof, cutoff=options['get_LCA_from_profile'], white_list = white_list_terms)
+            lcas = ontology.clean_profile(lcas, remove_alternatives = False)
+            string = ','.join(sorted(lcas))
+          elif options.get('get_MICA_from_profile') != None:
+            mica = ontology.get_MICA_from_profile(prof, ic_type='resnik', cutoff=options['get_MICA_from_profile'], white_list = white_list_terms)
+            string = "\t".join(mica)
+          f.write(f"{pid}\t{string}\n")
+      exit()
+
     if options.get('similarity') != None:
         refs = None
         if options.get('reference_profiles') != None:
@@ -339,7 +356,7 @@ def main_semtools(opts: argparse.Namespace) -> None:
             else:
                 print(ac)
 
-    if options.get('output_file') != None and options.get('similarity') == None:
+    if options.get('output_file') != None and options.get('similarity') == None and options.get('similarity_cluster') == None:
         with open(options['output_file'], 'w') as file:
             if options.get('out2cols') == True:
                 for pr_id, terms in ontology.profiles.items(): 
@@ -406,6 +423,16 @@ def main_semtools(opts: argparse.Namespace) -> None:
                 text_to_print += "None\t" if field_content == None else f"{field_content}\t"
             print(text_to_print)
     
+    if options.get('similarity_cluster_plot') or options.get('similarity_cluster'): 
+      tmp_path = os.path.join(os.path.dirname(options['output_file']), "tmp", "clustermap_tmp")
+      os.makedirs(tmp_path, exist_ok=True)
+      method = None
+      if options.get('similarity_cluster_plot'):
+        method = options.get('similarity_cluster_plot')
+      elif options.get('similarity_cluster'):
+        method = options.get('similarity_cluster')
+      ontology.get_similarity_clusters(method_name=method, temp_folder=tmp_path, options=options, sim_index=options.get('similarity_index'))
+
     if options.get('output_report') != None:
       ontology.add_observed_terms_from_profiles(reset = True)
       if not ontology.dicts.get('term_stats'): ontology.get_profiles_terms_frequency()
@@ -413,10 +440,6 @@ def main_semtools(opts: argparse.Namespace) -> None:
       if not ontology.dicts.get('prof_IC_struct') and not ontology.dicts.get('prof_IC_observ'):
         ontology.get_observed_ics_by_onto_and_freq()
         ontology.get_profiles_resnik_dual_ICs()
-      if options.get('similarity_cluster_plot'): 
-        tmp_path = os.path.join(os.path.dirname(options['output_report']), "tmp", "clustermap_tmp")
-        os.makedirs(tmp_path, exist_ok=True)
-        ontology.get_similarity_clusters(method_name=options['similarity_cluster_plot'], temp_folder=tmp_path, options=options)
       # Building report
       container = {"ontology": ontology, 
                    "root_term": options['root_term'], 
