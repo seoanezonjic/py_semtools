@@ -262,9 +262,9 @@ def main_semtools(opts: argparse.Namespace) -> None:
 
     if options['input_file'] != None:
         data = CmdTabs.load_input_data(options['input_file'])
-        if options.get('list_translate') == None and options.get('filter_list') == None or options['keyword'] != None:
+        if options.get('list_translate') == None and options.get('filter_list') == None or options['keyword'] != None or options.get('get_representative_profile') != None:
             data = format_data(data, options)
-            if options.get('translate') != 'codes' and options.get('keyword') == None:
+            if (options.get('translate') != 'codes' and options.get('keyword') == None) or options.get('get_representative_profile') != None :
                 #TODO: change add_profile for load_profiles method and add the clean_hard argument to the method
                 for t_id, terms in data: ontology.add_profile(t_id, terms, clean_hard = options['load_hard_cleaned_profiles'], options = options)
     if options.get('list_translate') != None:
@@ -298,6 +298,20 @@ def main_semtools(opts: argparse.Namespace) -> None:
             with open(options['removed_path'], 'w') as f:
                 for profile in removed_profiles:
                     f.write(profile + "\n")
+    
+    if options.get('get_representative_profile') != None:
+        ontology.expand_profiles('parental', expand_ancestor = False)
+
+        n_profiles = len(ontology.profiles)
+        term_frequency = ontology.meta
+        final_profile = {}
+        for term, freqs in term_frequency.items():
+            obs = freqs['observed_freq']/n_profiles
+            if obs >= options.get('get_representative_profile'):  final_profile[term] = obs
+        non_redundant = ontology.clean_profile(list(final_profile.keys()))
+        for t in non_redundant: print(f"{t}\t{final_profile[t]}")
+        exit()
+
 
     if options.get('expand_profiles') != None:
         ontology.expand_profiles(options['expand_profiles'], unwanted_terms = options['unwanted_terms'])

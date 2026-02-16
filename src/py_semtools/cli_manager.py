@@ -182,9 +182,11 @@ def semtools(args = None):
     parser.add_argument("--get_LCA_from_profile", dest="get_LCA_from_profile", default=None, type=float,
               help="For a list if profiles, give for each one the list of LCA that occurs for the selected frequency in the profile terms.") 
     parser.add_argument("--get_MICA_from_profile", dest="get_MICA_from_profile", default=None, type=float,
-              help="For a list if profiles, give for each one the list of LCA that occurs for the selected frequency in the profile terms.") 
+              help="For a list of profiles, give for each one the list of LCA that occurs for the selected frequency in the profile terms.") 
     parser.add_argument("--LCA_list", dest="LCA_list", default=None, type=str,
               help="With flags 'get_LCA_from_profile' and 'get_MICA_from_profile' constraint the ancestors to the given list of terms (one per line).") 
+    parser.add_argument("--get_representative_profile", dest="get_representative_profile", default=None, type=float,
+              help="For a list of profiles, give one single profile with terms presented with al least FLOAT frecuency in the profile list. Parents are infered and computed too. The most spefic terms are retained.") 
 
     opts =  parser.parse_args(args)
     

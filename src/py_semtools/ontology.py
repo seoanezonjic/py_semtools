@@ -176,16 +176,18 @@ class Ontology:
     # +increas+:: frequency rate to be increased. Default = 1
     # ===== Return
     # true if process ends without errors, false in other cases
-    def add_observed_term(self, term = None, increase = 1.0):
+    def add_observed_term(self, term = None, increase = 1.0, expand_ancestor = True):
         if not self.term_exist(term): return False # Check if exists
         if self.meta.get(term) == None: self.meta[term] = {'ancestors': -1.0, 'descendants': -1.0, 'struct_freq': 0.0, 'observed_freq': 0.0}
-        # Add frequency
-        if self.meta[term]['observed_freq'] == -1: self.meta[term]['observed_freq'] = 0 
+        # Add frequency (with ancestors)
+        if self.meta[term]['observed_freq'] == -1: self.meta[term]['observed_freq'] = 0 #Annotation
         self.meta[term]['observed_freq'] += increase
         # Add observation to parents, we assume that observing the child implies the existence of the parent
-        for anc in self.get_ancestors(term): 
-            self.meta[anc]['observed_freq'] += increase
-            if self.max_freqs['observed_freq'] < self.meta[anc]['observed_freq']: self.max_freqs['observed_freq'] = self.meta[anc]['observed_freq']
+        if expand_ancestor:
+            for anc in self.get_ancestors(term): 
+                self.meta[anc]['observed_freq'] += increase
+                if self.max_freqs['observed_freq'] < self.meta[anc]['observed_freq']: self.max_freqs['observed_freq'] = self.meta[anc]['observed_freq']
+        
         # Check maximum frequency
         if self.max_freqs['observed_freq'] < self.meta[term]['observed_freq']: self.max_freqs['observed_freq'] = self.meta[term]['observed_freq']
 
@@ -726,8 +728,8 @@ class Ontology:
     # +transform_to_sym+:: if true, transform observed terms to symbols. Default: false
     # ===== Return
     # true if process ends without errors and false in other cases
-    def add_observed_terms(self, terms = None, increase = 1.0):
-        for t_id in terms: self.add_observed_term(t_id, increase = increase)
+    def add_observed_terms(self, terms = None, increase = 1.0, expand_ancestor = True):
+        for t_id in terms: self.add_observed_term(t_id, increase = increase, expand_ancestor = expand_ancestor)
 
     # Modifying Profile
     ####################################
@@ -1144,14 +1146,13 @@ class Ontology:
     # Includes as "observed_terms" all terms included into stored profiles
     # ===== Parameters
     # +reset+:: if true, reset observed freqs alreeady stored befor re-calculate
-    def add_observed_terms_from_profiles(self, reset = False):
+    def add_observed_terms_from_profiles(self, reset = False, expand_ancestor = True):
         if reset:
             self.items = {}
             for term, freqs in self.meta.items(): freqs['observed_freq'] = -1 
         for pr_id, terms in self.profiles.items(): 
-            for t_id in terms:
-                add_record(self.items, t_id, pr_id )
-            self.add_observed_terms(terms = terms)
+            for t_id in terms: add_record(self.items, t_id, pr_id )
+            self.add_observed_terms(terms = terms, expand_ancestor = expand_ancestor)
 
     # ===== Returns 
     # profiles assigned to a given ID
@@ -1172,7 +1173,7 @@ class Ontology:
         self.max_freqs['observed_freq'] = 0
         self.items = {}
 
-    def expand_profiles(self, meth, unwanted_terms = [], calc_metadata = True, ontology = None, minimum_childs = 1, clean_profiles = True):
+    def expand_profiles(self, meth, unwanted_terms = [], calc_metadata = True, ontology = None, minimum_childs = 1, clean_profiles = True, expand_ancestor = True):
         if meth == 'parental':
             for pr_id, terms in self.profiles.items(): self.profiles[pr_id] = sorted(diff(self.expand_profile_with_parents(terms), unwanted_terms))
             if calc_metadata: self.get_items_from_profiles()
@@ -1180,7 +1181,7 @@ class Ontology:
             self.get_items_from_profiles()
             self.expand_items_to_parentals(ontology = ontology, minimum_childs = minimum_childs, clean_profiles = clean_profiles)
             self.get_profiles_from_items()
-        self.add_observed_terms_from_profiles(reset = True)
+        self.add_observed_terms_from_profiles(reset = True, expand_ancestor = expand_ancestor)
 
     # Remove alternatives (if official term is present) and ancestors terms of stored profiles 
     # ===== Parameters
