@@ -329,7 +329,7 @@ def main_semtools(opts: argparse.Namespace) -> None:
             string = ','.join(sorted(lcas))
           elif options.get('get_MICA_from_profile') != None:
             mica = ontology.get_MICA_from_profile(prof, ic_type='resnik', cutoff=options['get_MICA_from_profile'], white_list = white_list_terms)
-            string = "\t".join(mica)
+            string = mica[0]
           f.write(f"{pid}\t{string}\n")
       exit()
 
