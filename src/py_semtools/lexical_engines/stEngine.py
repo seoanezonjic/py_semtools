@@ -8,6 +8,7 @@ class STengine(LexicalEngineBaseClass):
         self.gpu_devices = gpu_devices
         self.model_name = None
         self.embedder = None
+        self.reranker = None
         self.queries_content = {}
         
 
@@ -58,12 +59,20 @@ class STengine(LexicalEngineBaseClass):
 
     def init_model(self, model_name, cache_folder = None, verbose = False):
         from sentence_transformers import SentenceTransformer #Moving import here due to long import time
-        if model_name != None and cache_folder != None:
-            if verbose: print(f"\n-Downloading or loading model {model_name} inside path {cache_folder}")
-            self.model_name = model_name
-            has_cached_model = os.path.exists(os.path.join(cache_folder, f'models--sentence-transformers--{model_name}')) #SentenceTransfomers now uses local_files_only to control internet access, even if the model is cached, and trying to download the model with this variable false gives error, so we have to control it
-            self.embedder = SentenceTransformer(model_name, cache_folder = cache_folder, local_files_only=has_cached_model)
+        full_model_path = os.path.join(cache_folder, model_name)
+        if verbose: print(f"\n-Downloading or loading bi encoder model {model_name} inside path {full_model_path}")
+        self.model_name = model_name
+        has_cached_model = os.path.exists(os.path.join(full_model_path, f'models--sentence-transformers--{model_name}')) #SentenceTransfomers now uses local_files_only to control internet access, even if the model is cached, and trying to download the model with this variable false gives error, so we have to control it
+        self.embedder = SentenceTransformer(model_name, cache_folder = full_model_path, local_files_only=has_cached_model)
 
+    def init_rerank_model(self, model_name, cache_folder = None, verbose = False):
+        from sentence_transformers import CrossEncoder
+        full_model_path = os.path.join(cache_folder, model_name)
+        if verbose: print(f"\n-Downloading or loading cross-encoder model {model_name} inside path {full_model_path}")
+        self.reranker_model_name = model_name
+        has_cached_model = os.path.exists(os.path.join(full_model_path, f'models--cross-encoder--{model_name}')) #SentenceTransfomers now uses local_files_only to control internet access, even if the model is cached, and trying to download the model with this variable false gives error, so we have to control it
+        self.reranker = CrossEncoder(model_name, cache_folder = full_model_path, local_files_only=has_cached_model)
+     
     def embed_save_corpus(self, options, corpus_basename, all_textIDs, all_corpus, total_papers):
         if options["verbose"]: print(f"---Embedding corpus of {corpus_basename} comprised by {total_papers} initial papers with {len(all_textIDs)} sentences, with {'GPU' if options.get('gpu_device') else 'CPU'}")
         corpus_embeddings = self.embedd_text(all_corpus, options)       
@@ -126,34 +135,82 @@ class STengine(LexicalEngineBaseClass):
         return text_embedding
 
     def embedd_text_gpu(self, text, options):
-        start = time.time()
+        glob_start = time.time()
         if len(options["gpu_device"]) > 1:
+                start = time.time()
                 pool = self.embedder.start_multi_process_pool(options["gpu_device"])
-                text_embedding = self.embedder.encode_multi_process(text, pool = pool, batch_size=options["batch_size"])
+                end = time.time()
+                print(f"---Time to start multi-process pool for embedding: {end - start} seconds")
+                start = time.time()
+                text_embedding = self.embedder.encode_multi_process(text, pool = pool, batch_size=options["batch_size"], chunk_size=options['single_worker_chunk_size'])
+                end = time.time()
+                print(f"---Time to embed with multi-process pool: {end - start} seconds")
                 self.embedder.stop_multi_process_pool(pool)
         elif len(options["gpu_device"]) == 1:
                 text_embedding = self.embedder.encode(text, convert_to_numpy=True, show_progress_bar = options["verbose"], device= options["gpu_device"][0]) #convert_to_tensor=True 
-        if options["verbose"]: print(f"---Embedding time with {0 if options.get('gpu_device') == None else len(options['gpu_device'])} GPUs: {time.time() - start} seconds")
+        if options["verbose"]: print(f"---Embedding time with {0 if options.get('gpu_device') == None else len(options['gpu_device'])} GPUs: {time.time() - glob_start} seconds")
         return text_embedding
 
     def calculate_similarity(self, query_info, corpus_info, options):
         from sentence_transformers import util # Moving import here to avoid long import time
         corpus_ids = corpus_info["textIDs"]
         corpus_embeddings = corpus_info["embeddings"]
+        corpus_texts = corpus_info["all_corpus"]
 
         query_ids = query_info['query_ids']
         query_embeddings = query_info["embeddings"]
+        query_texts = query_info["queries"]
 
         if options["gpu_device"] != None and options["use_gpu_for_sim_calculation"]:
             search = self.calculate_similarity_gpu(query_embeddings, corpus_embeddings, options["top_k"], util, options['cuda'], options['from_numpy'], options["verbose"], options["order"])
         else:
             search = self.calculate_similarity_cpu(query_embeddings, corpus_embeddings, options["top_k"], util, options["verbose"], options["order"])
 
+        if self.reranker:
+            if options["verbose"]: print("---Reranking results with cross-encoder")
+            if options["order"] == "corpus-query":
+                search = self.rerank_results(corpus_texts, query_texts, search, options)
+            else:
+                search = self.rerank_results(query_texts, corpus_texts, search, options)
+
         if options["order"] == "corpus-query":
             matches = self.find_best_matches(corpus_ids, query_ids, search)
         else:
             matches = self.find_best_matches(query_ids, corpus_ids, search)
         return matches
+
+    def rerank_results(self, query_texts, corpus_texts, search, options):
+        query_indexes = []
+        corpus_indexes = []
+        text_pairs = []
+        results = []
+        for query_idx, query_info in enumerate(search):
+            results.append([])
+            for corpus_info in query_info:
+                query_indexes.append(query_idx)
+                corpus_indexes.append(corpus_info['corpus_id'])
+                text_pairs.append([query_texts[query_idx], corpus_texts[corpus_info['corpus_id']]])
+        reranked_scores = self.make_rerank(text_pairs, options)
+        
+        for idx, score in enumerate(reranked_scores):
+            query_idx = query_indexes[idx]
+            corpus_idx = corpus_indexes[idx]
+            results[query_idx].append({'score': score, 'corpus_id': corpus_idx})
+        return results
+
+
+    def make_rerank(self, sentence_pairs, options):
+        import torch
+        if options['verbose']: print(f"---Reranking {len(sentence_pairs)} sentence pairs with cross-encoder model")
+        start = time.time()
+        if len(options["gpu_device"]) > 1:
+                pool = self.reranker.start_multi_process_pool(options["gpu_device"])
+                scores = self.reranker.predict(sentence_pairs, pool=pool, batch_size=options["batch_size"], chunk_size=options['single_worker_chunk_size'], activation_fn=torch.nn.Sigmoid())
+                self.reranker.stop_multi_process_pool(pool)
+        elif len(options["gpu_device"]) == 1:
+                scores = self.reranker.encode(sentence_pairs, device= options["gpu_device"][0], batch_size=options["batch_size"], activation_fn=torch.nn.Sigmoid()) #convert_to_tensor=True 
+        if options["verbose"]: print(f"---Reranking time with {0 if options.get('gpu_device') == None else len(options['gpu_device'])} GPUs: {time.time() - start} seconds")
+        return scores
 
     def calculate_similarity_cpu(self, query_embeddings, corpus_embeddings, top_k, util, verbose=False, order="corpus-query"):
       if verbose: print(f"----Calculating similarities using {os.environ.get('MKL_NUM_THREADS') or os.environ.get('OMP_NUM_THREADS') or 1} CPUs")
@@ -218,7 +275,10 @@ class STengine(LexicalEngineBaseClass):
             total_papers += n_papers
             all_textIDs.extend(pubmed_index.keys())
             all_corpus.extend(pubmed_index.values())
-            if total_papers >= options['chunk_size']:
+            
+            n_items = total_papers if options['chunk_size_sentences'] == 0 else len(all_corpus)
+            threshold = options['chunk_size'] if options['chunk_size_sentences'] == 0 else options['chunk_size_sentences']
+            if n_items >= threshold:
               corpus_basename = f"corpus_{count}"
               count += 1
               corpus_info = self.embed_save_corpus(options, corpus_basename, all_textIDs, all_corpus, total_papers)

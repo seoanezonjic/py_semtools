@@ -47,7 +47,10 @@ def main_stEngine(opts: argparse.Namespace) -> None:
     stEngine = STengine(gpu_devices=options["gpu_device"])
     if options.get("gpu_device") and "cuda" in options["gpu_device"]: stEngine.show_gpu_information(verbose= options['verbose'])
 
-    stEngine.init_model(options["model_name"], cache_folder = options["model_path"], verbose= options['verbose'])
+    if options["model_name"] and options["model_path"]:
+      stEngine.init_model(options["model_name"], cache_folder = options["model_path"], verbose= options['verbose'])
+    if options["reranker_model_name"] and options["model_path"]:
+      stEngine.init_rerank_model(options["reranker_model_name"], cache_folder = options["model_path"], verbose= options['verbose']) 
 
     if options.get("query") != None: 
         stEngine.embedd_several_queries(options, expand_path(options["query"]), verbose= options['verbose'])

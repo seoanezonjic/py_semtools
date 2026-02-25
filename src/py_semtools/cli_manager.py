@@ -272,6 +272,8 @@ def stEngine(args = None):
 
     parser.add_argument('-m', "--model_name", dest="model_name", default= None,
             help="Name of the model to be used")
+    parser.add_argument('-r', "--reranker_model_name", dest="reranker_model_name", default= None,
+            help="(Optional) Name of the reranker model to be used")    
     parser.add_argument('-p', "--model_path", dest="model_path", default= None,
             help="Path where the model is cached or where it will be stored")
     parser.add_argument('-q', "--query", dest="query", default= None,
@@ -289,21 +291,25 @@ def stEngine(args = None):
     parser.add_argument('-t', "--threshold", dest="threshold", default= 0, type = float,
             help="Similarity threshold to filter results to write")    
     parser.add_argument('-v', "--verbose", dest="verbose", default= False, action='store_true',
-            help="Toogle on to get verbose output")
-    parser.add_argument('-g', "--gpu_device", dest="gpu_device", default= [], type=text_list,
-            help="Use to specify the GPU device to be used for speed-up (if available). The format is like: 'cuda:0' or 'cuda:0,cuda:1' to use multiple GPUs or cpu,cpu to use multiple CPUs")    
-    parser.add_argument("-b", "--batch_size", dest="batch_size", default= 32, type=int,
-            help="Use to specify batch size for multi-GPU embedding step") 
-    parser.add_argument("--use_gpu_for_sim_calculation", dest="use_gpu_for_sim_calculation", default= False, action='store_true',
-            help="Toogle on if you want to use GPU not only for the embedding process, but also for calculating query-corpus similarities (then dot score if used instead of cosine similarity)")
+            help="Toogle on to get verbose output")    
     parser.add_argument('-s', "--split", dest="split", default= False, action='store_true',
             help="Use it if your corpus comes splitted in smaller parts as list of lists (embedded in a json)")
     parser.add_argument("--order", dest="order", default= "corpus-query",
-            help="Order of the semantic search. Options: 'corpus-query' or 'query-corpus'")
-    parser.add_argument("--chunk_size", dest="chunk_size", default=10000, type=int,
-            help="Size to be accumulating corpora until a threshold is reached before proceeding to embedd")
+            help="Order of the semantic search. Options: 'corpus-query' or 'query-corpus'")    
     parser.add_argument("--print_relevant_pairs", dest="print_relevant_pairs", default= False, action='store_true',
-            help="Use it to print the relevant pairs of query-corpus with their scores")    
+            help="Use it to print the relevant pairs of query-corpus with their scores")
+    parser.add_argument('-g', "--gpu_device", dest="gpu_device", default= [], type=text_list,
+            help="Use to specify the GPU device to be used for speed-up (if available). The format is like: 'cuda:0' or 'cuda:0,cuda:1' to use multiple GPUs or cpu,cpu to use multiple CPUs")
+    parser.add_argument("--use_gpu_for_sim_calculation", dest="use_gpu_for_sim_calculation", default= False, action='store_true',
+            help="Toogle on if you want to use GPU not only for the embedding process, but also for calculating query-corpus similarities (then dot score if used instead of cosine similarity)")        
+    parser.add_argument("--chunk_size", dest="chunk_size", default=10000, type=int,
+            help="Size to be accumulating corpora (documents) until a threshold is reached before proceeding to embedd")
+    parser.add_argument("--chunk_size_sentences", dest="chunk_size_sentences", default=0, type=int,
+            help="(If toogled on, takes precedence over --chunk_size) Size to be accumulating sentences until a threshold is reached before proceeding to embedd")    
+    parser.add_argument("--single_worker_chunk_size", dest="single_worker_chunk_size", default=10000, type=int,
+            help="(Only for multi GPU processing) Chunk size for each worker when multi-GPU processing is used.")
+    parser.add_argument("-b", "--batch_size", dest="batch_size", default= 32, type=int,
+            help="Use to specify batch size for multi-GPU embedding step")             
     opts =  parser.parse_args(args)
     main_stEngine(opts)
 
