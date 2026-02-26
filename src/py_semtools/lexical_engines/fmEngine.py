@@ -61,7 +61,7 @@ class FMengine(LexicalEngineBaseClass):
         tokenized_query = bm25s.tokenize(query_text)
         
         retriever.index(tokenized_corpus, show_progress=options['verbose'])
-        results_indexes, scores = retriever.retrieve(tokenized_query, k=options['top_k'], return_as="indices")
+        results_indexes, scores = retriever.retrieve(tokenized_query, k=options['top_k'], return_as="tuple")
         return results_indexes, scores
 
     def calculate_tfidf_similarity(self, query_text, corpus_text, options):
