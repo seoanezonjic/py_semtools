@@ -68,7 +68,7 @@ class LexicalEngineBaseClass(ABC):
         return queries, query_ids
 
     
-    def get_splitted_document(self, id, text):
+    def get_splitted_document(self, id, text, split_level = "sentence"):
         """
         Process a document that has been split by get_corpus_index. It is a json formmated list of lists, where each sublist is a paragraph and each element inside the sublist is a sentence.
         Each sentence is stored in a dictionary with the key being the ID of the document in the format "id_paragraphNumber_sentenceNumber" and the value being the sentence text.
@@ -78,29 +78,42 @@ class LexicalEngineBaseClass(ABC):
         Returns:
             dict: A dictionary where keys are IDs in the format "id_paragraph_sentence" and values are the corresponding sentences.
         """
+        from py_exp_calc.exp_calc import flatten
         pubmed_index = {}
         abstract_parts = json.loads(text)
         paragraph_number = 0
-        for paragraph in abstract_parts:
-            if paragraph[0] == "TITLE": paragraph_number = -2
-            if paragraph[0] == "KEYWORDS": paragraph_number = -1
-            sentence_number = 0
-            for sentence in paragraph:
-                if sentence in ["TITLE", "KEYWORDS", "None"]: 
-                    sentence_number += 1
-                    continue
-                id_tag = f"{id}_{paragraph_number}_{sentence_number}"
-                pubmed_index[id_tag] = sentence
-                sentence_number += 1
-            paragraph_number += 1
+        sentence_number = 0
+
+        if split_level == "doc":
+            joined_text = self._join_text_back(text, join_back_to = "doc")
+            pubmed_index[f"{id}_{paragraph_number}_{sentence_number}"] = joined_text
+        else:
+            for paragraph in abstract_parts:
+                if paragraph[0] == "TITLE": paragraph_number = -2
+                if paragraph[0] == "KEYWORDS": paragraph_number = -1
+                sentence_number = 0
+
+                if split_level == "paragraph":
+                    joined_paragraph = self._join_text_back(paragraph, join_back_to = "paragraph")
+                    pubmed_index[f"{id}_{paragraph_number}_{sentence_number}"] = joined_paragraph
+                    paragraph_number += 1
+                else: #case for split_level == "sentence"
+                    for sentence in paragraph:
+                        if sentence in ["TITLE", "KEYWORDS", "None"]: 
+                            sentence_number += 1
+                            continue
+                        id_tag = f"{id}_{paragraph_number}_{sentence_number}"
+                        pubmed_index[id_tag] = sentence
+                        sentence_number += 1
+                paragraph_number += 1
         return pubmed_index
 
-    def load_pubmed_index(self, file, is_splitted):
+    def load_pubmed_index(self, file, split_level = "sentence"):
         """
         Load a PubMed processed index file get by 'get_corpus_index' binary. The file is expected to be in a specific format, where each line contains an ID and the corresponding text (and other columns with possible metadata not loaded).
         Args:
             file (str): Path to the file containing the PubMed index.
-            is_splitted (bool): If True, the text is expected to be in a JSON format with sentences split into paragraphs.
+            split_level (str): The level of splitting to use. Can be "doc", "paragraph", or "sentence".
         Returns:
             tuple: A tuple containing a dictionary where keys are IDs in the format "id_paragraphNumber_sentenceNumber" and values are the corresponding sentences, and the total number of papers processed.
         """
@@ -110,7 +123,7 @@ class LexicalEngineBaseClass(ABC):
             for line in f:
                 try:
                     id, text, *_rest = line.rstrip().split("\t")
-                    pubmed_index_iter = self.get_splitted_document(id, text)
+                    pubmed_index_iter = self.get_splitted_document(id, text, split_level = split_level)
                     pubmed_index.update(pubmed_index_iter)
                     n_papers += 1
                 except Exception as e:
@@ -130,7 +143,7 @@ class LexicalEngineBaseClass(ABC):
         with open(filepath, 'a') as f:
           for kwdID, matches in best_matches.items():
             for textID, score in matches.items():
-              if score >= options["threshold"]: 
+              if score == "-" or score >= options["threshold"]: #"-" means full match for ontogpt
                 if options["order"] == "corpus-query":
                   f.write(f"{textID}\t{kwdID}\t{score}\n")
                 else:
@@ -142,7 +155,7 @@ class LexicalEngineBaseClass(ABC):
             textIDX = corpus_info["textIDs"].index(textID)
             text = corpus_info["all_corpus"][textIDX]
             for kwdID, score in matches.items():
-                if score >= options["threshold"]: 
+                if score == "-" or score >= options["threshold"]: 
                     kwIDXs = (idx for idx, char in enumerate(query_info['query_ids']) if char == kwdID) 
                     term = " -- ".join([query_info["queries"][kwIDX] for kwIDX in kwIDXs])
                     if term not in term_related_sentences: term_related_sentences[term] = {"term_id": kwdID, "sentences": []}
@@ -153,4 +166,19 @@ class LexicalEngineBaseClass(ABC):
             for textID, text, score in data["sentences"]:
                 print(f"  - Text ID: {textID}, Score: {score}")
                 print(f"    Text: {text}")
-            print("-"*30)                      
+            print("-"*30)   
+
+    def _join_text_back(self, text, join_back_to = "doc"):
+        final_text = ""
+
+        if join_back_to == "doc":
+            for paragraph in text:
+                for sentence in paragraph:              
+                    final_text += sentence + ", "
+                final_text += ".\n\n"
+
+        elif join_back_to == "paragraph":
+            for sentence in text:
+                final_text += sentence + ", "
+
+        return final_text
