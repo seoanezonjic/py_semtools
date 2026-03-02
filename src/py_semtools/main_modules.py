@@ -482,6 +482,24 @@ def main_semtools(opts: argparse.Namespace) -> None:
       report.build(template)
       report.write(options['output_report'])
 
+    if options.get('set_operation') != None:
+        set_a = sorted(list(set(options['set_a'])))
+        set_b = sorted(list(set(options['set_b'])))
+        print("hola")
+        print(set_a)
+        print(set_b)
+        if options['set_operation'] == 'is_parental':
+            get_relation = ontology.get_ancestors
+        elif options['set_operation'] == 'is_descendant':
+            get_relation = ontology.get_descendants
+        with open(options["set_operation_output"], "w") as f:
+          for term_a in set_a:
+              for term_b in set_b:
+                  familiars = get_relation(term_b)
+                  print(familiars)
+                  if term_a in familiars:
+                      f.write(f"{term_a}\t{term_b}\n")
+
 def main_strsimnet(options: argparse.Namespace) -> None:
     from py_semtools.sim_handler import similitude_network 
     texts2compare = load_table_file(input_file = options.input_file,

@@ -105,6 +105,27 @@ def test_get_ancestors_descendants(enrichment_ontology):
     expected_result = [['branchAChild1'], ['branchAChild2']]
     assert expected_result == test_result
 
+## Set tems operations
+
+def test_set_operations(tmp_dir, enrichment_ontology):
+    set_a = "branchA,branchAChild2"
+    set_b = "branchAChild2,branchB"
+    output_file = os.path.join(tmp_dir, 'set_operation_is_parental')
+    args = f"-O {enrichment_ontology} --set_a {set_a} --set_b {set_b} --set_operation is_parental --set_operation_output {output_file}".split(" ")
+    pysemtools(args)
+    test_result = CmdTabs.load_input_data(output_file)
+    expected_result = CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'set_operation_is_parental'))
+    assert expected_result == test_result
+
+    set_a = "branchAChild2,branchB"
+    set_b = "branchA,branchAChild2"
+    output_file = os.path.join(tmp_dir, 'set_operation_is_descendant')
+    args = f"-O {enrichment_ontology} --set_a {set_a} --set_b {set_b} --set_operation is_descendant --set_operation_output {output_file}".split(" ")
+    pysemtools(args)
+    test_result = CmdTabs.load_input_data(output_file)
+    expected_result = CmdTabs.load_input_data(os.path.join(REF_DATA_PATH, 'set_operation_is_descendant'))
+    assert expected_result == test_result
+
 ## Profile operations
 ### Modification
 @pytest.mark.parametrize("filter_type, filename", [

@@ -188,7 +188,10 @@ def semtools(args = None):
               help="With flags 'get_LCA_from_profile' and 'get_MICA_from_profile' constraint the ancestors to the given list of terms (one per line).") 
     parser.add_argument("--get_representative_profile", dest="get_representative_profile", default=None, type=float,
               help="For a list of profiles, give one single profile with terms presented with al least FLOAT frecuency in the profile list. Parents are infered and computed too. The most spefic terms are retained.") 
-
+    parser.add_argument("--set_a", dest="set_a", default=None, type=text_list, help="Set of terms A to be used in set operations. It must be a file with one term per line.")
+    parser.add_argument("--set_b", dest="set_b", default=None, type=text_list, help="Set of terms B to be used in set operations. It must be a file with one term per line.")
+    parser.add_argument("--set_operation", dest="set_operation", default=None, type=str, help="Set operation to perform between set A and B. Options: 'is_parental', 'is_descendant'")
+    parser.add_argument("--set_operation_output", dest="set_operation_output", default=None, type=str, help="Path to save the output of the set operation between set A and B.")
     opts =  parser.parse_args(args)
     
     main_semtools(opts)
