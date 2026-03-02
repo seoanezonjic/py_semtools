@@ -1,3 +1,4 @@
+from email import parser
 import argparse, re, sys, inspect
 from py_semtools.main_modules import *
 from collections import defaultdict
@@ -233,6 +234,29 @@ def get_sorted_suggestions(args = None):
     opts =  parser.parse_args(args)
     main_get_sorted_suggestions(opts)
 
+
+def llmEngine(args = None):
+    parser = argparse.ArgumentParser(description='Perform Ontology driven analysis with LLMs')
+    parser.add_argument('-P', "--model_provider", dest="model_provider", default= None,
+            help="Provider of the LLM model to be used")
+    parser.add_argument('-m', "--model_name", dest="model_name", default= None,
+            help="Model to be used")
+    parser.add_argument("-t", "--template", dest="template", default= None,
+            help="For ontoGPT, it is the template to be used for the prompt.")
+    parser.add_argument('-q', "--query", dest="query", default= None,
+            help="Path to the query file. Wildcards are accepted to process multiple files")    
+    parser.add_argument('-c', "--corpus", dest="corpus", default= None,
+            help="Path to the corpus file. Wildcards are accepted to process multiple files")    
+    parser.add_argument('-o', "--output_file", dest="output_file", default= None,
+            help="Path to save the output file with semantic scores")
+    parser.add_argument('-s', "--split_level", dest="split_level", default= "sentence",
+            help="Use it if your corpus comes splitted in smaller parts and want to unify it at document level. Options: 'doc', 'paragraph', or 'sentence'")        
+    parser.add_argument('-v', "--verbose", dest="verbose", default= False, action='store_true',
+            help="Toogle on to get verbose output")
+    parser.add_argument("--print_relevant_pairs", dest="print_relevant_pairs", default= False, action='store_true',
+            help="Use it to print the relevant pairs of query-corpus with their scores")    
+    opts = parser.parse_args(args)
+    main_llmEngine(opts)
 
 def fmEngine(args = None):
     if args is None:

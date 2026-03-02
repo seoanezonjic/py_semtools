@@ -27,6 +27,17 @@ def main_get_corpus_index(opts: argparse.Namespace) -> None:
   options = vars(opts)
   TextIndexer.build_index(options)
 
+def main_llmEngine(opts: argparse.Namespace) -> None:
+    from py_semtools.lexical_engines.llmEngine import LLMengine
+    options = vars(opts)
+    options["order"] = "corpus-query" #OntoGPT only makes sense in this mode, but this option is needed for saving results 
+
+    llmEngine = LLMengine()
+    llmEngine.init_model(options["model_name"], model_provider=options["model_provider"], verbose= options['verbose'])
+
+    llmEngine.load_several_queries(options, expand_path(options["query"]), verbose= options['verbose'])
+    corpus_info = llmEngine.load_several_corpora(options, expand_path(options["corpus"]), options['verbose'])
+    llmEngine.calculate_similarities(options, corpus_info)
 
 def main_fmEngine(opts: argparse.Namespace) -> None: 
     from py_semtools.lexical_engines.fmEngine import FMengine
