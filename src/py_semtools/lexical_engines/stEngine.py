@@ -272,7 +272,7 @@ class STengine(LexicalEngineBaseClass):
           
           if options.get("corpus") != None: #LOAD RAW CORPUS AND EMBEDD (AND MAYBE SAVE)
             if verbose: print(f"---Loading corpus of {corpus_filename}")
-            pubmed_index, n_papers = self.load_pubmed_index(corpus_filename, options["split"]) # abstracts
+            pubmed_index, n_papers = self.load_pubmed_index(corpus_filename, split_level=options["split_level"]) # abstracts
             total_papers += n_papers
             all_textIDs.extend(pubmed_index.keys())
             all_corpus.extend(pubmed_index.values())

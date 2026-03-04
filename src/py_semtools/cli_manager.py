@@ -287,8 +287,8 @@ def fmEngine(args = None):
             help="Toogle on to get verbose output")
     parser.add_argument("--order", dest="order", default= "corpus-query",
             help="Order of the semantic search. Options: 'corpus-query' or 'query-corpus'")    
-    parser.add_argument('-s', "--split", dest="split", default= False, action='store_true',
-            help="Use it if your corpus comes splitted in smaller parts as list of lists (embedded in a json)")
+    parser.add_argument('-s', "--split_level", dest="split_level", default= "sentence",
+            help="Use it if your corpus comes splitted in smaller parts and want to unify it at document level. Options: 'doc', 'paragraph', or 'sentence'")
     parser.add_argument("--print_relevant_pairs", dest="print_relevant_pairs", default= False, action='store_true',
             help="Use it to print the relevant pairs of query-corpus with their scores")
     parser.add_argument("--get_total_time", dest="get_total_time", default= False, action='store_true',
@@ -326,8 +326,8 @@ def stEngine(args = None):
             help="Similarity threshold to filter results to write")    
     parser.add_argument('-v', "--verbose", dest="verbose", default= False, action='store_true',
             help="Toogle on to get verbose output")    
-    parser.add_argument('-s', "--split", dest="split", default= False, action='store_true',
-            help="Use it if your corpus comes splitted in smaller parts as list of lists (embedded in a json)")
+    parser.add_argument('-s', "--split_level", dest="split_level", default= "sentence",
+            help="Use it if your corpus comes splitted in smaller parts and want to unify it at document level. Options: 'doc', 'paragraph', or 'sentence'")
     parser.add_argument("--order", dest="order", default= "corpus-query",
             help="Order of the semantic search. Options: 'corpus-query' or 'query-corpus'")    
     parser.add_argument("--print_relevant_pairs", dest="print_relevant_pairs", default= False, action='store_true',

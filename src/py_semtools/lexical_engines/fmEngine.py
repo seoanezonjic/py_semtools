@@ -23,7 +23,7 @@ class FMengine(LexicalEngineBaseClass):
         all_textIDs = []; all_corpus = []; total_papers = 0 
         for corpus_filename in corpus_filenames:
             if verbose: print(f"---Loading corpus of {corpus_filename}")
-            pubmed_index, n_papers = self.load_pubmed_index(corpus_filename, options["split"]) # abstracts
+            pubmed_index, n_papers = self.load_pubmed_index(corpus_filename, split_level=options["split_level"]) # abstracts
             if verbose: print(f"------Loaded {n_papers} documents with {len(pubmed_index)} sentences from {corpus_filename}")
             total_papers += n_papers
             all_textIDs.extend(pubmed_index.keys())
