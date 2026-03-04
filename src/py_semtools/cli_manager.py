@@ -246,6 +246,8 @@ def llmEngine(args = None):
             help="Model to be used")
     parser.add_argument("-t", "--template", dest="template", default= None,
             help="For ontoGPT, it is the template to be used for the prompt.")
+    parser.add_argument("-T", "--regex_tag", dest="regex_tag", default= None,
+            help="Regex tag for filtering grounded terms (like HP:), etc")
     parser.add_argument('-q', "--query", dest="query", default= None,
             help="Path to the query file. Wildcards are accepted to process multiple files")    
     parser.add_argument('-c', "--corpus", dest="corpus", default= None,
@@ -257,7 +259,9 @@ def llmEngine(args = None):
     parser.add_argument('-v', "--verbose", dest="verbose", default= False, action='store_true',
             help="Toogle on to get verbose output")
     parser.add_argument("--print_relevant_pairs", dest="print_relevant_pairs", default= False, action='store_true',
-            help="Use it to print the relevant pairs of query-corpus with their scores")    
+            help="Use it to print the relevant pairs of query-corpus with their scores")
+    parser.add_argument("--get_total_time", dest="get_total_time", default= False, action='store_true',
+            help="Toogle on to get the total time of the process")    
     opts = parser.parse_args(args)
     main_llmEngine(opts)
 
@@ -268,7 +272,7 @@ def fmEngine(args = None):
     parser = argparse.ArgumentParser(description='Perform Ontology driven analysis with Sentence Transformer')
 
     parser.add_argument('-m', "--model_name", dest="model_name", default= None,
-            help="Model to be used. Current options include 'bm25' and 'tfidf'")
+            help="Model to be used. Current options include 'bm25', 'tfidf', 'tfidf_fast'")
     parser.add_argument('-q', "--query", dest="query", default= None,
             help="Path to the query file. Wildcards are accepted to process multiple files")
     parser.add_argument('-c', "--corpus", dest="corpus", default= None,
@@ -286,7 +290,10 @@ def fmEngine(args = None):
     parser.add_argument('-s', "--split", dest="split", default= False, action='store_true',
             help="Use it if your corpus comes splitted in smaller parts as list of lists (embedded in a json)")
     parser.add_argument("--print_relevant_pairs", dest="print_relevant_pairs", default= False, action='store_true',
-            help="Use it to print the relevant pairs of query-corpus with their scores")        
+            help="Use it to print the relevant pairs of query-corpus with their scores")
+    parser.add_argument("--get_total_time", dest="get_total_time", default= False, action='store_true',
+            help="Toogle on to get the total time of the process")    
+
     opts =  parser.parse_args(args)
     main_fmEngine(opts)
 
@@ -336,7 +343,10 @@ def stEngine(args = None):
     parser.add_argument("--single_worker_chunk_size", dest="single_worker_chunk_size", default=10000, type=int,
             help="(Only for multi GPU processing) Chunk size for each worker when multi-GPU processing is used.")
     parser.add_argument("-b", "--batch_size", dest="batch_size", default= 32, type=int,
-            help="Use to specify batch size for multi-GPU embedding step")             
+            help="Use to specify batch size for multi-GPU embedding step")
+    parser.add_argument("--get_total_time", dest="get_total_time", default= False, action='store_true',
+            help="Toogle on to get the total time of the process")     
+                    
     opts =  parser.parse_args(args)
     main_stEngine(opts)
 

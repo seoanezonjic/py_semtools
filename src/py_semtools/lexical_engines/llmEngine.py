@@ -6,6 +6,8 @@ from ontogpt.engines.spires_engine import SPIRESEngine
 class LLMengine(LexicalEngineBaseClass):
     def __init__(self, gpu_devices = []):
         self.model_name = None
+        self.embedder = None
+        self.reranker = None
         self.queries_content = {}
 
     def init_model(self, model_name: str, model_provider: str = None, verbose: bool = False) -> None:
@@ -39,6 +41,8 @@ class LLMengine(LexicalEngineBaseClass):
         corpus_ids = corpus_info["textIDs"]
         template = options["template"]
         model = options["model_name"]
+        
+        if options['verbose']: print(f"\n-Calculating similarities between queries and corpus using {model} model with {template} template:")
 
         if template:
             template_details = get_template_details(template=template)
@@ -49,31 +53,20 @@ class LLMengine(LexicalEngineBaseClass):
                           api_base=None, api_version=None, model_provider=None, system_message=None, max_text_length=None,
                           **kwargs)
 
-        counts = 0
-        if options['verbose']: print(f"\n-Calculating similarities between queries and corpus using {model} model with {template} template:")
-        
         best_matches = {}
-        #          for kwdID, matches in best_matches.items():
-        #    for textID, score in matches.items():
-        for idx, text in enumerate(corpus_texts):        
+        for idx, text in enumerate(corpus_texts):
+            if options['verbose']: print(f"Extracting for text ID {corpus_ids[idx]}")  # Print the beginning of the text for context
             results = ke.extract_from_text( text=text, cls=None, show_prompt=None)
-            hpos = self._get_genuine_hpos(results.named_entities)
-            print("-"*30)
-            print(f"Text ID: {corpus_ids[idx]}")
-            print(f"Original Text: {text}")
-            print(f"Named Entities: {results.named_entities}")
-            print(f"Extracted HPOs: {hpos}")
-            print("-"*30)
-            counts += 1
+            hpos = self._get_genuine_terms(results.named_entities, options["regex_tag"])
             best_matches[corpus_ids[idx]] = hpos
-            if counts > 20: 
-                print(best_matches)
-                break
-
+        
         return best_matches
     
     def find_best_matches(self, results_indexes, scores, query_ids, corpus_ids):
         pass
 
-    def _get_genuine_hpos(self, named_entities):
-        return {entity.id : "-" for entity in named_entities if re.match(r"HP:\d{7}", entity.id) and len(entity.original_spans) > 0}
+    def _get_genuine_terms(self, named_entities, regex_tag):
+        if regex_tag:
+            return {entity.id : "-" for entity in named_entities if re.match(regex_tag, entity.id) and len(entity.original_spans) > 0}
+        else:
+            return {entity.id : "-" for entity in named_entities if len(entity.original_spans) > 0}

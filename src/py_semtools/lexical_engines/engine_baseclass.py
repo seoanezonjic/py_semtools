@@ -1,12 +1,14 @@
 #JPG: THIS IS AN ABSTRACT BASE CLASS FOR LEXICAL ENGINES AND SHOULD NOT BE INSTANTIATED DIRECTLY
 
-import os, warnings, json, gzip
+import os, warnings, json, gzip, time, sys
 from abc import ABC, abstractmethod
 
 class LexicalEngineBaseClass(ABC):
 
     def __init__(self):
+        self.model_name = None
         self.embedder = None
+        self.reranker = None
         self.queries_content = {}
 
     @abstractmethod
@@ -85,7 +87,7 @@ class LexicalEngineBaseClass(ABC):
         sentence_number = 0
 
         if split_level == "doc":
-            joined_text = self._join_text_back(text, join_back_to = "doc")
+            joined_text = self._join_text_back(abstract_parts, join_back_to = "doc")
             pubmed_index[f"{id}_{paragraph_number}_{sentence_number}"] = joined_text
         else:
             for paragraph in abstract_parts:
@@ -133,7 +135,10 @@ class LexicalEngineBaseClass(ABC):
     def calculate_similarities(self, options, corpus_info):
         if options.get("output_file"):
           for query_basename, query_info in self.queries_content.items():
+            start = time.time()
             best_matches = self.calculate_similarity(query_info, corpus_info, options)
+            end = time.time()
+            if options['get_total_time']: print(f"TIMELOG:{self.model_name}:{self.reranker}:Total time calculating similarities for {query_basename} query ({len(query_info['query_ids'])} names and synonims) and {len(corpus_info['all_corpus'])} sentences: {end - start}", file=sys.stderr)
             if options['print_relevant_pairs']: self.print_similarities(query_info, corpus_info, best_matches, options)
             output_filename = os.path.join(options["output_file"],query_basename)
             self.save_similarities(output_filename, best_matches, options)

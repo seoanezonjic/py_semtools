@@ -3,10 +3,12 @@ from py_semtools.lexical_engines.engine_baseclass import LexicalEngineBaseClass
 class FMengine(LexicalEngineBaseClass):
     def __init__(self, gpu_devices = []):
         self.model_name = None
+        self.embedder = None
+        self.reranker = None
         self.queries_content = {}
 
     def init_model(self, model_name: str, verbose: bool = False) -> None:
-        if model_name not in ["bm25", "tfidf"]:
+        if model_name not in ["bm25", "tfidf", "tfidf_faiss"]:
             raise Exception(f"Model {model_name} not supported in FMengine")
         if verbose: print(f"\n-Loading {model_name} model")
         self.model_name = model_name
@@ -45,6 +47,9 @@ class FMengine(LexicalEngineBaseClass):
             results_indexes, scores = self.calculate_bm25_similarity(query_text, corpus_text, options)
         elif self.model_name == "tfidf":
             results_indexes, scores = self.calculate_tfidf_similarity(query_text, corpus_text, options)
+        elif self.model_name == "tfidf_faiss":
+            results_indexes, scores = self.calculate_tfidf_similarity_faiss(query_text, corpus_text, options)
+
         matches = self.find_best_matches(results_indexes, scores, query_ids, corpus_ids)
         return matches
     
@@ -86,6 +91,31 @@ class FMengine(LexicalEngineBaseClass):
             batch_indices[i] = top_indices
             batch_scores[i] = sim_scores[top_indices]
             
+        return batch_indices, batch_scores
+
+    def calculate_tfidf_similarity_faiss(self, query_text, corpus_text, options):
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        import faiss
+        # 1. Vectorization (remains the same)
+        vectorizer = TfidfVectorizer().fit(corpus_text)
+        tfidf_matrix = vectorizer.transform(corpus_text).toarray().astype('float32')
+        query_vecs = vectorizer.transform(query_text).toarray().astype('float32')
+
+        # 2. Normalize vectors for Cosine Similarity
+        faiss.normalize_L2(tfidf_matrix)
+        faiss.normalize_L2(query_vecs)
+
+        # 3. Initialize FAISS Index (Inner Product)
+        d = tfidf_matrix.shape[1]  # dimensionality
+        index = faiss.IndexFlatIP(d)
+        
+        # 4. Add corpus to index (Fast process)
+        index.add(tfidf_matrix)
+
+        # 5. Search (This handles batching and parallelization internally)
+        k = min(options['top_k'], tfidf_matrix.shape[0])
+        batch_scores, batch_indices = index.search(query_vecs, k)
+
         return batch_indices, batch_scores
 
     def find_best_matches(self, results_indexes, scores, query_ids, corpus_ids):
