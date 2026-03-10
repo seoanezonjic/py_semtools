@@ -1129,7 +1129,7 @@ class Ontology:
     # +terms+:: array of terms
     # +substitute+:: subsstitute flag from check_ids
     def add_profile(self, pr_id, terms, substitute = True, clean_hard=False, options={}): # FRED: Talk with PSZ about the uniqness of IDs translated
-        if pr_id in self.profiles: warnings.warn(f"Profile assigned to ID ({pr_id}) is going to be replaced")
+        #if pr_id in self.profiles: warnings.warn(f"Profile assigned to ID ({pr_id}) is going to be replaced") ##Currently disabled, there is already a general warning in load_profiles 
         if clean_hard:
             correct_terms = self.clean_profile_hard(terms, options=options)
             rejected_terms = []
