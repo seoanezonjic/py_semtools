@@ -244,10 +244,14 @@ def llmEngine(args = None):
             help="Provider of the LLM model to be used")
     parser.add_argument('-m', "--model_name", dest="model_name", default= None,
             help="Model to be used")
+    parser.add_argument('-A', "--listening_addresses", dest="listening_addresses", default= None,
+            help="Addresses to listen for incoming requests in the format 'host:port'. For example: 'http://localhost:11434'")
     parser.add_argument("-t", "--template", dest="template", default= None,
             help="For ontoGPT, it is the template to be used for the prompt.")
     parser.add_argument("-T", "--regex_tag", dest="regex_tag", default= None,
             help="Regex tag for filtering grounded terms (like HP:), etc")
+    parser.add_argument("--logging_level", dest="logging_level", default=None,
+            help="Logging level for the process (if the model support it). Options: 'DEBUG', 'INFO', 'WARNING' or 'ERROR'. By default, logging is not activated.")
     parser.add_argument('-q', "--query", dest="query", default= None,
             help="Path to the query file. Wildcards are accepted to process multiple files")    
     parser.add_argument('-c', "--corpus", dest="corpus", default= None,
@@ -260,8 +264,10 @@ def llmEngine(args = None):
             help="Toogle on to get verbose output")
     parser.add_argument("--print_relevant_pairs", dest="print_relevant_pairs", default= False, action='store_true',
             help="Use it to print the relevant pairs of query-corpus with their scores")
-    parser.add_argument("--get_total_time", dest="get_total_time", default= False, action='store_true',
-            help="Toogle on to get the total time of the process")    
+    parser.add_argument("--get_total_time_file", dest="get_total_time_file", default= None,
+            help="Use it to save the calculation time of the process to a file") 
+    parser.add_argument("--stream_write_results", dest="stream_write_results", default= False, action='store_true',
+            help="Use it to write results in streaming mode, which means that results will be written as they are calculated instead of waiting for the whole process to end.")   
     opts = parser.parse_args(args)
     main_llmEngine(opts)
 
@@ -272,7 +278,7 @@ def fmEngine(args = None):
     parser = argparse.ArgumentParser(description='Perform Ontology driven analysis with Sentence Transformer')
 
     parser.add_argument('-m', "--model_name", dest="model_name", default= None,
-            help="Model to be used. Current options include 'bm25', 'tfidf', 'tfidf_fast'")
+            help="Model to be used. Current options include 'bm25', 'tfidf', 'tfidf_faiss'")
     parser.add_argument('-q', "--query", dest="query", default= None,
             help="Path to the query file. Wildcards are accepted to process multiple files")
     parser.add_argument('-c', "--corpus", dest="corpus", default= None,
@@ -291,8 +297,8 @@ def fmEngine(args = None):
             help="Use it if your corpus comes splitted in smaller parts and want to unify it at document level. Options: 'doc', 'paragraph', or 'sentence'")
     parser.add_argument("--print_relevant_pairs", dest="print_relevant_pairs", default= False, action='store_true',
             help="Use it to print the relevant pairs of query-corpus with their scores")
-    parser.add_argument("--get_total_time", dest="get_total_time", default= False, action='store_true',
-            help="Toogle on to get the total time of the process")    
+    parser.add_argument("--get_total_time_file", dest="get_total_time_file", default= None,
+            help="Use it to save the calculation time of the process to a file")    
 
     opts =  parser.parse_args(args)
     main_fmEngine(opts)
@@ -344,8 +350,8 @@ def stEngine(args = None):
             help="(Only for multi GPU processing) Chunk size for each worker when multi-GPU processing is used.")
     parser.add_argument("-b", "--batch_size", dest="batch_size", default= 32, type=int,
             help="Use to specify batch size for multi-GPU embedding step")
-    parser.add_argument("--get_total_time", dest="get_total_time", default= False, action='store_true',
-            help="Toogle on to get the total time of the process")     
+    parser.add_argument("--get_total_time_file", dest="get_total_time_file", default= None,
+            help="Use it to save the calculation time of the process to a file")     
                     
     opts =  parser.parse_args(args)
     main_stEngine(opts)

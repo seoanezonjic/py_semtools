@@ -135,10 +135,12 @@ class LexicalEngineBaseClass(ABC):
     def calculate_similarities(self, options, corpus_info):
         if options.get("output_file"):
           for query_basename, query_info in self.queries_content.items():
-            start = time.time()
+            self.current_query_basename = query_basename
+            self.start_time = time.time()
             best_matches = self.calculate_similarity(query_info, corpus_info, options)
             end = time.time()
-            if options['get_total_time']: print(f"TIMELOG:{self.model_name}:{self.reranker}:Total time calculating similarities for {query_basename} query ({len(query_info['query_ids'])} names and synonims) and {len(corpus_info['all_corpus'])} sentences: {end - start}", file=sys.stderr)
+            if options['get_total_time_file']:
+                with open(options['get_total_time_file'], 'a') as f: f.write(f"TIMELOG:{self.model_name}:{self.reranker}:Total time calculating similarities for {query_basename} query ({len(query_info.get('query_ids', []))} names and synonims) and {len(corpus_info['all_corpus'])} sentences: {end - self.start_time}\n")
             if options['print_relevant_pairs']: self.print_similarities(query_info, corpus_info, best_matches, options)
             output_filename = os.path.join(options["output_file"],query_basename)
             self.save_similarities(output_filename, best_matches, options)
