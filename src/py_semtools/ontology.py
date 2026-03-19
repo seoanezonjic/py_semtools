@@ -775,7 +775,7 @@ class Ontology:
 
     def clean_profile_hard(self, profile, options = {}):
         profile, _ = self.check_ids(profile)
-        if options.get('term_filter') != None: profile = [ term for term in profile if options['term_filter'] in self.get_ancestors(term) ] # keep terms with parents in term filter
+        if options.get('term_filter') != None: profile = [ term for term in profile if term == options['term_filter'] or options['term_filter'] in self.get_ancestors(term) ] # keep terms with parents in term filter
         profile, _ = self.remove_ancestors_from_profile(pxc.uniq(profile))
         return profile
 
