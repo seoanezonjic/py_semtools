@@ -992,8 +992,8 @@ class Ontology:
         return np.mean(sims)
 
 
-    def calc_sim_term2term_similarity_matrix(self, ref_profile, ref_profile_id, external_profiles, term_limit = 100, candidate_limit = 100, sim_type = 'lin', bidirectional = True, string_format = False, header_id = "id", ySortFunc=None, other_scores = {}, id2label = {}):
-        similarities = self.compare_profiles(external_profiles = external_profiles, sim_type = sim_type, bidirectional = bidirectional)
+    def calc_sim_term2term_similarity_matrix(self, ref_profile, ref_profile_id, external_profiles, term_limit = 100, candidate_limit = 100, sim_type = 'lin', bidirectional = True, string_format = False, header_id = "id", ySortFunc=None, other_scores = {}, id2label = {}, direction=None):
+        similarities = self.compare_profiles(external_profiles = external_profiles, sim_type = sim_type, bidirectional = bidirectional, direction = direction)
         candidate_sim_matrix, candidates, candidates_ids, candidate_pr_cd_term_matches, candidate_terms_all_sims = self.get_term2term_similarity_matrix(ref_profile, similarities[ref_profile_id], external_profiles, term_limit, candidate_limit, string_format = string_format, other_scores = other_scores, id2label = id2label, ySortFunc=ySortFunc)
         if string_format: candidate_sim_matrix.insert(0, [header_id] + candidates_ids)
         return candidate_sim_matrix, candidates, candidates_ids, similarities, candidate_pr_cd_term_matches, candidate_terms_all_sims
@@ -1449,16 +1449,20 @@ class Ontology:
     # +bidirectional+:: calculate bidirectional similitude. Default: false
     # ===== Return
     # Similitudes calculated
-    def compare_profiles(self, external_profiles = None, sim_type = 'resnik', ic_type = 'resnik', bidirectional = True, sim_index = None):
+    def compare_profiles(self, external_profiles = None, sim_type = 'resnik', ic_type = 'resnik', bidirectional = True, sim_index = None, direction = None):
         profiles_similarity = {} #calculate similarity between patients profile
         if external_profiles == None:
+            same_profiles = True
             comp_profiles = self.profiles
             main_profiles = comp_profiles
-            same_profiles = True
         else:
-            comp_profiles = external_profiles
-            main_profiles = self.profiles
             same_profiles = False
+            if direction == None or direction == 'ext-int':
+                comp_profiles = external_profiles
+                main_profiles = self.profiles
+            elif direction == 'int-ext':
+                comp_profiles = self.profiles
+                main_profiles = external_profiles
 
         self.get_similarity_index(main_profiles, comp_profiles, sim_type=sim_type, ic_type=ic_type, same_profiles= same_profiles, file=sim_index)
         #start = time.time()

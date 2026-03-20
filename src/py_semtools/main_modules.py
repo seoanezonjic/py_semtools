@@ -216,7 +216,7 @@ def main_get_sorted_profs(opts: argparse.Namespace) -> None:
 
     candidate_sim_matrix, _, candidates_ids, similarities, candidate_pr_cd_term_matches, candidate_terms_all_sims = ontology.calc_sim_term2term_similarity_matrix(ref_profile, "ref", clean_profiles, 
           term_limit = options["matrix_limits"][0], candidate_limit = options["matrix_limits"][-1], sim_type = options['similarity'], bidirectional = False,
-          string_format = True, header_id = "HP")
+          string_format = True, header_id = "HP", direction="int-ext")
     
     candidate_terms_all_sims = {candidates_ids[candidate_idx]:canditate_terms_sims for candidate_idx, canditate_terms_sims in candidate_terms_all_sims.items()}
     negative_matrix, _ = ontology.get_negative_terms_matrix(candidate_terms_all_sims, 
