@@ -1106,7 +1106,8 @@ class Ontology:
     # +calc_metadata+:: if true, launch get_items_from_profiles process
     # +reset_stored+:: if true, remove already stored profiles
     # +substitute+:: subsstitute flag from check_ids
-    def load_profiles(self, profiles, calc_metadata = True, reset_stored = False, substitute= False):
+    # +clean_hard+:: if true, perform hard cleaning of profiles
+    def load_profiles(self, profiles, calc_metadata = True, reset_stored = False, substitute= False, clean_hard=False):
         if reset_stored: self.reset_profiles()
         # Check
         if type(profiles) is list:
@@ -1118,7 +1119,7 @@ class Ontology:
                     warnings.warn('Some profiles given are already stored. Stored version will be replaced')
                     break 
             for pr_prof, prof in profiles.items(): 
-                self.add_profile(pr_prof, prof, substitute = substitute)
+                self.add_profile(pr_prof, prof, substitute = substitute, clean_hard=clean_hard)
         self.add_observed_terms_from_profiles(reset = True)
 
         if calc_metadata: self.get_items_from_profiles()
@@ -1128,6 +1129,7 @@ class Ontology:
     # +id+:: assigned to profile
     # +terms+:: array of terms
     # +substitute+:: subsstitute flag from check_ids
+    # +clean_hard+:: if true, perform hard cleaning of profiles
     def add_profile(self, pr_id, terms, substitute = True, clean_hard=False, options={}): # FRED: Talk with PSZ about the uniqness of IDs translated
         #if pr_id in self.profiles: warnings.warn(f"Profile assigned to ID ({pr_id}) is going to be replaced") ##Currently disabled, there is already a general warning in load_profiles 
         if clean_hard:
