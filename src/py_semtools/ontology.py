@@ -1449,7 +1449,7 @@ class Ontology:
     # +bidirectional+:: calculate bidirectional similitude. Default: false
     # ===== Return
     # Similitudes calculated
-    def compare_profiles(self, external_profiles = None, sim_type = 'resnik', ic_type = 'resnik', bidirectional = True, sim_index = None, direction = None):
+    def compare_profiles(self, external_profiles = None, sim_type = 'resnik', ic_type = 'resnik', bidirectional = True, sim_index = None, direction = None, reverse_sim=None):
         profiles_similarity = {} #calculate similarity between patients profile
         if external_profiles == None:
             same_profiles = True
@@ -1481,6 +1481,10 @@ class Ontology:
                     value = self.compare(current_profile, profile, sim_type = sim_type, ic_type = ic_type, bidirectional = bidirectional, store_mica = True)
                     self.add2nestHash(profiles_similarity, curr_id, t_id, value)
         #print(f"similarity: {time.time() - start}")
+
+        if (reverse_sim == None and direction == "int-ext") or reverse_sim == True:
+            profiles_similarity = pxc.invert_nested_hash(profiles_similarity)
+            
         return profiles_similarity
 
     def get_similarity_index(self, main_profiles, comp_profiles,  sim_type = 'resnik', ic_type = 'resnik', same_profiles = True, file=None):
