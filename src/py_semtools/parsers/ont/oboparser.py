@@ -57,14 +57,14 @@ class OboParser(FileParser):
                 yield(t_id)
 
     @classmethod
-    def load(cls, ontology, file, build = True, black_list = [], extra_dicts = [], zipped=False):
+    def load(cls, ontology, file, build = True, black_list = [], root= None, extra_dicts = [], zipped=False):
         cls.reset() # Clean class variables to avoid the mix of several obo loads
         cls.removable_terms = black_list
         cls.load_obo(file, zipped)
 
         ontology.ont_name = cls.ontology_name
         if len(cls.removable_terms) > 0 : cls.remove_black_list_terms() 
-        if build: cls.build_index(ontology, extra_dicts = extra_dicts) 
+        if build: cls.build_index(ontology, extra_dicts = extra_dicts, root = root) 
 
     # Class method to load an OBO format file (based on OBO 1.4 format). Specially focused on load
     # the Header, the Terms, the Typedefs and the Instances.
@@ -180,11 +180,12 @@ class OboParser(FileParser):
     # ===== Returns 
     # true if eprocess ends without errors and false in other cases
     @classmethod
-    def build_index(cls, ontology, extra_dicts: []):
+    def build_index(cls, ontology, extra_dicts: [], root: None):
         cls.get_index_obsoletes(obs_tag = cls.basic_tags['obsolete'], alt_tags = cls.basic_tags['alternative'])
         cls.get_index_alternatives(alt_tag = cls.basic_tags['alternative'][-1]) # BEWARE!!: [-1] is for get the last element of the alternative list that is "alt_id" and must be this string, not other
         cls.remove_obsoletes_in_terms()
         cls.get_index_child_parent_relations(tag = cls.basic_tags['ancestors'][0])
+        if root != None: cls.filter_to_root(root)
         cls.calc_dictionary('name')
         cls.calc_dictionary('synonym', select_regex = '\"(.*)\"')
         cls.calc_ancestors_dictionary()
@@ -199,6 +200,28 @@ class OboParser(FileParser):
         ontology.reroot = cls.reroot
         ontology.structureType = cls.structureType
         ontology.dicts.update(cls.dicts)
+
+    @classmethod
+    def filter_to_root(cls, root):
+        cls.reroot = True
+        root_descendants = cls.descendants_index[root]
+        terms = cls.stanzas['terms']
+        root_terms = {desc: terms[desc] for desc in root_descendants}
+        root_terms[root] = terms[root]
+        root_alternatives = {}
+        for alt_id, term_id in cls.alternatives_index.items():
+            if term_id in root_terms or not term_id in terms:
+                root_alternatives[alt_id] = term_id # we keep alt relation in subontology or chains of alt_id
+
+        r_desc_index = { desc: cls.descendants_index[desc] for desc in root_descendants if desc in cls.descendants_index}
+        r_desc_index[root] = root_descendants
+        root_ancestors = set(cls.ancestors_index[root])
+        r_asc_index = { desc: list(set(cls.ancestors_index[desc]) - root_ancestors) for desc in root_descendants}
+ 
+        cls.stanzas['terms'] = root_terms
+        cls.alternatives_index = root_alternatives
+        cls.ancestors_index = r_asc_index
+        cls.descendants_index = r_desc_index
 
     @classmethod
     def remove_obsoletes_in_terms(cls): # once alternative and obsolete indexes are loaded, use this to keep only working terms

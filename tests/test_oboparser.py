@@ -24,6 +24,7 @@ class OBOParserTestCase(unittest.TestCase):
         # Files
         self.file_Header = {"file": os.path.join(DATA_TEST_PATH, "only_header_sample.obo"), "name": "only_header_sample"}
         self.file_Hierarchical = {"file": os.path.join(DATA_TEST_PATH, "hierarchical_sample.obo"), "name": "hierarchical_sample"}
+        self.file_Hierarchical3ChLevel = {"file": os.path.join(DATA_TEST_PATH, "hierarchical_sample_3level_child.obo"), "name": "hierarchical_sample"}
         self.file_Hierarchical_alt_chain = {"file": os.path.join(DATA_TEST_PATH, "hierarchical_alt_chain.obo"), "name": "hierarchical_alt_chain"}
         self.file_Hierarchical_Compressed = {"file": os.path.join(DATA_TEST_PATH, "hierarchical_compressed.obo.gz"), "name": "hierarchical_compressed.obo"} #TODO: Discuss with PSZ wether to change the method that extract file extension that currently gives this name
         self.file_Circular = {"file": os.path.join(DATA_TEST_PATH, "circular_sample.obo"), "name": "circular_sample"}
@@ -232,6 +233,20 @@ class OBOParserTestCase(unittest.TestCase):
         self.assertEqual(0, hierarchical_cutted.meta["Child2"]["ancestors"])
         self.assertIsNone(hierarchical_cutted.terms.get("Parental"))
 
+    def test_reroot(self):
+        hierarchical_reroot = Ontology(file = self.file_Hierarchical3ChLevel["file"], 
+                                       load_file = True, root = "Child6")
+        hierarchical_reroot.precompute()
+        self.assertEqual({ 'Child8': ['Child6'], 'Child9': ['Child6']}, 
+                          hierarchical_reroot.ancestors_index)
+        self.assertEqual({'Child6': ['Child8', 'Child9']}, hierarchical_reroot.descendants_index)
+        self.assertEqual({}, hierarchical_reroot.alternatives_index)
+        self.assertEqual(
+            {'Child6': {'id': 'Child6', 'is_a': ['Child2'], 'name': 'Child6'},
+            'Child8': {'id': 'Child8', 'is_a': ['Child6'], 'name': 'Child8'},
+            'Child9': {'id': 'Child9', 'is_a': ['Child6'], 'name': 'Child9'}}, 
+            hierarchical_reroot.terms)
+   
     def test_inferred_alternatives_chain(self):
         expected_alternative_index = {'Child1': 'Child2', 'Child3': 'Child2', 'Child10': 'Child2', 'Child11': 'Child2', 'Child4': 'Child2'}
         hierarchical_cutted = Ontology(file = self.file_Hierarchical_alt_chain["file"], load_file = True)

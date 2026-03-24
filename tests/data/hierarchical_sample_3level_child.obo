@@ -1,0 +1,54 @@
+format-version: 1.2
+data-version: test/a/b/c/
+
+[Term]
+id: Parental
+name: All
+comment: none
+
+[Term]
+id: Child1
+name: Child1
+is_obsolete: true
+is_a: Parental ! Parental
+replaced_by: Child2
+
+[Term]
+id: Child2
+name: Child2
+synonym: "1,6-alpha-mannosyltransferase activity" EXACT []
+alt_id: Child3
+alt_id: Child4
+is_a: Parental ! Parental
+
+[Term]
+id: Child5
+name: Child5
+synonym: "activity related to example" EXACT []
+is_obsolete: true
+is_a: Parental ! Parental
+
+[Term]
+id: Child6
+name: Child6
+is_a: Child2 ! Child2
+
+[Term]
+id: Child7
+name: Child7
+is_a: Child2 ! Child2
+
+[Term]
+id: Child8
+name: Child8
+is_a: Child6 ! Child6
+
+[Term]
+id: Child9
+name: Child9
+is_a: Child6 ! Child6
+
+[Term]
+id: Child10
+name: Child10
+is_a: Child7 ! Child7

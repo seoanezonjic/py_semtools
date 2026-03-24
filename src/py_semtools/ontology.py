@@ -16,7 +16,7 @@ class Ontology:
     TEMPLATES = "py_semtools.templates"
     allowed_calcs = {'ics': ['resnik', 'resnik_observed', 'seco', 'zhou', 'sanchez'], 'sims': ['resnik', 'lin', 'jiang_conrath', 'eric', 'neric', 'nweric', 'erlin']}
     
-    def __init__(self, file= None, load_file= False, removable_terms= [], build= True, file_format= None, extra_dicts= []):
+    def __init__(self, file= None, load_file= False, removable_terms= [], root= None, build= True, file_format= None, extra_dicts= []):
         self.threads = 1
         self.terms = {}
         self.ancestors_index = {}
@@ -50,7 +50,7 @@ class Ontology:
                 zipped = True
                 fformat = fformat.split(".")[-2]
             if fformat == 'obo' or fformat == ".obo":
-                OboParser.load(self, file, build = True, black_list = removable_terms, extra_dicts = extra_dicts, zipped = zipped)
+                OboParser.load(self, file, build = True, black_list = removable_terms, root= root, extra_dicts = extra_dicts, zipped = zipped)
             elif fformat == 'json' or fformat == ".json":
                 JsonParser.load(self, file, build = False, zipped = zipped)
             elif fformat != None:

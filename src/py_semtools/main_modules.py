@@ -259,12 +259,9 @@ def main_semtools(opts: argparse.Namespace) -> None:
     if options.get('keyword') != None:
         extra_dicts.append(['xref', {'select_regex': eval('r"'+options['keyword']+'"'), 'store_tag': 'tag', 'multiterm': True}]) 
 
-    ontology = Ontology(file = options['ontology_file'], load_file = True, extra_dicts = extra_dicts)
+    ontology = Ontology(file = options['ontology_file'], load_file = True, extra_dicts = extra_dicts, root = options.get('root'))
     ontology.precompute()
     ontology.threads = options['processes']
-
-    if options['root'] != None:
-        Ontology.mutate(options['root'], ontology, clone = False)  # TODO fix method and convert in class method
 
     if options.get('query_ncbi') != None:
         results = ontology.query_ncbi(options['query_ncbi'])
