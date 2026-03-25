@@ -205,9 +205,18 @@ class OboParser(FileParser):
     def filter_to_root(cls, root):
         cls.reroot = True
         root_descendants = cls.descendants_index[root]
+        authorized_terms = set(root_descendants + [root]) 
+        
         terms = cls.stanzas['terms']
-        root_terms = {desc: terms[desc] for desc in root_descendants}
-        root_terms[root] = terms[root]
+        root_terms = {}
+        for desc in root_descendants:
+           metadata = terms[desc]
+           metadata['is_a'] = list(set(metadata['is_a']) & authorized_terms) 
+           root_terms[desc] = metadata
+        root_metadata = terms[root]
+        root_metadata['is_a'] = list(set(root_metadata['is_a']) & authorized_terms) 
+        root_terms[root] = root_metadata
+
         root_alternatives = {}
         for alt_id, term_id in cls.alternatives_index.items():
             if term_id in root_terms or not term_id in terms:
@@ -215,8 +224,11 @@ class OboParser(FileParser):
 
         r_desc_index = { desc: cls.descendants_index[desc] for desc in root_descendants if desc in cls.descendants_index}
         r_desc_index[root] = root_descendants
-        root_ancestors = set(cls.ancestors_index[root])
-        r_asc_index = { desc: list(set(cls.ancestors_index[desc]) - root_ancestors) for desc in root_descendants}
+        r_asc_index = {} 
+        for desc in root_descendants:
+            desc_ancestors = cls.ancestors_index[desc]
+            clean_ancestors = list(set(desc_ancestors) & authorized_terms)
+            r_asc_index[desc] = clean_ancestors
  
         cls.stanzas['terms'] = root_terms
         cls.alternatives_index = root_alternatives

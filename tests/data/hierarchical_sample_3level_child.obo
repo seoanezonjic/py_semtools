@@ -22,6 +22,11 @@ alt_id: Child4
 is_a: Parental ! Parental
 
 [Term]
+id: Child2BRO
+name: Child2BRO
+is_a: Parental ! Parental
+
+[Term]
 id: Child5
 name: Child5
 synonym: "activity related to example" EXACT []
@@ -42,6 +47,7 @@ is_a: Child2 ! Child2
 id: Child8
 name: Child8
 is_a: Child6 ! Child6
+is_a: Child2BRO ! Child2BRO
 
 [Term]
 id: Child9
@@ -52,3 +58,8 @@ is_a: Child6 ! Child6
 id: Child10
 name: Child10
 is_a: Child7 ! Child7
+
+[Term]
+id: Child11
+name: Child11
+is_a: Child2BRO ! Child2BRO

@@ -242,7 +242,7 @@ class OBOParserTestCase(unittest.TestCase):
         self.assertEqual({'Child6': ['Child8', 'Child9']}, hierarchical_reroot.descendants_index)
         self.assertEqual({}, hierarchical_reroot.alternatives_index)
         self.assertEqual(
-            {'Child6': {'id': 'Child6', 'is_a': ['Child2'], 'name': 'Child6'},
+            {'Child6': {'id': 'Child6', 'is_a': [], 'name': 'Child6'},
             'Child8': {'id': 'Child8', 'is_a': ['Child6'], 'name': 'Child8'},
             'Child9': {'id': 'Child9', 'is_a': ['Child6'], 'name': 'Child9'}}, 
             hierarchical_reroot.terms)
