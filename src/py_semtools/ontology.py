@@ -992,13 +992,13 @@ class Ontology:
         return np.mean(sims)
 
 
-    def calc_sim_term2term_similarity_matrix(self, ref_profile, ref_profile_id, external_profiles, term_limit = 100, candidate_limit = 100, sim_type = 'lin', bidirectional = True, string_format = False, header_id = "id", ySortFunc=None, other_scores = {}, id2label = {}, direction=None):
+    def calc_sim_term2term_similarity_matrix(self, ref_profile, ref_profile_id, external_profiles, term_limit = 100, candidate_limit = 100, sim_type = 'lin', bidirectional = True, string_format = False, header_id = "id", ySortFunc=None, other_scores = {}, id2label = {}, direction=None, translate=True):
         similarities = self.compare_profiles(external_profiles = external_profiles, sim_type = sim_type, bidirectional = bidirectional, direction = direction)
-        candidate_sim_matrix, candidates, candidates_ids, candidate_pr_cd_term_matches, candidate_terms_all_sims = self.get_term2term_similarity_matrix(ref_profile, similarities[ref_profile_id], external_profiles, term_limit, candidate_limit, string_format = string_format, other_scores = other_scores, id2label = id2label, ySortFunc=ySortFunc)
+        candidate_sim_matrix, candidates, candidates_ids, candidate_pr_cd_term_matches, candidate_terms_all_sims = self.get_term2term_similarity_matrix(ref_profile, similarities[ref_profile_id], external_profiles, term_limit, candidate_limit, string_format = string_format, other_scores = other_scores, id2label = id2label, ySortFunc=ySortFunc, translate=translate)
         if string_format: candidate_sim_matrix.insert(0, [header_id] + candidates_ids)
         return candidate_sim_matrix, candidates, candidates_ids, similarities, candidate_pr_cd_term_matches, candidate_terms_all_sims
 
-    def get_term2term_similarity_matrix(self, reference_prof, similarities, evidence_profiles, term_limit, candidate_limit, string_format=False, other_scores = {}, id2label = {}, ySortFunc=None):
+    def get_term2term_similarity_matrix(self, reference_prof, similarities, evidence_profiles, term_limit, candidate_limit, string_format=False, other_scores = {}, id2label = {}, ySortFunc=None, translate=True):
         candidates = [ list(pair) for pair in similarities.items()]
         if len(other_scores) == 0:
             candidates.sort(key=lambda s: s[-1], reverse=True)
@@ -1022,7 +1022,8 @@ class Ontology:
         candidate_similarity_matrix, candidate_pr_cd_term_matches, candidate_terms_all_sims = self.get_detailed_similarity(reference_prof, candidates, evidence_profiles)
         if string_format:
             for i, row in enumerate(candidate_similarity_matrix):
-                row.insert(0,self.translate_id(reference_prof[i]))
+                term_id = self.translate_id(reference_prof[i]) if translate else reference_prof[i]
+                row.insert(0, term_id)
 
         if ySortFunc != None and ySortFunc.__name__ == "sortByPhens":
             candidate_similarity_matrix.sort(key=lambda r: ySortFunc(r[0]), reverse=True)
@@ -1066,7 +1067,7 @@ class Ontology:
             cand_number += 1
         return matrix, candidate_pr_cd_term_matches, candidate_terms_all_sims
 
-    def get_negative_terms_matrix(self, external_profiles_terms_sims, sim_filter=0.2, term_limit = 100, candidate_limit = 100, string_format = False, header_id = "id"):
+    def get_negative_terms_matrix(self, external_profiles_terms_sims, sim_filter=0.2, term_limit = 100, candidate_limit = 100, string_format = False, header_id = "id", translate=True):
         candidate_ids = list(external_profiles_terms_sims.keys())
         external_profiles = {profile_id: list(profile_terms_sims_dict.keys()) for profile_id, profile_terms_sims_dict in external_profiles_terms_sims.items()}
 
@@ -1083,7 +1084,9 @@ class Ontology:
         final_table = []
         for term, count in specific_terms_counts_sorted:
             row_to_add = []
-            if string_format: row_to_add.append(self.translate_id(term))
+            if string_format: 
+                term_id = self.translate_id(term) if translate else term
+                row_to_add.append(term_id)
             for candidate in candidate_ids[:candidate_limit]:
                 profile_term_count = 0
                 if term in external_profiles[candidate]: profile_term_count = count
