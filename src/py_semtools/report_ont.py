@@ -205,8 +205,8 @@ def ontoICdist(self, **user_options):
     term_IC_struct, term_IC_observed = ontology.get_observed_ics_by_onto_and_freq() # IC for TERMS
     prof_IC_struct = ontology.dicts['prof_IC_struct']
     prof_IC_observ = ontology.dicts['prof_IC_observ']
-    term_ics = [ list(p) for p in zip(list(term_IC_struct.values()),list(term_IC_observed.values())) ]
-    profile_ics = [ list(p) for p in zip(list(prof_IC_struct.values()), list(prof_IC_observ.values())) ]
+    term_ics = [ list(p) for p in zip(list(term_IC_struct.keys()), list(term_IC_struct.values()),list(term_IC_observed.values())) ]
+    profile_ics = [ list(p) for p in zip(list(prof_IC_struct.keys()), list(prof_IC_struct.values()), list(prof_IC_observ.values())) ]
     self.hash_vars['term_ics'] = term_ics
     self.hash_vars['profile_ics'] = profile_ics
     return self.renderize_child_template(self.get_internal_template('ontoICdist.txt'), **default_opts)
