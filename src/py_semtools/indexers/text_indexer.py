@@ -105,7 +105,7 @@ class TextIndexer:
         for parsed_text in parsed_texts:
             doc_id, file, text = parsed_text
             if doc_id == None or text == "": continue
-            pmid_content_and_stats = cls.prepare_indexes(text, doc_id, file, "None", "None", "None", "None", options)
+            pmid_content_and_stats = cls.prepare_indexes(text, doc_id, file, "None", "None", "None", "None", "None", options)
             texts.append(pmid_content_and_stats)
         if logger != None: logger.warning(f"stats:file={file_path},total={stats['total']}")
         if logger != None: logger.warning(f"logs_errors:file={file_path},errors_number={stats['errors']}")
