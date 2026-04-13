@@ -176,6 +176,16 @@ class OboParser(FileParser):
     def remove_black_list_terms(cls):
         for removableID in cls.removable_terms: del cls.stanzas['terms'][removableID]
 
+
+    @classmethod
+    def get_synonyms_regex(cls, regextype):
+        if regextype == 'exact':
+            return '\"(.*)\" EXACT'
+        elif regextype == 'all':
+            return '\"(.*)\"'
+        else:
+            return regextype
+
     # Executes basic expansions of tags (alternatives, obsoletes and parentals) with default values
     # ===== Returns 
     # true if eprocess ends without errors and false in other cases
@@ -188,6 +198,7 @@ class OboParser(FileParser):
         if root != None: cls.filter_to_root(root)
         cls.calc_dictionary('name')
         cls.calc_dictionary('synonym', select_regex = '\"(.*)\"')
+        #cls.calc_dictionary('synonym', select_regex = '\"(.*)\" EXACT') # REGEX for exact synonyms
         cls.calc_ancestors_dictionary()
         for dict_tag, extra_parameters in extra_dicts:
             cls.calc_dictionary(dict_tag, **extra_parameters) # https://www.justinweiss.com/articles/fun-with-keyword-arguments/
