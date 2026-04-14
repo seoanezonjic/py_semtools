@@ -62,7 +62,8 @@ class STengine(LexicalEngineBaseClass):
         full_model_path = os.path.join(cache_folder, model_name)
         if verbose: print(f"\n-Downloading or loading bi encoder model {model_name} inside path {full_model_path}")
         self.model_name = model_name
-        has_cached_model = os.path.exists(os.path.join(full_model_path, f'models--sentence-transformers--{model_name}')) #SentenceTransfomers now uses local_files_only to control internet access, even if the model is cached, and trying to download the model with this variable false gives error, so we have to control it
+        has_cached_model = os.path.exists(os.path.join(full_model_path, f'models--{model_name.replace("/", "--")}')) #SentenceTransfomers now uses local_files_only to control internet access, even if the model is cached, and trying to download the model with this variable false gives error, so we have to control it
+        if verbose: print(f"Seeking cached model (found:{has_cached_model}) in", os.path.join(full_model_path, f'models--{model_name.replace("/", "--")}'))
         self.embedder = SentenceTransformer(model_name, cache_folder = full_model_path, local_files_only=has_cached_model)
 
     def init_rerank_model(self, model_name, cache_folder = None, verbose = False):
@@ -70,8 +71,9 @@ class STengine(LexicalEngineBaseClass):
         full_model_path = os.path.join(cache_folder, model_name)
         if verbose: print(f"\n-Downloading or loading cross-encoder model {model_name} inside path {full_model_path}")
         self.reranker_model_name = model_name
-        has_cached_model = os.path.exists(os.path.join(full_model_path, f'models--cross-encoder--{model_name}')) #SentenceTransfomers now uses local_files_only to control internet access, even if the model is cached, and trying to download the model with this variable false gives error, so we have to control it
-        self.reranker = CrossEncoder(model_name, cache_folder = full_model_path, local_files_only=has_cached_model)
+        has_cached_model = os.path.exists(os.path.join(full_model_path, f'models--{model_name.replace("/", "--")}')) #SentenceTransfomers now uses local_files_only to control internet access, even if the model is cached, and trying to download the model with this variable false gives error, so we have to control it
+        if verbose: print(f"Seeking cached model (found:{has_cached_model}) in ", os.path.join(full_model_path, f'models--{model_name.replace("/", "--")}'))
+        self.reranker = CrossEncoder(model_name_or_path = model_name, cache_folder = full_model_path, local_files_only=has_cached_model)
      
     def embed_save_corpus(self, options, corpus_basename, all_textIDs, all_corpus, total_papers):
         if options["verbose"]: print(f"---Embedding corpus of {corpus_basename} comprised by {total_papers} initial papers with {len(all_textIDs)} sentences, with {'GPU' if options.get('gpu_device') else 'CPU'}")
