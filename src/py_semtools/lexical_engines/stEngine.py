@@ -209,7 +209,8 @@ class STengine(LexicalEngineBaseClass):
         elif len(options["gpu_device"]) == 1:
                 scores = self.reranker.predict(sentence_pairs, device= options["gpu_device"][0], batch_size=options["batch_size"], activation_fn=torch.nn.Sigmoid()) #convert_to_tensor=True 
         else:
-                raise Exception("You need to provide GPU to use reranker. It should be a list of GPU devices like: ['cuda:0'] or ['cuda:0', 'cuda:1']")                
+                scores = self.reranker.predict(sentence_pairs, batch_size=options["batch_size"], activation_fn=torch.nn.Sigmoid()) #convert_to_tensor=True 
+                #raise Exception("You need to provide GPU to use reranker. It should be a list of GPU devices like: ['cuda:0'] or ['cuda:0', 'cuda:1']")                
         if options["verbose"]: print(f"---Reranking time with {0 if options.get('gpu_device') == None else len(options['gpu_device'])} GPUs: {time.time() - start} seconds")
         return scores
 
