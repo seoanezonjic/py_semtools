@@ -209,6 +209,8 @@ class TextIndexer:
             sentences_splitter = RecursiveCharacterTextSplitter(chunk_size = 100, chunk_overlap  = 20, length_function = len, separators=["\n", " ", ""], keep_separator=False, is_separator_regex=False)
             #sentences_splitter = RecursiveCharacterTextSplitter(chunk_size = 20, chunk_overlap  = 2, length_function = cls._len_by_words_func, separators=["\n", " ", ""], keep_separator=False, is_separator_regex=False)
         #sentences_splitter = RecursiveCharacterTextSplitter(chunk_size = 120, chunk_overlap  = 20, length_function = len, separators=["\n", " ", ""], keep_separator=False, is_separator_regex=False)
+        else:
+            sentences_splitter = RecursiveCharacterTextSplitter(chunk_size = 10, chunk_overlap  = 0, length_function = len, separators=split_type.split("%-%"), keep_separator=False, is_separator_regex=False)
         paragraphs = [paragraph.strip() for paragraph in paragraph_splitter.split_text(text)]
         paragraph_sentences = [ sentences_splitter.split_text(paragraph) for paragraph in paragraphs ]
         

@@ -1,5 +1,4 @@
-from email import parser
-import argparse, re, sys, inspect
+import argparse, re, sys, inspect, codecs
 from py_semtools.main_modules import *
 from collections import defaultdict
 
@@ -42,6 +41,9 @@ def split_keyword_and_fields(string):
 
 def split_column_numbers(string):
     return [int(number) for number in string.split(",")]
+
+def unescaped_str(arg_str):
+    return codecs.decode(str(arg_str), 'unicode_escape')
 
 #########################################################################
 #CLI PARSERS 
@@ -429,7 +431,7 @@ def get_corpus_index(args = None):
             help="When using 'filter_by_blacklist' use this option to choose between 'exact' or 'partial' match. Default is 'partial'")
     parser.add_argument("--clean_type", dest="clean_type", default= 'hard',
             help="Use to set the type of cleaning to be performed on the text. Options: basic (do not clean at all), soft or hard (default).")
-    parser.add_argument("--split_type", dest="split_type", default= 'classic',
+    parser.add_argument("--split_type", dest="split_type", default= 'classic', type=unescaped_str,
             help="Use to set the type of splitting to be performed on the text. Options: classic (default, splitting by '\n\n', \n', '.', ';', ',') or space_overlap ('\n\n', '\n', ' ', '' with overlap to avoid losing information).")
     parser.add_argument("--extra_fields", dest="extra_fields", default= defaultdict(lambda: False), type=text_to_default_dict,
             help="Comma-separated list of extra fields to include in the processed corpus. Available: title and/or keywords. Default: none")
