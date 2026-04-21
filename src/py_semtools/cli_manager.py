@@ -353,7 +353,9 @@ def stEngine(args = None):
     parser.add_argument("-b", "--batch_size", dest="batch_size", default= 32, type=int,
             help="Use to specify batch size for multi-GPU embedding step")
     parser.add_argument("--get_total_time_file", dest="get_total_time_file", default= None,
-            help="Use it to save the calculation time of the process to a file")     
+            help="Use it to save the calculation time of the process to a file")
+    parser.add_argument("--write_sims_mode", dest="write_sims_mode", default= "w",
+            help="Use it to set the mode for writing similarities to the output file. Options: 'w' for write (overwrite) and 'a' for append.") 
                     
     opts =  parser.parse_args(args)
     main_stEngine(opts)

@@ -147,7 +147,7 @@ class LexicalEngineBaseClass(ABC):
 
     def save_similarities(self, filepath, best_matches, options):
         #with gzip.open(filepath, "a") as f: #TODO: add it later
-        with open(filepath, 'a') as f:
+        with open(filepath, options["write_sims_mode"]) as f:
           for kwdID, matches in best_matches.items():
             for textID, score in matches.items():
               if score == "-" or score >= options["threshold"]: #"-" means full match for ontogpt

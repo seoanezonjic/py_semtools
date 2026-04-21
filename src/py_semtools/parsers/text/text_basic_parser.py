@@ -66,12 +66,13 @@ class TextBasicParser:
     @classmethod
     def perform_soft_cleaning(cls, raw_document, type="soft"):
         document = raw_document
-        if type in ["soft", "hard"]:
-            document = re.sub(r"([A-Za-z\(\)]+[ ]*)\n([ ]*[A-Z-a-z\(\)]+)", r"\1 \2", raw_document) #Removing nonsense newlines that broke the text and make information loss
+        if type in ["hard", "spaces"]:
+            document = re.sub(r"([0-9]+)[\.\,]([0-9]+)", r"\1'\2", document) #Changing floating point numbers from 4.5 or 4,5 to 4'5
+            document = re.sub(r"i\.?e\.?", "ie", document).replace("al.", "al ") #Changing i.e to ie and et al. to et al
+        if type in ["soft", "hard", "spaces"]:
             document = document.strip().replace("\r", "\n").replace("&#13", "\n").replace("\t", " ") #Replace carriage returns and tabs
             document = re.sub(r"\\[a-z]+(\[.+\])?(\{(.+)\})", r"\3", document) #Removing latex commands
             document = re.sub(r"[ ]+", r" ", document) #Removing additional whitespaces between words
-        if type in ["hard"]:
-            document = re.sub(r"([0-9]+)[\.\,]([0-9]+)", r"\1'\2", document) #Changing floating point numbers from 4.5 or 4,5 to 4'5
-            document = re.sub(r"i\.?e\.?", "ie", document).replace("al.", "al ") #Changing i.e to ie and et al. to et al
+        if type in ["nosense_newlines"]:
+            document = re.sub(r"([A-Za-z\(\)]+[ ]*)\n([ ]*[A-Z-a-z\(\)]+)", r"\1 \2", raw_document) #Removing nonsense newlines that broke the text and make information loss
         return document    
