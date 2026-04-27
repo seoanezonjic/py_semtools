@@ -478,6 +478,10 @@ def get_sorted_profs(args=None):
                         help="When reference profile is not given, a general ine is computed with all profiles. If a freq is defined (0-1), all terms with freq minor than limit are removed")
     parser.add_argument("-L", "--matrix_limits", dest="matrix_limits", default= [20, 40], type= lambda data: [int(i) for i in data.split(",")],
                         help="Number of rows and columns to show in heatmap defined as 'Nrows,Ncols'. Default 20,40")
+    parser.add_argument("--sim_bidirectional", dest="sim_bidirectional", default= False, action="store_true",
+                        help="Use to activate similarity average calculation onto term profiles when both directios are computed (A to B, and B to A profiles)")                                        
+    parser.add_argument("--sim_direction", dest="sim_direction", default= None,
+                        help="If not defined or set to 'ext-int' are external profiles against reference profile. If set 'int-ext' is the ref profile against the external profiles")
     parser.add_argument("--header_id", dest="header_id", default="HP", help="Header ID to use in plotted heatmaps")
     opts =  parser.parse_args(args)
     main_get_sorted_profs(opts)
