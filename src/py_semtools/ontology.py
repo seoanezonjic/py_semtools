@@ -992,8 +992,8 @@ class Ontology:
         return np.mean(sims)
 
 
-    def calc_sim_term2term_similarity_matrix(self, ref_profile, ref_profile_id, external_profiles, term_limit = 100, candidate_limit = 100, sim_type = 'lin', bidirectional = True, string_format = False, header_id = "id", ySortFunc=None, other_scores = {}, id2label = {}, direction=None, translate=True):
-        similarities = self.compare_profiles(external_profiles = external_profiles, sim_type = sim_type, bidirectional = bidirectional, direction = direction)
+    def calc_sim_term2term_similarity_matrix(self, ref_profile, ref_profile_id, external_profiles, term_limit = 100, candidate_limit = 100, sim_type = 'lin', bidirectional = True, string_format = False, header_id = "id", ySortFunc=None, other_scores = {}, id2label = {}, direction=None, translate=True, sim_index=None):
+        similarities = self.compare_profiles(external_profiles = external_profiles, sim_type = sim_type, bidirectional = bidirectional, direction = direction, sim_index=sim_index)
         candidate_sim_matrix, candidates, candidates_ids, candidate_pr_cd_term_matches, candidate_terms_all_sims = self.get_term2term_similarity_matrix(ref_profile, similarities[ref_profile_id], external_profiles, term_limit, candidate_limit, string_format = string_format, other_scores = other_scores, id2label = id2label, ySortFunc=ySortFunc, translate=translate)
         if string_format: candidate_sim_matrix.insert(0, [header_id] + candidates_ids)
         return candidate_sim_matrix, candidates, candidates_ids, similarities, candidate_pr_cd_term_matches, candidate_terms_all_sims
