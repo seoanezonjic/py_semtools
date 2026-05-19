@@ -869,8 +869,8 @@ def load_query_related_target_terms(filename, cleaned_query_terms, black_list, o
    for line in file:
         term1, term2, value = line.strip().split("\t")
         terms, _ = ontology.check_ids([term1, term2])
-        term1, term2 = terms
         if len(terms) < 2: continue
+        term1, term2 = terms
         value = float(value)
         if term1 not in cleaned_query_terms and term2 not in cleaned_query_terms: continue
         if term1 in cleaned_query_terms and term2 in cleaned_query_terms: continue

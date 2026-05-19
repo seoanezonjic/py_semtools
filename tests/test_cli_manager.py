@@ -366,7 +366,7 @@ def test_get_sorted_suggestions():
 
     #Asserting base case without filter neither limits
     returned_file_no_filter_no_limit = os.path.join(GET_SORTED_SUGG_PATH, 'returned', 'no_filter_no_limit.txt')
-    args = f"-q {query_hps_file} -r {relations_file} -O {ontology_file} -o {returned_file_no_filter_no_limit}".split()
+    args = f"-q {query_hps_file} -r {relations_file} -O {ontology_file} -o {returned_file_no_filter_no_limit} --color_heatmap_by rel_value".split()
 
     get_sorted_suggestions(args)
     expected = CmdTabs.load_input_data(os.path.join(GET_SORTED_SUGG_PATH, 'expected', 'no_filter_no_limit.txt'))
@@ -375,40 +375,36 @@ def test_get_sorted_suggestions():
 
     #Asserting case without filter but limit to 2 targets
     returned_file_no_filter_limit_2 = os.path.join(GET_SORTED_SUGG_PATH, 'returned', 'no_filter_limit_2.txt')
-    args2 = f"-q {query_hps_file} -r {relations_file} -O {ontology_file} -o {returned_file_no_filter_limit_2} --max_targets 2".split(" ")
+    args2 = f"-q {query_hps_file} -r {relations_file} -O {ontology_file} -o {returned_file_no_filter_limit_2} --max_targets 2 --color_heatmap_by rel_value".split(" ")
 
     get_sorted_suggestions(args2)
     expected = CmdTabs.load_input_data(os.path.join(GET_SORTED_SUGG_PATH, 'expected', 'no_filter_limit_2.txt'))
     returned = CmdTabs.load_input_data(returned_file_no_filter_limit_2)
     assert expected == returned
 
-
     #Asserting case with target parentals filter
     returned_file_filter_target_parentals = os.path.join(GET_SORTED_SUGG_PATH, 'returned', 'filter_target_parentals.txt')
-    args3 = f"-q {query_hps_file} -r {relations_file} -O {ontology_file} -o {returned_file_filter_target_parentals} -f"
-    args_list3 = args3.split(" ")
+    args3 = f"-q {query_hps_file} -r {relations_file} -O {ontology_file} -o {returned_file_filter_target_parentals} -f --color_heatmap_by rel_value".split(" ")
 
-    get_sorted_suggestions(args_list3)
+    get_sorted_suggestions(args3)
     expected = CmdTabs.load_input_data(os.path.join(GET_SORTED_SUGG_PATH, 'expected', 'filter_target_parentals.txt'))
     returned = CmdTabs.load_input_data(returned_file_filter_target_parentals)
     assert expected == returned
 
     #Asserting case with query parentals filter
     returned_file_filter_query_parentals = os.path.join(GET_SORTED_SUGG_PATH, 'returned', 'filter_query_parentals.txt')
-    args4 = f"-q {query_hps_file} -r {relations_file} -O {ontology_file} -o {returned_file_filter_query_parentals} -c"
-    args_list4 = args4.split(" ")
+    args4 = f"-q {query_hps_file} -r {relations_file} -O {ontology_file} -o {returned_file_filter_query_parentals} -c --color_heatmap_by rel_value".split(" ")
 
-    get_sorted_suggestions(args_list4)
+    get_sorted_suggestions(args4)
     expected = CmdTabs.load_input_data(os.path.join(GET_SORTED_SUGG_PATH, 'expected', 'filter_query_parentals.txt'))
     returned = CmdTabs.load_input_data(returned_file_filter_query_parentals)
     assert expected == returned
 
     #Asserting case with both query and target parentals filter
     returned_file_filter_both_parentals = os.path.join(GET_SORTED_SUGG_PATH, 'returned', 'filter_target_and_query_parentals.txt')
-    args5 = f"-q {query_hps_file} -r {relations_file} -O {ontology_file} -o {returned_file_filter_both_parentals} -f -c"
-    args_list5 = args5.split(" ")
+    args5 = f"-q {query_hps_file} -r {relations_file} -O {ontology_file} -o {returned_file_filter_both_parentals} -f -c --color_heatmap_by rel_value".split(" ")
 
-    get_sorted_suggestions(args_list5)
+    get_sorted_suggestions(args5)
     expected = CmdTabs.load_input_data(os.path.join(GET_SORTED_SUGG_PATH, 'expected', 'filter_target_and_query_parentals.txt'))
     returned = CmdTabs.load_input_data(returned_file_filter_both_parentals)
     assert expected == returned
@@ -419,9 +415,8 @@ def test_get_sorted_suggestions():
     output_file = os.path.join(tmp_dir, 'sugg_report.html')
     
     returned_file_filter_both_parentals = os.path.join(GET_SORTED_SUGG_PATH, 'returned', 'filter_target_and_query_parentals.txt')
-    args6 = f"-q {query_hps_file} -r {relations_file} -O {ontology_file} -o {returned_file_filter_both_parentals} -f -c --output_report {output_file}"
-    args_list6 = args6.split(" ")
-    get_sorted_suggestions(args_list6)
+    args6 = f"-q {query_hps_file} -r {relations_file} -O {ontology_file} -o {returned_file_filter_both_parentals} -f -c --output_report {output_file} --color_heatmap_by rel_value".split(" ")
+    get_sorted_suggestions(args6)
     assert os.path.exists(output_file)
     shutil.rmtree(tmp_dir, ignore_errors=True)
 
