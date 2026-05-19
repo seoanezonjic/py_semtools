@@ -482,9 +482,6 @@ def main_semtools(opts: argparse.Namespace) -> None:
     if options.get('set_operation') != None:
         set_a = sorted(list(set(options['set_a'])))
         set_b = sorted(list(set(options['set_b'])))
-        print("hola")
-        print(set_a)
-        print(set_b)
         if options['set_operation'] == 'is_parental':
             get_relation = ontology.get_ancestors
         elif options['set_operation'] == 'is_descendant':
@@ -493,7 +490,6 @@ def main_semtools(opts: argparse.Namespace) -> None:
           for term_a in set_a:
               for term_b in set_b:
                   familiars = get_relation(term_b)
-                  print(familiars)
                   if term_a in familiars:
                       f.write(f"{term_a}\t{term_b}\n")
 
@@ -581,12 +577,12 @@ def main_get_sorted_suggestions(opts: argparse.Namespace) -> None:
 
 
     ##### LOADING ONLY TERMS RELATED WITH QUERY TERMS FROM RELATIONS FILE
-    query_related_terms, blacklisted_terms = load_query_related_target_terms(options["term_relations"], cleaned_query_terms, black_list)
-
+    query_related_terms, blacklisted_terms = load_query_related_target_terms(options["term_relations"], cleaned_query_terms, black_list, ontology)
     ##### CALCULATING NUMBER OF HITS (RELATION WITH A QUERY) FOR EACH TARGET TERM AND SORTING THEM FROM HIGHEST TO LOWEST 
     related_terms_query = invert_nested_hash(query_related_terms)
     target_number_of_hits = {target: len(queries.values()) for target, queries in related_terms_query.items()}
-    unfiltered_targets_heatmap_sort_list = [term_hits_pair[0] for term_hits_pair in sorted(target_number_of_hits.items(), key=lambda term_hits_pair: (term_hits_pair[1], term_hits_pair[0]), reverse=True)]
+    unfiltered_targets_heatmap_sort_list = [term_hits_pair[0] for term_hits_pair in sorted(target_number_of_hits.items(), 
+                                                                                           key=lambda term_hits_pair: (term_hits_pair[1], term_hits_pair[0]), reverse=True)]
     targets_heatmap_sort_list = [hp for hp in unfiltered_targets_heatmap_sort_list if hp not in query_terms_parental_targets]
 
     ## LIMITING THE NUMBER OF TARGETS TO PLOT TO THE MAX_TARGETS PARAMETER (FOR PLOTTING PURPOSES) PROVIDED BY THE USER
@@ -606,6 +602,7 @@ def main_get_sorted_suggestions(opts: argparse.Namespace) -> None:
     #### CALCULATING THE MEAN OF THE TARGETS HYPERGEOMETRIC SCORE FOR EACH QUERY TERM AND SORTING THEM FROM HIGHEST TO LOWEST
     queries_mean_hypergeometric = {query: custom_mean_and_filter(targets.items(), targets_to_plot) for query, targets in query_related_terms.items()}
     queries_heatmap_sort_list = [term_mean_pair[0] for term_mean_pair in sorted(queries_mean_hypergeometric.items(), key=lambda term_mean_pair: term_mean_pair[1], reverse=True)]
+    target_to_IC = {target: ontology.get_IC(target) for target in related_terms_query.keys()}
 
     #### CHECKING WETHER TO TRANSLATE TERMS CODES TO HUMAN READABLE NAMES
     all_terms_list = set(query_related_terms.keys()).union(set(related_terms_query.keys())).union(set(black_list))
@@ -624,11 +621,16 @@ def main_get_sorted_suggestions(opts: argparse.Namespace) -> None:
 
     #Preparing query-targets hyper values heatmap table
     report_table_format = [  ["queries"] + [ code_to_name[term] for term in targets_heatmap_sort_list[:options["max_targets"]] ]  ]
-
     for query_term in queries_heatmap_sort_list:
         row = [code_to_name[query_term]]
         for target_term in targets_heatmap_sort_list[:options["max_targets"]]:
-          value = None if query_related_terms[query_term][target_term] == 0 else query_related_terms[query_term][target_term]
+          value = None
+          if query_related_terms[query_term][target_term] != 0:
+             if options["color_heatmap_by"] == "IC":
+                value = target_to_IC.get(target_term)
+             elif options["color_heatmap_by"] == "rel_value":
+                value = query_related_terms[query_term][target_term]
+          
           if options["transform_rel_values"] == "no" or value == None:
             row.append(value)
           elif options["transform_rel_values"] == "exp":
@@ -640,9 +642,9 @@ def main_get_sorted_suggestions(opts: argparse.Namespace) -> None:
     #Preparing targets and number of hits datatable
     blacklisted_terms_inverted = invert_nested_hash(blacklisted_terms)
     blacklisted_terms_hits = {target: len(queries.values()) for target, queries in blacklisted_terms_inverted.items()}
-    targets_and_n_hits = [["Target HP name", "Target HP Code", "Number of hits"]] + [
-                          [ontology.translate_ids([target])[0][0], target, target_number_of_hits[target]] for target in unfiltered_targets_heatmap_sort_list]
-    targets_and_n_hits += [[ontology.translate_ids([target])[0][0], target, blacklisted_terms_hits[target]] for target in blacklisted_terms_hits.keys()]
+    targets_and_n_hits = [["Target HP name", "Target HP Code", "Number of hits", "Target IC"]] + [
+                          [ontology.translate_ids([target])[0][0], target, target_number_of_hits[target], target_to_IC.get(target)] for target in unfiltered_targets_heatmap_sort_list]
+    targets_and_n_hits += [[ontology.translate_ids([target])[0][0], target, blacklisted_terms_hits[target], target_to_IC.get(target)] for target in blacklisted_terms_hits.keys()]
 
     #Writting output files and making report 
     output_file_dir = os.path.dirname(options["output_file"])
@@ -664,7 +666,8 @@ def main_get_sorted_suggestions(opts: argparse.Namespace) -> None:
                   'deleted_query_parental_targets_terms': deleted_query_parental_targets_terms_and_names,
                   'filter_parental_targets': options["filter_parental_targets"],
                   'clean_query_terms': options["clean_query_terms"],
-                  'heatmap_color_preset': options["heatmap_color_preset"]}
+                  'heatmap_color_preset': options["heatmap_color_preset"],
+                  'color_heatmap_by': options["color_heatmap_by"] if options["color_heatmap_by"] == "IC" else "Relation value"}
       template = open(str(files('py_semtools.templates').joinpath('comorb_sugg.txt'))).read()
       report = Py_report_html(container, f'stEngine report', data_from_files=True)
       report.build(template)
@@ -859,12 +862,15 @@ def load_ontology(external_data, ontology_file):
   ontology.precompute()
   return ontology
 
-def load_query_related_target_terms(filename, cleaned_query_terms, black_list):
+def load_query_related_target_terms(filename, cleaned_query_terms, black_list, ontology):
   query_related_terms = {query_term: defaultdict(lambda: 0) for query_term in cleaned_query_terms}
   blacklisted_terms = {query_term: defaultdict(lambda: 0) for query_term in cleaned_query_terms}
   with open(filename) as file:
    for line in file:
         term1, term2, value = line.strip().split("\t")
+        terms, _ = ontology.check_ids([term1, term2])
+        term1, term2 = terms
+        if len(terms) < 2: continue
         value = float(value)
         if term1 not in cleaned_query_terms and term2 not in cleaned_query_terms: continue
         if term1 in cleaned_query_terms and term2 in cleaned_query_terms: continue

@@ -12,7 +12,7 @@ if plotter.hash_vars['heatmap_color_preset'] == "2": heatmaps_config.update({"co
 <p> All query HPs are shown as rows and target HPs as columns (the first ${ len(plotter.hash_vars["suggs_table"][0])-1 } most representative targets found). <br>
 Queries order is determined by the median association score (hypergeometric) with target HPs. <br>
 Targets order is determined by the number of queries associated with them. <br>
-The value of each field is the association score between the query and target HPs, measured by hypergeometric score. <br>
+The value of each field is the ${plotter.hash_vars['color_heatmap_by']} score from target HPs. <br>
 </p>
 
 % if len(plotter.hash_vars["blacklisted_terms"]) > 0:

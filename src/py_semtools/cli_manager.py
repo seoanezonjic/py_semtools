@@ -235,6 +235,9 @@ def get_sorted_suggestions(args = None):
             help="Path to the output report file. If not used, no report will be generated")
     parser.add_argument("--heatmap_color_preset", dest="heatmap_color_preset", default= "1",
             help="Use to set the color preset for the heatmap. Options: '1' (default) or '2'. Each preset has a different color scheme.")
+    parser.add_argument("--color_heatmap_by", dest="color_heatmap_by", default="IC",
+            help="Use to set the values to color the heatmap. Options: 'IC' (information content of the target term) or "
+            "'rel_value' (the value of the relation between query and target term)")
 
     opts =  parser.parse_args(args)
     main_get_sorted_suggestions(opts)
