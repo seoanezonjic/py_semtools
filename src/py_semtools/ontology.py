@@ -530,7 +530,8 @@ class Ontology:
     # ===== Parameters
     # +termsA+:: to be compared
     # +termsB+:: to be compared
-    # +type+:: similitude formula to be used
+    # +type+:: similitude formula to be used           print(terms)
+ 
     # +ic_type+:: IC formula to be used
     # ===== Returns 
     # the similarity between both sets or false if frequencies are not available yet
@@ -729,7 +730,12 @@ class Ontology:
     # ===== Return
     # true if process ends without errors and false in other cases
     def add_observed_terms(self, terms = None, increase = 1.0, expand_ancestor = True):
-        for t_id in terms: self.add_observed_term(t_id, increase = increase, expand_ancestor = expand_ancestor)
+        if expand_ancestor: # if we have to expand parental terms, we take the uniq set to avoid count several times a common parental
+            all_terms = []
+            all_terms.extend(terms) # keep initial terms to add ocurrences
+            for t in terms: all_terms.extend(self.get_ancestors(t))
+            terms = list(set(all_terms))
+        for t_id in terms: self.add_observed_term(t_id, increase = increase, expand_ancestor = False)
 
     # Modifying Profile
     ####################################
