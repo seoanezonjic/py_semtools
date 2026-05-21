@@ -1582,7 +1582,7 @@ class Ontology:
             if temp_folder == None or not os.path.exists(cluster_file):
                 if method_name == 'resnik':
                     dist_matrix = np.amax(similarity_matrix) - similarity_matrix
-                elif method_name == 'lin':
+                elif method_name in ['lin', 'nweric']:
                     dist_matrix = 1 - similarity_matrix
                 clusters, cls_objects = pxc.get_hc_clusters(dist_matrix, dist = 'custom', method = 'ward', 
                             identify_clusters='max_avg', cl_size_factor= options['cl_size_factor'], 
