@@ -1522,13 +1522,13 @@ class Ontology:
 
     ## clustering methods
     ########################################################
-    def get_matrix_similarity(self, method_name, options, reference_profiles=None, profiles_similarity_filename=None, matrix_filename = None, sim_index = None):
+    def get_matrix_similarity(self, method_name, options, reference_profiles=None, profiles_similarity_filename=None, matrix_filename = None, sim_index = None, ic_method = 'resnik'):
         if reference_profiles == None: 
-            profiles_similarity = self.compare_profiles(sim_type = method_name, external_profiles = reference_profiles, sim_index = sim_index)
+            profiles_similarity = self.compare_profiles(sim_type = method_name, ic_type = ic_method, external_profiles = reference_profiles, sim_index = sim_index)
         else: # AS reference profiles are constant, the sematic comparation will be A => B (A reference). So, we have to invert the elements to perform the comparation
             pat_profiles = self.profiles # TEmporal copy to preserve patient profiles and inject reference profiles
             self.load_profiles(reference_profiles, reset_stored = True)
-            profiles_similarity = self.compare_profiles(sim_type = method_name, 
+            profiles_similarity = self.compare_profiles(sim_type = method_name, ic_type = ic_method, 
                 external_profiles = pat_profiles, 
                 bidirectional = False,  sim_index = sim_index)
             self.load_profiles(pat_profiles, reset_stored = True)
@@ -1554,11 +1554,13 @@ class Ontology:
                 for pairsB, values in pairsB_and_values.items():
                     f.write(f"{pairsA}\t{pairsB}\t{values}\n")
 
-    def get_similarity_clusters(self, method_name, options, temp_folder = None, reference_profiles = None, sim_index = None):
+    def get_similarity_clusters(self, method_name, options, temp_folder = None, reference_profiles = None, sim_index = None, ic_meth='resnik'):
         clusters = {}
         similarity_matrix = None
         linkage = None
         raw_cls = None
+        ic_method = options.get('ic_method')
+        if ic_method == None: ic_method = ic_meth
         if len(self.profiles) > 1:
             if temp_folder != None: # To save and load results from disk
                 matrix_filename = os.path.join(temp_folder, f"similarity_matrix_{method_name}.npy")
@@ -1575,7 +1577,8 @@ class Ontology:
                     reference_profiles=reference_profiles,  
                     profiles_similarity_filename=profiles_similarity_filename, 
                     matrix_filename = matrix_filename,
-                    sim_index = sim_index)
+                    sim_index = sim_index,
+                    ic_method = ic_method)
             elif temp_folder != None or os.path.exists(matrix_filename):
                 similarity_matrix, x_names, y_names = pxc.load(matrix_filename, x_axis_file=axis_file, y_axis_file=axis_file_y)
             
