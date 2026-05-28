@@ -1609,7 +1609,13 @@ class Ontology:
                 linkage = np.load(linkage_file)
                 raw_cls = np.load(raw_cls_file)
                 #with open(raw_cls_file) as f: raw_cls = json.loads(f.read())
-            self.clustering[method_name] = {'cls': clusters, 'sim': similarity_matrix, 'link': linkage, 'raw_cls': raw_cls}
+            x_index = { i: name for i, name in enumerate(x_names)  }
+            if y_names == None:
+                y_index = None
+            else:
+                y_index = { i: name for i, name in enumerate(y_names)  }
+            self.clustering[method_name] = {'cls': clusters, 'sim': similarity_matrix, 'link': linkage, 'raw_cls': raw_cls, 
+                                            'x_index': x_index, 'y_index': y_index }
         return clusters, similarity_matrix, linkage, raw_cls
 
     # specifity_index related methods
