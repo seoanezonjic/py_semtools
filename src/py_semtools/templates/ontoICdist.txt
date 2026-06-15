@@ -1,8 +1,33 @@
 % if 'term' in dist_type:
-	${ plotter.scatter2D(id= 'term_ics', width=width, height=height, header=False, row_names=True, title=f'{ONT_NAME} term IC distribution', x_label = f'{ONT_NAME} Ontology IC', y_label = f'{ONT_NAME} Frequency based IC', alpha=0.6, add_densities=True, config={"dataPointSize":8, "setMaxX": 4.5, "setMaxY":4.5, "setMinX": 0, "setMinY": 0}  )}
+	${ plotter.scatter2D(id= 'term_ics', width=width, height=height, header=False, row_names=True, 
+		title=f'{ONT_NAME} term IC distribution', 
+		x_label = f'{ONT_NAME} Ontology IC', 
+		y_label = f'{ONT_NAME} Frequency based IC', 
+		alpha=0.6, add_densities=True, 
+		config={"dataPointSize":8, "setMaxX": 4.5, "setMaxY":4.5, "setMinX": 0, "setMinY": 0}  )}
 % endif
 
 
 % if 'prof' in dist_type:
-	${ plotter.scatter2D(id= 'profile_ics', width=width, height=height, header=False, row_names=True, title=f'{ONT_NAME} patient profile IC distribution', x_label = f'{ONT_NAME} Ontology Profile IC', y_label = f'{ONT_NAME} Frequency based Profile IC', alpha=0.6, add_densities=True, config={"dataPointSize":8, "setMaxX": 4.5, "setMaxY":4.5, "setMinX": 0, "setMinY": 0}  )}
+	${ plotter.scatter2D(id= 'profile_ics', width=width, height=height, header=False, row_names=True, 
+	title=f'{ONT_NAME} patient profile IC distribution', 
+	x_label = f'{ONT_NAME} Ontology Profile IC', 
+	y_label = f'{ONT_NAME} Frequency based Profile IC', 
+	alpha=0.6, add_densities=True, 
+	config={"dataPointSize":8, "setMaxX": 4.5, "setMaxY":4.5, "setMinX": 0, "setMinY": 0}  )}
+% endif
+
+% if 'profSizeIC' in dist_type:
+	${ plotter.scatter2D(id= 'profSizeIC', width=width, height=height, header=True, row_names=True, 
+		title=f'{ONT_NAME} patient profile size distribution vs IC', 
+		x_label = f'Profile Size', y_label = f'{ONT_NAME} IC structure', alpha=0.6, 
+		config={"dataPointSize":8, "setMaxY":4.5, "setMinX": 0, "setMinY": 2, "xAxis": ["size"], "yAxis": ['ICstruct'],}  
+		)
+	}
+	${ plotter.scatter2D(id= 'profSizeIC', width=width, height=height, header=True, row_names=True, 
+		title=f'{ONT_NAME} patient profile size distribution vs IC', 
+		x_label = f'Profile Size', y_label = f'{ONT_NAME} IC observed', alpha=0.6, 
+		config={"dataPointSize":8, "setMaxY":1.0, "setMinX": 0, "setMinY": 0, "xAxis": ["size"], "yAxis": ['ICobs'],}  
+		)
+	}
 % endif
