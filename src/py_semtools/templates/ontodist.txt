@@ -1,10 +1,31 @@
-% if 'count' in dist_type:
-	${plotter.barplot(id= "ontology_levels",width=width, height=height, header= True, x_label= f'Number of {ONT_NAME} terms', title= f'{ONT_NAME} annotations distribution', responsive= False, transpose= True, 
-		config = { 'graphOrientation': 'vertical'}) }
-% endif
+<div class="row">
 
-% if 'perc' in dist_type:
-	${plotter.line(id= "distribution_percentage", width=width, height=height, header= True, x_label= 'Percentage of terms', title= f'{ONT_NAME} percentage distribution',  responsive= False, transpose= True, 
-		config = { 'graphOrientation' : 'vertical' }) }
-% endif
+	% if 'count' in dist_type:
+
+		<div class="col-md-4 d-flex justify-content-center">
+			<div class="card p-2 m-1 shadow-sm" style="height:fit-content;">
+				<div class="canvasXpressContainerSite">
+					${plotter.barplot(id= "ontology_levels",width=width, height=height, header= True, 
+						x_label= f'Number of {ONT_NAME} terms', title= f'{ONT_NAME} annotations distribution', 
+						responsive= True, transpose= True, 
+						config = { 'graphOrientation': 'vertical'}) }
+				</div>
+			</div>
+		</div>
+
+	% endif
+
+	% if 'perc' in dist_type:
+		<div class="col-md-4 d-flex justify-content-center">
+			<div class="card p-2 m-1 shadow-sm" style="height:fit-content;">
+				<div class="canvasXpressContainerSite">
+					${plotter.line(id= "distribution_percentage", width=width, height=height, header= True, 
+						x_label= 'Percentage of terms', title= f'{ONT_NAME} percentage distribution',  
+						responsive= True, transpose= True, 
+						config = { 'graphOrientation' : 'vertical' }) }
+				</div>
+			</div>
+		</div>
+	% endif
+</div>
 
