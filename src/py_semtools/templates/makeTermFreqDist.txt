@@ -1,0 +1,5 @@
+${ plotter.scatter2D(id= "term_stats", header= True, row_names=True, width=width, height=height,
+	title = 'Frecuency distribution of the observed terms', y_label = 'Count', x_label = 'Term Percentage',
+	config= {"histogramBins": 20, "showHistogram": True, 'xAxis': ['perc'], 'setMinX' :0, 'setMaxX' : 100 },
+	func = lambda data: data.insert(0,[f'{ONT_NAME}', ' perc']))
+}

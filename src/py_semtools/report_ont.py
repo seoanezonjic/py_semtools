@@ -239,6 +239,16 @@ def makeTermFreqTable(self, **user_options):
     self.hash_vars['term_stats'] = term_stats
     return self.renderize_child_template(self.get_internal_template('makeTermFreqTable.txt'), **default_opts)
 
+def makeTermFreqDist(self, **user_options):
+    ontology = self.hash_vars[user_options['ontology']]
+    ONT_NAME = ontology.ont_name.upper() if hasattr(ontology, 'ont_name') and ontology.ont_name != None else 'Ontology'
+    default_opts = {"width": "600px", "height": "600px", "ONT_NAME": ONT_NAME, "count_parentals": False}    
+    default_opts.update(user_options)    
+    term_stat_dict = ontology.dicts['term_stats'] if not default_opts['count_parentals'] else ontology.dicts['term_stats_with_parentals']
+    term_stats = [ [ontology.translate_id(term), freq * 100] for term, freq in term_stat_dict.items()] 
+    self.hash_vars['term_stats'] = term_stats
+    return self.renderize_child_template(self.get_internal_template('makeTermFreqDist.txt'), **default_opts)
+
 def plotClust(self, **user_options):
     ontology = self.hash_vars[user_options['ontology']]
     ONT_NAME = ontology.ont_name.upper() if hasattr(ontology, 'ont_name') and ontology.ont_name != None else 'Ontology'
@@ -270,4 +280,5 @@ Py_report_html.ontoICdist = ontoICdist
 Py_report_html.plotProfRed = plotProfRed
 Py_report_html.plotClust = plotClust
 Py_report_html.makeTermFreqTable = makeTermFreqTable
+Py_report_html.makeTermFreqDist = makeTermFreqDist
 Py_report_html.similarity_matrix_plot = similarity_matrix_plot
