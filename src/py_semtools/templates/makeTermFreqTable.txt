@@ -1,6 +1,6 @@
 <%
 	def prepare_freq_table(table):
-		for row_idx in enumerate(table):
+		for row_idx, row in enumerate(table):
 			table[row_idx][1] = round(table[row_idx][1], 2)
 		table.insert(0,[f'{ONT_NAME}', ' Patient percentage'])
 %>
