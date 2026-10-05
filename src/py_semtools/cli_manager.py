@@ -304,6 +304,8 @@ def fmEngine(args = None):
             help="Use it to print the relevant pairs of query-corpus with their scores")
     parser.add_argument("--get_total_time_file", dest="get_total_time_file", default= None,
             help="Use it to save the calculation time of the process to a file")    
+    parser.add_argument("--write_sims_mode", dest="write_sims_mode", default= "w",
+            help="Use it to set the mode for writing similarities to the output file. Options: 'w' for write (overwrite) and 'a' for append.") 
 
     opts =  parser.parse_args(args)
     main_fmEngine(opts)
