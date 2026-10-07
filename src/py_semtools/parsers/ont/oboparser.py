@@ -340,7 +340,6 @@ class OboParser(FileParser):
             cls.ancestors_index[term_id] = clean_parentals
             for anc_id in parents: cls.add2hash(cls.descendants_index, anc_id, term_id)
 
-
     # Expand terms using a specific tag and return all extended terms into an array and
     # the relationship structuture observed (hierarchical or circular). If circular structure is
     # foumd, extended array will be an unique vector without starting term (no loops) 
