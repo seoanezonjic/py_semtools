@@ -60,11 +60,10 @@ class FMengine(LexicalEngineBaseClass):
         # Adjust top_k to corpus size if top_k is infinite, otherwise bm25s throws an error (althouhg it works with sentence_transformers)
         if options['top_k'] == np.inf: options['top_k'] = len(corpus_text)
         retriever = bm25s.BM25(backend=options['bm25_backend'])
-
         tokenized_corpus = bm25s.tokenize(corpus_text)
-        tokenized_query = bm25s.tokenize(query_text)
-        
         retriever.index(tokenized_corpus, show_progress=options['verbose'])
+
+        tokenized_query = bm25s.tokenize(query_text)
         results_indexes, scores = retriever.retrieve(tokenized_query, k=options['top_k'], return_as="tuple", n_threads=options['threads'])
         return results_indexes, scores
 
