@@ -306,6 +306,10 @@ def fmEngine(args = None):
             help="Use it to save the calculation time of the process to a file")    
     parser.add_argument("--write_sims_mode", dest="write_sims_mode", default= "w",
             help="Use it to set the mode for writing similarities to the output file. Options: 'w' for write (overwrite) and 'a' for append.") 
+    parser.add_argument('--threads', dest="threads", default= 1, type = int,
+            help="Number of threads to use for parallel processing")
+    parser.add_argument('--bm25_backend', dest="bm25_backend", default= "numba",
+            help="Backend to use for BM25. Options: 'numba' or 'numpy'")
 
     opts =  parser.parse_args(args)
     main_fmEngine(opts)

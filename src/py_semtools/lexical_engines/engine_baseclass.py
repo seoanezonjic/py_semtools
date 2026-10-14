@@ -149,8 +149,7 @@ class LexicalEngineBaseClass(ABC):
         #with gzip.open(filepath, "a") as f: #TODO: add it later
         with open(filepath, options["write_sims_mode"]) as f:
           for kwdID, matches in best_matches.items():
-            for textID, score in matches.items():
-              if score == "-" or score >= options["threshold"]: #"-" means full match for ontogpt
+            for textID, score in matches.items(): 
                 if options["order"] == "corpus-query":
                   f.write(f"{textID}\t{kwdID}\t{score}\n")
                 else:

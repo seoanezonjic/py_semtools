@@ -50,7 +50,7 @@ class FMengine(LexicalEngineBaseClass):
         elif self.model_name == "tfidf_faiss":
             results_indexes, scores = self.calculate_tfidf_similarity_faiss(query_text, corpus_text, options)
 
-        matches = self.find_best_matches(results_indexes, scores, query_ids, corpus_ids)
+        matches = self.find_best_matches(results_indexes, scores, query_ids, corpus_ids, options["threshold"])
         return matches
     
     def calculate_bm25_similarity(self, query_text, corpus_text, options):
@@ -59,14 +59,12 @@ class FMengine(LexicalEngineBaseClass):
         
         # Adjust top_k to corpus size if top_k is infinite, otherwise bm25s throws an error (althouhg it works with sentence_transformers)
         if options['top_k'] == np.inf: options['top_k'] = len(corpus_text)
-        
-        retriever = bm25s.BM25()
-
+        retriever = bm25s.BM25(backend=options['bm25_backend'])
         tokenized_corpus = bm25s.tokenize(corpus_text)
-        tokenized_query = bm25s.tokenize(query_text)
-        
         retriever.index(tokenized_corpus, show_progress=options['verbose'])
-        results_indexes, scores = retriever.retrieve(tokenized_query, k=options['top_k'], return_as="tuple")
+
+        tokenized_query = bm25s.tokenize(query_text)
+        results_indexes, scores = retriever.retrieve(tokenized_query, k=options['top_k'], return_as="tuple", n_threads=options['threads'])
         return results_indexes, scores
 
     def calculate_tfidf_similarity(self, query_text, corpus_text, options):
@@ -118,12 +116,14 @@ class FMengine(LexicalEngineBaseClass):
 
         return batch_indices, batch_scores
 
-    def find_best_matches(self, results_indexes, scores, query_ids, corpus_ids):
+    def find_best_matches(self, results_indexes, scores, query_ids, corpus_ids, threshold):
         matches = {}
         for row_idx, res_idxs  in enumerate(results_indexes):
             query_id = query_ids[row_idx]
             matches[query_id] = {}
             for col_idx, res_idx in enumerate(res_idxs):
                 corpus_id = corpus_ids[res_idx]
-                matches[query_id][corpus_id] = scores[row_idx, col_idx]
+                comp_score = scores[row_idx, col_idx]
+                if comp_score >= threshold and (matches[query_id].get(corpus_id) is None or comp_score > matches[query_id][corpus_id]):
+                        matches[query_id][corpus_id] = comp_score
         return matches

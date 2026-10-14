@@ -176,9 +176,9 @@ class STengine(LexicalEngineBaseClass):
                 search = self.rerank_results(query_texts, corpus_texts, search, options)
 
         if options["order"] == "corpus-query":
-            matches = self.find_best_matches(corpus_ids, query_ids, search)
+            matches = self.find_best_matches(corpus_ids, query_ids, search, options["threshold"])
         else:
-            matches = self.find_best_matches(query_ids, corpus_ids, search)
+            matches = self.find_best_matches(query_ids, corpus_ids, search, options["threshold"])
         return matches
 
     def rerank_results(self, query_texts, corpus_texts, search, options):
@@ -246,7 +246,7 @@ class STengine(LexicalEngineBaseClass):
         raise Exception("Invalid order parameter value. Valid values are: query-corpus or corpus-query")
       return result
 
-    def find_best_matches(self, query_ids, corpus_ids, search):
+    def find_best_matches(self, query_ids, corpus_ids, search, threshold):
         best_matches = {}
         for i,query in enumerate(search):
           kwdID = query_ids[i]
@@ -259,7 +259,7 @@ class STengine(LexicalEngineBaseClass):
             textID = corpus_ids[hit['corpus_id']]
             score = hit['score']
             text_score = kwd.get(textID)
-            if text_score == None or text_score < score :
+            if score > threshold and (text_score == None or text_score < score):
               kwd[textID] = score
           #sentence = corpus_sentences[hit['corpus_id']]
         return best_matches
