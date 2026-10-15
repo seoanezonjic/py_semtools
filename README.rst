@@ -46,3 +46,4 @@ Key features of this library include:
 * Ontology Representations: Methods to represent the specificity and frequency of terms within a set of items, enabling visualization of the ontology distribution in a given dataset.
 * Text Similarity Analysis: Utilize Sentence Transformers (SBERT) for text similarity analysis.
 
+
